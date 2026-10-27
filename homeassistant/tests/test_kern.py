@@ -28,21 +28,51 @@ async def test_bewertung_bonus_und_nie():
     assert text_zu_bonus("WELT HD") == {"WELT HD": 1}
 
 
-async def test_erster_kandidat_passt():
+async def test_einmal_umschalten_und_nachlesen():
     f = fernseher([{"nr": 141, "sender": "N24 DOKU", "sendung": "Doku: Hip Hop", "punkte": 8, "treffer": []}])
     e = await f.durchgang(CFG)
-    assert e["aktion"] == "umgeschaltet" and e["neu"]["nr"] == 141
+    assert e["aktion"] == "umgeschaltet" and e["neu"]["nr"] == 141 and e["passt_nach_umschalten"] is True
     assert [c.args[0] for c in f.tune.call_args_list] == [141]
 
 
-async def test_rueckfall_auf_alten_sender():
-    f = fernseher([None, {"nr": 271, "punkte": 0, "sendung": "Heute"}, {"nr": 25, "punkte": -1, "sendung": "Shop"}])
+async def test_passt_nachher_nicht_trotzdem_nur_einmal():
+    f = fernseher([{"nr": 141, "sender": "N24 DOKU", "sendung": "Wetter", "punkte": 0, "treffer": []}])
     e = await f.durchgang(CFG)
-    assert e["aktion"].startswith("bleibt (") and len(e["verworfen"]) == 3
-    assert [c.args[0] for c in f.tune.call_args_list][-1] == 23
+    assert e["aktion"] == "umgeschaltet" and e["passt_nach_umschalten"] is False
+    assert f.tune.call_count == 1
+
+
+async def test_back_nur_bei_programmzeitschrift():
+    f = tv.Fernseher("x", 1, None)
+    f.key = AsyncMock()
+    f.focus_app = AsyncMock(return_value=tv.TV_APP)
+    await f.close_guide()
+    assert f.key.call_count == 0                     # im Fernsehbild kein BACK
+    f.focus_app = AsyncMock(side_effect=[tv.GUIDE_APP, tv.TV_APP])
+    await f.close_guide()
+    assert [c.args for c in f.key.call_args_list] == [("KEYCODE_BACK",)]
+
+
+async def test_tune_bricht_ab_wenn_kein_fernsehbild():
+    f = tv.Fernseher("x", 1, None)
+    f.key = AsyncMock()
+    f.focus_app = AsyncMock(return_value="com.google.android.apps.tv.launcherx/.Home")
+    try:
+        await f.tune(23)
+        raise AssertionError("haette abbrechen muessen")
+    except RuntimeError:
+        pass
+    assert f.key.call_count == 0
 
 
 async def test_nur_lesen_schaltet_nicht():
     f = fernseher([])
     e = await f.durchgang(CFG, nur_lesen=True)
     assert e["aktion"] == "bleibt" and f.tune.call_count == 0 and e["bester"]["nr"] == 141
+
+
+async def test_disney_nie():
+    assert bewerte_sendung(30, "Disney Channel HD", "Doku über Rap", {}, const.STANDARD_OPTIONEN | {"interessen": const.STANDARD_INTERESSEN, "sender_nie": const.STANDARD_SENDER_NIE})["punkte"] == -1
+    cfg = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS}
+    from custom_components.tv_zapper.logik import score
+    assert score("Micky Maus Wunderhaus", cfg)[0] == -1 and score("Futurama", cfg)[0] > 0

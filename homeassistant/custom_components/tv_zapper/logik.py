@@ -113,10 +113,8 @@ def bewerte(current, chans, infos, cfg):
     return scored, cur, best
 
 
-def kandidaten(scored, cur):
-    """Bis zu drei Treffer, die besser sind als das Laufende - der Reihe nach probieren."""
-    return sorted((x for x in scored if x["punkte"] > max(0, cur.get("punkte", 0))),
-                  key=lambda x: -x["punkte"])[:3]
+def soll_umschalten(cur, best):
+    return bool(best and best["punkte"] > 0 and best["punkte"] > cur.get("punkte", 0))
 
 
 # --- Interessen als Text (fuer die Eingabe in Home Assistant) ---------------------------

@@ -46,7 +46,7 @@ class TrefferSensor(ZapperEntity, SensorEntity):
             "sender": x.get("sender"), "nr": x.get("nr"), "sendung": x.get("sendung"),
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "genre": x.get("genre"),
             "aktion": e.get("aktion"), "zeit": e.get("zeit"), "fehler": e.get("fehler"),
-            "app": e.get("app"), "sender_gelesen": e.get("sender_gelesen"),
+            "app": e.get("app"), "passt_nach_umschalten": e.get("passt_nach_umschalten"), "sender_gelesen": e.get("sender_gelesen"),
             "bester_treffer": _kurz(e.get("bester")),
             "weitere_treffer": [_kurz(t) for t in (e.get("treffer") or [])[:6]],
         }

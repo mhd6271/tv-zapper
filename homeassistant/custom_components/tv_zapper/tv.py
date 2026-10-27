@@ -14,7 +14,7 @@ from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
-from .logik import bewerte, bewerte_sendung, kandidaten, parse_guide, parse_xml
+from .logik import bewerte, bewerte_sendung, parse_guide, parse_xml, soll_umschalten
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +66,15 @@ class Fernseher:
     # --- Bausteine wie in zapper.py -------------------------------------------------------
     async def key(self, *names):
         await self.sh("input keyevent " + " ".join(names))
+
+    async def close_guide(self):
+        """BACK nur, wenn die Programmzeitschrift vorn ist: im Fernsehbild springt BACK beim TCL
+        auf den vorigen Sender."""
+        for _ in range(2):
+            if await self.focus_app() != GUIDE_APP:
+                return
+            await self.key("KEYCODE_BACK")
+            await asyncio.sleep(1.2)
 
     async def focus_app(self) -> str:
         out = await self.sh("dumpsys window | grep mCurrentFocus")
@@ -145,14 +154,13 @@ class Fernseher:
             idle = idle + 1 if n == 0 else 0
             if idle >= 15:
                 break
-        await self.key("KEYCODE_BACK")
-        await asyncio.sleep(1.2)
+        await self.close_guide()
         return current, chans, infos
 
     async def tune(self, num):
-        if await self.focus_app() != TV_APP:
-            await self.key("KEYCODE_BACK")
-            await asyncio.sleep(1)
+        await self.close_guide()
+        if (app := await self.focus_app()) != TV_APP:
+            raise RuntimeError(f"Fernsehbild nicht vorn ({app}) - schalte nicht um")
         for d in str(num):                      # Ziffern einzeln, sonst wird die erste verschluckt
             await self.key(f"KEYCODE_{d}")
             await asyncio.sleep(0.8)
@@ -165,8 +173,7 @@ class Fernseher:
         await asyncio.sleep(3)
         nodes = await self.open_guide()
         rows, header, _ = self.guide(nodes)
-        await self.key("KEYCODE_BACK")
-        await asyncio.sleep(1.2)
+        await self.close_guide()
         if not rows or rows[0][0] != cand["nr"]:
             return None
         num, name, prog = rows[0]
@@ -179,21 +186,16 @@ class Fernseher:
             return {"aktion": "uebersprungen", "app": app}
         current, chans, infos = await self.collect()
         scored, cur, best = bewerte(current, chans, infos, cfg)
-        aktion, neu, verworfen = "bleibt", None, []
-        if not nur_lesen:
-            # Die Beschreibung in der Programmzeitschrift ist erst nach dem Anwaehlen sicher aktuell:
-            # nach dem Umschalten neu lesen und notfalls den naechstbesten Treffer nehmen.
-            versucht = kandidaten(scored, cur)
-            for cand in versucht:
-                await self.tune(cand["nr"])
-                fresh = await self.verify(cand, cfg)
-                if fresh is not None and fresh["punkte"] > 0:
-                    aktion, neu = "umgeschaltet", fresh
-                    break
-                verworfen.append({**cand, "danach": (fresh or {}).get("sendung")})
-            if aktion != "umgeschaltet" and versucht:
-                await self.tune(current)
-                aktion = "bleibt (Treffer passten nach dem Anwaehlen nicht)"
-        return {"aktion": aktion, "vorher": cur, "bester": best, "neu": neu, "verworfen": verworfen,
+        aktion, neu, nachgelesen = "bleibt", None, None
+        if soll_umschalten(cur, best) and not nur_lesen:
+            # Nur einmal umschalten. Die Beschreibung ist erst nach dem Anwaehlen sicher aktuell -
+            # danach nur nachlesen, nicht weiter herumschalten (naechster Durchgang entscheidet neu).
+            await self.tune(best["nr"])
+            aktion, neu = "umgeschaltet", best
+            nachgelesen = await self.verify(best, cfg)
+            if nachgelesen is not None:
+                neu = nachgelesen
+        return {"aktion": aktion, "vorher": cur, "bester": best, "neu": neu,
+                "passt_nach_umschalten": None if nachgelesen is None else nachgelesen["punkte"] > 0,
                 "treffer": sorted((x for x in scored if x["punkte"] > 0), key=lambda x: -x["punkte"]),
                 "sender_gelesen": len(chans)}

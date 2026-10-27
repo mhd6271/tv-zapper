@@ -33,6 +33,59 @@ STANDARD_INTERESSEN = [
         ]
     },
     {
+        "name": "Erwachsenen-Cartoons",
+        "gewicht": 4,
+        "woerter": [
+            "futurama",
+            "american dad*",
+            "family guy",
+            "die simpsons",
+            "simpsons",
+            "south park",
+            "rick and morty",
+            "bob's burgers",
+            "bobs burgers",
+            "king of the hill",
+            "king of queens*",
+            "solar opposites",
+            "f is for family",
+            "archer",
+            "bojack*",
+            "big mouth",
+            "disenchantment",
+            "central park",
+            "the cleveland show",
+            "cleveland show"
+        ]
+    },
+    {
+        "name": "Mysterien/Aliens",
+        "gewicht": 4,
+        "woerter": [
+            "unerklärlich*",
+            "phänomen*",
+            "alien*",
+            "ancient aliens",
+            "ufo*",
+            "außerirdisch*",
+            "pyramide*",
+            "däniken",
+            "von däniken",
+            "mysterium",
+            "mysterien",
+            "mystery",
+            "rätsel*",
+            "atlantis",
+            "area 51",
+            "prä-astronautik",
+            "maya",
+            "stonehenge",
+            "verschwörung*",
+            "übernatürlich*",
+            "paranormal*"
+        ]
+    },
+    {
         "name": "Musik",
         "gewicht": 3,
         "woerter": [
@@ -86,9 +139,9 @@ STANDARD_INTERESSEN = [
     }
 ]
 
-STANDARD_AUS = ["teleshopping", "dauerwerbesendung", "verkaufsshow", "shopping-tipps"]
+STANDARD_AUS = ["teleshopping", "dauerwerbesendung", "verkaufsshow", "shopping-tipps", "disney*", "micky*", "mickey*"]
 
-STANDARD_SENDER_NIE = []
+STANDARD_SENDER_NIE = ["Disney Channel", "Disney Channel HD"]
 
 STANDARD_SENDER_BEVORZUGT = {"N24 DOKU": 1, "ZDFinfo HD": 1}
 

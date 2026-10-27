@@ -59,8 +59,8 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 ## Home-Assistant-Fassung
 
 Im Ordner [`homeassistant/custom_components/tv_zapper`](homeassistant/custom_components/tv_zapper) liegt
-dieselbe Logik als Integration für Home Assistant (Stand von `zapper.py` am 27.10.2026 inkl. Sender nie/bevorzugt
-und Nachprüfen nach dem Umschalten). Alles wird in HA eingestellt, `interessen.json` ist nur
+dieselbe Logik als Integration für Home Assistant (Stand von `zapper.py` am 27.10.2026, Commit 4d6133c: Sender nie/bevorzugt,
+pro Durchgang nur einmal umschalten und danach nachlesen, BACK nur bei offener Programmzeitschrift). Alles wird in HA eingestellt, `interessen.json` ist nur
 die Vorlage für die Grundeinstellung.
 
 **Wie sie den Fernseher erreicht:** Die eingebauten Integrationen reichen nicht. „Android TV Remote“
