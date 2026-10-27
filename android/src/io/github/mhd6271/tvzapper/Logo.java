@@ -24,6 +24,15 @@ final class Logo {
     /** Lernrunden ohne brauchbares Logo (z. B. weil viel Werbung lief). */
     int failedRounds;
 
+    /** Weitere Logo-Varianten desselben Senders (z. B. bei 4:3-Sendungen mit schwarzen Raendern sitzt das Logo
+     *  woanders – am 27.10.2026 bei ProSieben MAXX/Futurama so gesehen). Wert = bester Treffer aller Varianten. */
+    final java.util.List<int[]> variantCorner = new java.util.ArrayList<>();
+    final java.util.List<boolean[]> variantMask = new java.util.ArrayList<>();
+    /** Variante lernen: Bilder, in denen 2 min lang an derselben Stelle oben ein festes Zeichen steht. */
+    static final int VARIANT_FRAMES = 400;
+    private int[][] vCounts;
+    private int vLearned;
+
     boolean ready() {
         return mask != null;
     }
@@ -35,10 +44,11 @@ final class Logo {
     /** Ein Bild verarbeiten; gibt den Logo-Wert 0..1 zurueck, oder -1 solange gelernt wird. */
     float feed(byte[] top, byte[] bottom, int w) {
         if (mask != null) {
-            boolean[] e = edges(crop(top, bottom, w, corner));
-            int hit = 0;
-            for (int i = 0; i < e.length; i++) if (mask[i] && e[i]) hit++;
-            return hit / (float) points;
+            float best = score(top, bottom, w, corner, mask, points);
+            for (int k = 0; k < variantMask.size(); k++)
+                best = Math.max(best, score(top, bottom, w, variantCorner.get(k)[0], variantMask.get(k),
+                        variantCorner.get(k)[1]));
+            return best;
         }
         for (int c = 0; c < 4; c++) {
             boolean[] e = edges(crop(top, bottom, w, c));
@@ -46,6 +56,44 @@ final class Logo {
         }
         if (++learned >= LEARN_FRAMES) finishLearning();
         return -1;
+    }
+
+    private static float score(byte[] top, byte[] bottom, int w, int corner, boolean[] m, int pts) {
+        boolean[] e = edges(crop(top, bottom, w, corner));
+        int hit = 0;
+        for (int i = 0; i < e.length; i++) if (m[i] && e[i]) hit++;
+        return hit / (float) pts;
+    }
+
+    /** Waehrend vermeintlicher Werbung aufrufen. Liefert true, sobald eine neue Variante gelernt ist
+     *  (dann war es keine Werbung). */
+    boolean learnVariant(byte[] top, byte[] bottom, int w) {
+        if (vCounts == null) vCounts = new int[2][CW * CH];
+        for (int c = 0; c < 2; c++) {
+            boolean[] e = edges(crop(top, bottom, w, c));
+            for (int i = 0; i < e.length; i++) if (e[i]) vCounts[c][i]++;
+        }
+        if (++vLearned < VARIANT_FRAMES) return false;
+        boolean found = false;
+        for (int c = 0; c < 2 && !found; c++) {
+            boolean[] m = new boolean[CW * CH];
+            for (int i = 0; i < m.length; i++) m[i] = vCounts[c][i] > 0.9 * vLearned;
+            clean(m);
+            int n = 0;
+            for (boolean b : m) if (b) n++;
+            if (n >= 40) {
+                variantCorner.add(new int[]{c, n});
+                variantMask.add(m);
+                found = true;
+            }
+        }
+        resetVariant();
+        return found;
+    }
+
+    void resetVariant() {
+        vCounts = null;
+        vLearned = 0;
     }
 
     void relearn() {
@@ -160,15 +208,21 @@ final class Logo {
 
     void save(Context c, String key) {
         if (mask == null) return;
-        StringBuilder b = new StringBuilder().append(corner).append('\n');
-        for (int y = 0; y < CH; y++) {
-            for (int x = 0; x < CW; x++) b.append(mask[y * CW + x] ? '1' : '0');
-            b.append('\n');
-        }
+        StringBuilder b = new StringBuilder();
+        block(b, corner, mask);
+        for (int k = 0; k < variantMask.size(); k++) block(b, variantCorner.get(k)[0], variantMask.get(k));
         try {
             Files.write(file(c, key).toPath(), b.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             Log.add(c, "Logo nicht gespeichert: " + e.getMessage());
+        }
+    }
+
+    private static void block(StringBuilder b, int corner, boolean[] m) {
+        b.append(corner).append('\n');
+        for (int y = 0; y < CH; y++) {
+            for (int x = 0; x < CW; x++) b.append(m[y * CW + x] ? '1' : '0');
+            b.append('\n');
         }
     }
 
@@ -186,15 +240,26 @@ final class Logo {
         }
         if (txt != null) {
             String[] lines = txt.split("\n");
-            l.corner = Integer.parseInt(lines[0].trim());
-            l.mask = new boolean[CW * CH];
-            for (int y = 0; y < CH && y + 1 < lines.length; y++)
-                for (int x = 0; x < CW && x < lines[y + 1].length(); x++)
-                    if (lines[y + 1].charAt(x) == '1') {
-                        l.mask[y * CW + x] = true;
-                        l.points++;
-                    }
-            if (l.points < 30) l.mask = null;
+            for (int at = 0; at + CH < lines.length + 1 && at < lines.length && !lines[at].trim().isEmpty(); at += CH + 1) {
+                int corner = Integer.parseInt(lines[at].trim());
+                boolean[] m = new boolean[CW * CH];
+                int n = 0;
+                for (int y = 0; y < CH && at + 1 + y < lines.length; y++)
+                    for (int x = 0; x < CW && x < lines[at + 1 + y].length(); x++)
+                        if (lines[at + 1 + y].charAt(x) == '1') {
+                            m[y * CW + x] = true;
+                            n++;
+                        }
+                if (n < 30) continue;
+                if (l.mask == null) {
+                    l.corner = corner;
+                    l.mask = m;
+                    l.points = n;
+                } else {
+                    l.variantCorner.add(new int[]{corner, n});
+                    l.variantMask.add(m);
+                }
+            }
         }
         return l;
     }

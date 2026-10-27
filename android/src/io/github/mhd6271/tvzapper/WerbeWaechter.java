@@ -202,6 +202,20 @@ final class WerbeWaechter implements Sensor.Frames {
             Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
         }
         long now = System.currentTimeMillis();
+        // Waehrend "Werbung" nach einer neuen Logo-Variante suchen (ab 20 s, dann ~2 min Bilder sammeln)
+        if (pause && now - pauseSince > 20_000 && logo.learnVariant(top, bottom, w)) {
+            logo.save(c, homeKey);
+            Log.add(c, "Neue Logo-Variante für " + home.name + " gelernt – war keine Werbung");
+            dump("variante_" + homeKey);
+            // Fehlalarm: nicht als Pause zaehlen, Sender nicht mehr meiden, zurueckschalten
+            pause = false;
+            adUntil.remove(home.name);
+            seconds.clear();
+            if (away) {
+                away = false;
+                if (svc.tuneTo(home, "Doch keine Werbung – zurück zu " + home.name)) returnedAt = now;
+            }
+        }
         if (secStart == 0) secStart = now;
         secSum += v;
         secN++;
@@ -288,6 +302,7 @@ final class WerbeWaechter implements Sensor.Frames {
         if (!pause && share(win, false) >= .8f) {
             pause = true;
             pauseSince = System.currentTimeMillis();
+            logo.resetVariant();
             long avg = PauseStats.averageSec(c, home.name);
             adUntil.put(home.name, pauseSince + (avg > 0 ? avg * 1000 : Config.load(c).pauseMaxMin * 60_000L));
             Log.add(c, "WERBUNG auf " + home.name + (fresh ? " (gleich beim Hineinschalten)" : ""));
