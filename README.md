@@ -81,7 +81,13 @@ Die Grundeinstellung sind meine Interessen – nach dem Einrichten unter „Konf
   („Programmzeitschrift“, „Drücken Sie …“).
 - In der Programmzeitschrift eine **eigene Senderliste** (Reiter) mit den Sendern, die in Frage kommen;
   ihr Name wird beim Einrichten eingetragen (bei mir `Favorit1`).
-- Am Fernseher **Entwickleroptionen → USB-Debugging** und **ADB über Netzwerk** an, Port 5555.
+- Der Fernseher muss **ADB über das Netzwerk auf Port 5555** annehmen. Nach
+  [Googles Anleitung](https://developers.google.com/cast/docs/android_tv_receiver/debugging):
+  Entwickleroptionen freischalten (in den Einstellungen unter Info die Build-Nummer mehrmals mit OK anklicken,
+  der Menüweg ist je Hersteller anders), dort **USB-Debugging** an. Viele Geräte lauschen danach noch nicht auf
+  5555; dann einmal von einem Rechner aus `adb tcpip 5555` (per USB-Kabel). Prüfen: `adb connect <TV-IP>:5555`
+  muss `connected` melden. Wie mein TCL damals freigeschaltet wurde, ist nicht festgehalten; bei ihm ist Port 5555
+  offen (Stand 27.10.2026).
   Die Adresse des Fernsehers steht unter Einstellungen → Netzwerk; am besten im Router fest vergeben.
 - Home Assistant mit Zugriff auf den Ordner `config` (z. B. Add-on „Samba share“).
 
