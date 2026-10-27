@@ -125,3 +125,18 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
         await st.jetzt_lesen()
     assert hass.states.get("sensor.tv_zapper_lauft_jetzt").state == "Fernseher aus"
+
+
+async def test_adresse_aendern(hass: HomeAssistant):
+    entry = await _einrichten(hass)
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.sh", AsyncMock(return_value="tvz-ok\n")):
+        r = await hass.config_entries.flow.async_init(
+            "tv_zapper", context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": entry.entry_id})
+        assert r["type"] is FlowResultType.FORM and r["step_id"] == "reconfigure"
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.0.2.62", "port": 5556})
+        await hass.async_block_till_done()
+    assert r["type"] is FlowResultType.ABORT and r["reason"] == "reconfigure_successful"
+    assert entry.data == {"host": "192.0.2.62", "port": 5556} and entry.unique_id == "192.0.2.62:5556"
+    assert entry.runtime_data.tv.host == "192.0.2.62"   # neu geladen, Optionen bleiben
+    assert entry.options["favorit"] == "Favorit1"

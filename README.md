@@ -111,7 +111,7 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 
 | Einstellung | Bedeutung |
 |---|---|
-| Adresse / Port | IP-Adresse des Fernsehers / 5555 |
+| Adresse / Port | IP-Adresse des Fernsehers / ADB-Port 5555 – beim Einrichten, später an der Integration über ⋮ → **Neu konfigurieren** (Einstellungen bleiben) |
 | Senderliste | Name des Reiters in der Programmzeitschrift, Standard `Favorit1` |
 | Interessen | eine Zeile je Kategorie: `Name \| Gewicht \| wort, wort*, …` |
 | Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
@@ -123,6 +123,15 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
 | TV-Protokoll | jede Minute nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
 | MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
+
+Mehr muss man nicht kennen: Alles oben steht in HA (Einrichten, „Konfigurieren“, „Neu konfigurieren“), nichts in
+Dateien. Die TV-App braucht **keine eigene Adresse und keinen Port** – HA erreicht sie über dieselbe ADB-Verbindung
+(`am broadcast`, ihre Empfänger nehmen nur Aufträge aus der adb-Shell an). ADB und die IP des Fernsehers sind also
+immer nötig, mit und ohne App. Den ADB-Schlüssel legt HA selbst an (`/config/.storage/tv_zapper_adbkey`).
+Fest im Code und nicht einstellbar: die TCL-Programme (`com.tcl.tv`), die Namen der App-Schnittstelle,
+Wake-on-LAN an Port 9 (Broadcast und direkt an den Fernseher), 90 Sekunden Warten nach dem Wecken, TV-Protokoll
+jede Minute. Was die TV-App selbst einstellt (ihre Interessen, Senderauswahl, Werbe-Sensor), stellt man in der App ein;
+HA bewertet mit seinen eigenen Interessen.
 
 **Entitäten** (Gerät „TV-Zapper“):
 

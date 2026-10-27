@@ -9,13 +9,22 @@
           "port": "ADB-Port",
           "favorit": "Name der Senderliste in der Programmzeitschrift"
         }
+      },
+      "reconfigure": {
+        "title": "TV-Zapper: Adresse ändern",
+        "description": "Neue Adresse oder neuer ADB-Port des Fernsehers. Die Einstellungen bleiben erhalten. {fehler}",
+        "data": {
+          "host": "Adresse (IP) des Fernsehers",
+          "port": "ADB-Port"
+        }
       }
     },
     "error": {
       "cannot_connect": "Keine ADB-Verbindung zum Fernseher. Ist er an, ADB über Netzwerk eingeschaltet und die Abfrage am Fernseher bestätigt?"
     },
     "abort": {
-      "already_configured": "Dieser Fernseher ist schon eingerichtet."
+      "already_configured": "Dieser Fernseher ist schon eingerichtet.",
+      "reconfigure_successful": "Adresse geändert."
     }
   },
   "options": {

@@ -30,6 +30,22 @@ def _minuten(maximum):
 class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    async def _verbindung_pruefen(self, host, port, errors, platzhalter):
+        signer = await self.hass.async_add_executor_job(lade_signer, self.hass.config.path(SCHLUESSEL_DATEI))
+        tv = Fernseher(host, port, signer)
+        try:
+            # 60 s Zeit, um am Fernseher "USB-Debugging zulassen" (immer zulassen) zu bestaetigen
+            await tv.verbinden(auth_timeout=60)
+            antwort = await tv.sh("echo tvz-ok")
+            if "tvz-ok" not in antwort:
+                raise RuntimeError(f"unerwartete Antwort: {antwort!r}")
+        except Exception as e:  # noqa: BLE001
+            _LOGGER.warning("Verbindung zu %s:%s fehlgeschlagen: %r", host, port, e)
+            errors["base"] = "cannot_connect"
+            platzhalter["fehler"] = f"{type(e).__name__}: {e}"
+        finally:
+            await tv.trennen()
+
     async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         errors, platzhalter = {}, {"fehler": ""}
         if user_input is not None:
@@ -37,20 +53,7 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
             # raise_on_progress=False: ein fehlgeschlagener, noch offener Versuch soll keinen neuen blockieren
             await self.async_set_unique_id(f"{host}:{port}", raise_on_progress=False)
             self._abort_if_unique_id_configured()
-            signer = await self.hass.async_add_executor_job(lade_signer, self.hass.config.path(SCHLUESSEL_DATEI))
-            tv = Fernseher(host, port, signer)
-            try:
-                # 60 s Zeit, um am Fernseher "USB-Debugging zulassen" (immer zulassen) zu bestaetigen
-                await tv.verbinden(auth_timeout=60)
-                antwort = await tv.sh("echo tvz-ok")
-                if "tvz-ok" not in antwort:
-                    raise RuntimeError(f"unerwartete Antwort: {antwort!r}")
-            except Exception as e:  # noqa: BLE001
-                _LOGGER.warning("Verbindung zu %s:%s fehlgeschlagen: %r", host, port, e)
-                errors["base"] = "cannot_connect"
-                platzhalter["fehler"] = f"{type(e).__name__}: {e}"
-            finally:
-                await tv.trennen()
+            await self._verbindung_pruefen(host, port, errors, platzhalter)
             if not errors:
                 return self.async_create_entry(
                     title=f"TV-Zapper {host}",
@@ -64,6 +67,25 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_FAVORIT, default=vorgabe.get(CONF_FAVORIT, "Favorit1")): str,
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors,
+                                    description_placeholders=platzhalter)
+
+    async def async_step_reconfigure(self, user_input=None) -> ConfigFlowResult:
+        """Adresse oder Port spaeter aendern (z. B. neue IP vom Router), ohne neu einzurichten."""
+        entry = self._get_reconfigure_entry()
+        errors, platzhalter = {}, {"fehler": ""}
+        if user_input is not None:
+            host, port = user_input[CONF_HOST].strip(), int(user_input[CONF_PORT])
+            await self._verbindung_pruefen(host, port, errors, platzhalter)
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    entry, unique_id=f"{host}:{port}", title=f"TV-Zapper {host}",
+                    data_updates={CONF_HOST: host, CONF_PORT: port})
+        vorgabe = user_input or entry.data
+        schema = vol.Schema({
+            vol.Required(CONF_HOST, default=vorgabe.get(CONF_HOST, "")): str,
+            vol.Required(CONF_PORT, default=vorgabe.get(CONF_PORT, 5555)): int,
+        })
+        return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors,
                                     description_placeholders=platzhalter)
 
     @staticmethod
