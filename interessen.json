@@ -46,6 +46,33 @@
       ]
     },
     {
+      "name": "Mysterien/Aliens",
+      "gewicht": 4,
+      "woerter": [
+        "unerklärlich*",
+        "phänomen*",
+        "alien*",
+        "ancient aliens",
+        "ufo*",
+        "außerirdisch*",
+        "pyramide*",
+        "däniken",
+        "von däniken",
+        "mysterium",
+        "mysterien",
+        "mystery",
+        "rätsel*",
+        "atlantis",
+        "area 51",
+        "prä-astronautik",
+        "maya",
+        "stonehenge",
+        "verschwörung*",
+        "übernatürlich*",
+        "paranormal*"
+      ]
+    },
+    {
       "name": "Musik",
       "gewicht": 3,
       "woerter": [
