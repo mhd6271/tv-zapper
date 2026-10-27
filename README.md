@@ -152,6 +152,8 @@ HA bewertet mit seinen eigenen Interessen.
   HA weicht selbst nicht vor Werbung aus. Setzen per `EINSTELLEN` über die App-Schnittstelle, Zustand aus
   `ABFRAGEN`; „nicht verfügbar“, solange die App die Einstellung nicht meldet (ältere App, App oder Fernseher nicht
   erreichbar, TV-Protokoll aus).
+  Ist gerade die Einstellungsseite der TV-App offen, speichert sie beim Schließen ihren eigenen Stand und
+  überschreibt einen in der Zeit aus HA gesetzten Wert (laut App-Sitzung, 27.10.2026).
 - `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
 - Ereignis `tv_zapper_durchgang` nach jedem Durchgang (mit allen Treffern) für eigene Automationen.
 - **Einblendung am Fernseher** (Option, Standard an): beim Einschalten („TV-Zapper an – läuft bis …“), nach jedem
