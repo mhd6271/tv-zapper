@@ -35,6 +35,9 @@ public class ZapperService extends Service {
     private Handler handler;
     private PowerManager.WakeLock wake;
     private boolean once, readOnly;
+    private HandlerThread adThread;
+    private Handler adHandler;
+    static volatile WerbeWaechter waechter;
 
     @Override
     public void onCreate() {
@@ -55,6 +58,7 @@ public class ZapperService extends Service {
         startForeground(1, notification("Läuft"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         handler.removeCallbacksAndMessages(null);
         once = ACTION_ONCE.equals(action);
+        if (!once && waechter == null) startWaechter();
         readOnly = intent.getBooleanExtra(EXTRA_READ_ONLY, false);
         Config cfg = Config.load(this);
         endAt = once ? System.currentTimeMillis() : System.currentTimeMillis() + cfg.runMin * 60_000L;
@@ -67,6 +71,27 @@ public class ZapperService extends Service {
         // Beim Start aus der App heraus ist sie selbst noch vorn – kurz warten, bis das Fernsehbild zurueck ist
         handler.postDelayed(this::tick, once ? 0 : 5000);
         return START_NOT_STICKY;
+    }
+
+    private void startWaechter() {
+        waechter = new WerbeWaechter(this);
+        adThread = new HandlerThread("werbung");
+        adThread.start();
+        adHandler = new Handler(adThread.getLooper());
+        adHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                WerbeWaechter w = waechter;
+                if (w == null) return;
+                try {
+                    if (Config.load(ZapperService.this).avoidAds) w.tick();
+                    else w.shutdown();
+                } catch (Exception e) {
+                    Log.add(ZapperService.this, "Werbe-Sensor Fehler: " + e);
+                }
+                adHandler.postDelayed(this, 2500);
+            }
+        });
     }
 
     private void tick() {
@@ -97,6 +122,11 @@ public class ZapperService extends Service {
 
     void cycle(boolean readOnly) {
         Config cfg = Config.load(this);
+        WerbeWaechter w = waechter;
+        if (!readOnly && w != null && w.isAway()) {
+            Log.add(this, "Werbepause läuft – Zapper wartet");
+            return;
+        }
         String fg = foregroundApp(this);
         boolean screenOn = getSystemService(PowerManager.class).isInteractive();
         if (!readOnly && (!screenOn || !TV_PKG.equals(fg))) {
@@ -158,27 +188,34 @@ public class ZapperService extends Service {
     }
 
     private void tune(Scored s) {
-        Intent i = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(s.ch.id));
+        String what = s.res.hits.isEmpty() ? "" : String.join(", ", s.res.hits) + ", ";
+        if (tuneTo(s.ch, s.ch.name + (s.prog == null ? "" : " – " + s.prog.title) + "  (" + what + s.points + " P.)"))
+            updateNotification(s.ch.number + " " + s.ch.name + (s.prog == null ? "" : ": " + s.prog.title));
+    }
+
+    /** Auf einen Sender schalten, pruefen, ob der Fernseher ihn meldet, Einblendung zeigen. */
+    synchronized boolean tuneTo(Epg.Channel ch, String banner) {
+        Intent i = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(ch.id));
         i.setPackage(TV_PKG);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(i);
         } catch (Exception e) {
             Log.add(this, "Umschalten fehlgeschlagen: " + e.getMessage());
-            return;
+            return false;
         }
-        try {
-            Thread.sleep(4000);
-        } catch (InterruptedException ignored) {
+        boolean ok = false;
+        for (int k = 0; k < 8 && !ok; k++) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ignored) {
+            }
+            ok = Epg.currentChannelId(this) == ch.id;
         }
-        boolean ok = Epg.currentChannelId(this) == s.ch.id;
-        Log.add(this, (ok ? "→ umgeschaltet auf " : "→ Umschalten auf ") + s.ch.number + " " + s.ch.name
+        Log.add(this, (ok ? "→ umgeschaltet auf " : "→ Umschalten auf ") + ch.number + " " + ch.name
                 + (ok ? "" : " nicht bestätigt (Fernseher meldet " + Epg.currentChannelId(this) + ")"));
-        if (ok) {
-            String what = s.res.hits.isEmpty() ? "" : String.join(", ", s.res.hits) + ", ";
-            Banner.show(this, s.ch.name + (s.prog == null ? "" : " – " + s.prog.title) + "  (" + what + s.points + " P.)", 6000);
-        }
-        updateNotification(s.ch.number + " " + s.ch.name + (s.prog == null ? "" : ": " + s.prog.title));
+        if (ok) Banner.show(this, banner, 6000);
+        return ok;
     }
 
     static String describe(Scored s) {
@@ -190,18 +227,23 @@ public class ZapperService extends Service {
         return b.toString();
     }
 
-    /** Paket der zuletzt nach vorn gekommenen App (Nutzungszugriff noetig), null wenn unbekannt. */
-    static String foregroundApp(Context c) {
+    private static long fgQueried;
+    private static String fgLast;
+
+    /** Paket der zuletzt nach vorn gekommenen App (Nutzungszugriff noetig), null wenn unbekannt.
+     *  Liest nur die Ereignisse seit der letzten Abfrage (wird alle paar Sekunden gefragt). */
+    static synchronized String foregroundApp(Context c) {
         UsageStatsManager um = c.getSystemService(UsageStatsManager.class);
         long now = System.currentTimeMillis();
-        UsageEvents ev = um.queryEvents(now - 12 * 3600_000L, now);
+        long from = fgQueried == 0 ? now - 7 * 24 * 3600_000L : fgQueried - 2000;
+        UsageEvents ev = um.queryEvents(from, now);
         UsageEvents.Event e = new UsageEvents.Event();
-        String last = null;
         while (ev != null && ev.hasNextEvent()) {
             ev.getNextEvent(e);
-            if (e.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) last = e.getPackageName();
+            if (e.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) fgLast = e.getPackageName();
         }
-        return last;
+        fgQueried = now;
+        return fgLast;
     }
 
     private Notification notification(String text) {
@@ -225,6 +267,10 @@ public class ZapperService extends Service {
 
     @Override
     public void onDestroy() {
+        WerbeWaechter w = waechter;
+        waechter = null;
+        if (w != null) w.shutdown();
+        if (adThread != null) adThread.quitSafely();
         endAt = 0;
         nextAt = 0;
         handler.removeCallbacksAndMessages(null);

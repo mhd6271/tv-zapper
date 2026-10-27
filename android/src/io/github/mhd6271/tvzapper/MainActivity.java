@@ -33,7 +33,8 @@ public class MainActivity extends Activity {
     private Config cfg;
     private LinearLayout root, catBox, chanBox;
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
-    private EditText never, runH, runM, dwell, bonus;
+    private EditText never, runH, runM, dwell, bonus, adFree, fritz;
+    private Button adToggle;
     private TextView status, perms, log;
     private boolean showAllChannels;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -164,6 +165,27 @@ public class MainActivity extends Activity {
         root.addView(chanBox);
         fillChannels();
 
+        section("Werbung umgehen");
+        root.addView(text("Die FRITZ!Box empfängt den laufenden Sender nebenher mit. Verschwindet sein Senderlogo "
+                + "(Werbung), schaltet der Fernseher auf den besten werbefreien Sender unten und nach der Pause zurück. "
+                + "Neue Sender: Logo wird beim ersten Mal etwa 5 min gelernt.", 14, false));
+        adToggle = button("", v -> {
+            cfg.avoidAds = !cfg.avoidAds;
+            adToggle.setText("Werbung umgehen: " + (cfg.avoidAds ? "an" : "aus"));
+            cfg.save(this);
+        });
+        adToggle.setText("Werbung umgehen: " + (cfg.avoidAds ? "an" : "aus"));
+        root.addView(adToggle);
+        root.addView(text("Werbefreie Ausweichsender (Namen wie in der Senderliste, Reihenfolge = Vorrang):", 14, false));
+        adFree = edit(String.join(", ", cfg.adFree), true);
+        root.addView(adFree);
+        LinearLayout fr = row();
+        fr.addView(text("FRITZ!Box-Adresse:", 16, false));
+        fritz = edit(cfg.fritz, false);
+        fritz.setMinWidth(dp(220));
+        fr.addView(fritz);
+        root.addView(fr);
+
         section("Protokoll");
         log = text("", 13, false);
         log.setTypeface(android.graphics.Typeface.MONOSPACE);
@@ -244,6 +266,9 @@ public class MainActivity extends Activity {
         cfg.runMin = Math.max(1, parse(runH.getText().toString(), 0) * 60 + parse(runM.getText().toString(), 0));
         cfg.dwellMin = Math.max(1, parse(dwell.getText().toString(), 5));
         cfg.bonus = parse(bonus.getText().toString(), 0);
+        cfg.adFree = Config.splitList(adFree.getText().toString());
+        String f = fritz.getText().toString().trim();
+        cfg.fritz = f.isEmpty() ? "fritz.box" : f;
     }
 
     private void start(String action, boolean readOnly) {
@@ -260,6 +285,8 @@ public class MainActivity extends Activity {
         status.setText(end > System.currentTimeMillis()
                 ? "Läuft bis " + hm.format(new Date(end)) + (next > 0 ? ", nächste Prüfung " + hm.format(new Date(next)) : "")
                 : "Steht.");
+        WerbeWaechter w = ZapperService.waechter;
+        if (w != null) status.append("   " + w.status());
         boolean listings = checkSelfPermission(PERM_LISTINGS) == PackageManager.PERMISSION_GRANTED;
         boolean usage = usageAccess();
         boolean overlay = Settings.canDrawOverlays(this);

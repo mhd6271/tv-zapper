@@ -12,6 +12,8 @@
     <!-- Senderliste und laufende Sendungen aus der Android-TV-Datenbank (TvContract) -->
     <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- Werbeerkennung: Senderliste und Stream von der FRITZ!Box im Heimnetz -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Dauerlauf im Hintergrund -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -31,7 +33,8 @@
         android:icon="@drawable/icon"
         android:banner="@drawable/banner"
         android:theme="@android:style/Theme.DeviceDefault"
-        android:allowBackup="false">
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"

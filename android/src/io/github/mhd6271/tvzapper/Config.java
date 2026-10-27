@@ -38,6 +38,12 @@ final class Config {
     Map<String, String> channels = new LinkedHashMap<>();
     Map<String, Integer> prefBonus = new LinkedHashMap<>();
     String newChannels = AUS;
+    /** Werbung umgehen ueber die FRITZ!Box als zweiten Empfaenger. */
+    boolean avoidAds = true;
+    String fritz = "fritz.box";
+    /** Werbefreie Ausweichsender, bei gleicher Punktzahl gilt die Reihenfolge. */
+    List<String> adFree = new ArrayList<>(java.util.Arrays.asList("ZDFinfo HD", "zdf_neo HD", "arte HD",
+            "tagesschau24 HD", "3sat HD", "phoenix HD", "WDR HD Köln", "hr-fernsehen HD"));
 
     /** Eigene Einstellung des Senders, sonst die Markierung des Fernsehers (Favorit1 = an), sonst newChannels. */
     String state(Epg.Channel ch) {
@@ -91,6 +97,9 @@ final class Config {
         cfg.runMin = o.optInt("laufzeit_min", 60);
         cfg.bonus = o.optInt("bonus_bevorzugt", 2);
         cfg.newChannels = o.optString("neue_sender", AUS);
+        cfg.avoidAds = o.optBoolean("werbung_umgehen", true);
+        cfg.fritz = o.optString("fritzbox", "fritz.box");
+        if (o.has("werbefrei")) cfg.adFree = strings(o.optJSONArray("werbefrei"));
         for (String n : strings(o.optJSONArray("sender_an"))) cfg.channels.put(n, AN);
         JSONObject pref = o.optJSONObject("sender_bevorzugt");
         if (pref != null) {
@@ -120,6 +129,9 @@ final class Config {
         o.put("laufzeit_min", runMin);
         o.put("bonus_bevorzugt", bonus);
         o.put("neue_sender", newChannels);
+        o.put("werbung_umgehen", avoidAds);
+        o.put("fritzbox", fritz);
+        o.put("werbefrei", new JSONArray(adFree));
         JSONArray on = new JSONArray(), nie = new JSONArray();
         JSONObject pref = new JSONObject();
         for (Map.Entry<String, String> e : channels.entrySet()) {

@@ -13,6 +13,7 @@ KS=${TVZ_KEYSTORE:-$HOME/.android/debug.keystore}
 OUT=build
 
 rm -rf $OUT && mkdir -p $OUT/res $OUT/classes $OUT/dex $OUT/assets
+cp -R assets/. $OUT/assets/
 cp ../interessen.json $OUT/assets/interessen.json
 
 "$BT/aapt2" compile --dir res -o $OUT/res.zip
