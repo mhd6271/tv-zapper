@@ -10,7 +10,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers import selector
 
 from .const import (
-    CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
+    CONF_AUS, CONF_EINBLENDUNG, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
     CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
@@ -96,6 +96,7 @@ class TvZapperOptionsFlow(OptionsFlow):
                     CONF_SENDER_NIE: woerter_zu_liste(user_input.get(CONF_SENDER_NIE, "")),
                     CONF_SENDER_BEVORZUGT: bonus,
                     CONF_NUR_LESEN: user_input[CONF_NUR_LESEN],
+                    CONF_EINBLENDUNG: user_input[CONF_EINBLENDUNG],
                 })
         vorgabe = user_input or {
             **opt,
@@ -113,6 +114,7 @@ class TvZapperOptionsFlow(OptionsFlow):
             vol.Required(CONF_VERWEILEN, default=vorgabe[CONF_VERWEILEN]): _minuten(120),
             vol.Required(CONF_FAVORIT, default=vorgabe[CONF_FAVORIT]): str,
             vol.Required(CONF_NUR_LESEN, default=vorgabe[CONF_NUR_LESEN]): bool,
+            vol.Required(CONF_EINBLENDUNG, default=vorgabe[CONF_EINBLENDUNG]): bool,
         })
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors,
                                     description_placeholders=platzhalter)

@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import re
+import shlex
 
 from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
@@ -19,6 +20,9 @@ from .logik import bewerte, bewerte_sendung, parse_guide, parse_xml, soll_umscha
 _LOGGER = logging.getLogger(__name__)
 
 TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
+# Einblendung ueber die TV-App aus android/ (Overlay wie deren eigene Meldung nach dem Umschalten)
+EINBLENDEN_ACTION = "io.github.mhd6271.tvzapper.EINBLENDEN"
+EINBLENDEN_EMPFAENGER = "io.github.mhd6271.tvzapper/.EinblendungEmpfaenger"
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 
 
@@ -158,9 +162,13 @@ class Fernseher:
             return new
 
         take(await self.dump())
-        await self.nur_in_guide("Blaettern")
-        await self.key(*["KEYCODE_DPAD_UP"] * 120)          # an den Anfang der Liste
-        await asyncio.sleep(1.5)
+        # an den Anfang der Liste - in kleinen Stuecken und jedes Mal pruefen, dass die
+        # Programmzeitschrift noch vorn ist: im Fernsehbild schaltet jedes Hoch einen Sender weiter.
+        for _ in range(6):
+            await self.nur_in_guide("Blaettern")
+            await self.key(*["KEYCODE_DPAD_UP"] * 20)
+            await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
         take(await self.dump())
         idle = 0
         for schritt in range(200):
@@ -190,6 +198,18 @@ class Fernseher:
             await self.close_guide()
         except Exception as e:  # noqa: BLE001
             _LOGGER.warning("Programmzeitschrift liess sich nach Fehler nicht schliessen: %s", e)
+
+    async def einblenden(self, text: str, ms: int = 6000) -> str:
+        """Text im Fernsehbild zeigen. Ueber die TV-App, wenn sie den Auftrag annimmt, sonst als
+        Android-Benachrichtigung (ob Google TV die sichtbar einblendet, ist geraeteabhaengig).
+        -> "app" / "benachrichtigung"."""
+        app = await self.sh(f"cmd package query-receivers --brief -a {EINBLENDEN_ACTION}")
+        if "EinblendungEmpfaenger" in app:
+            await self.sh(f"am broadcast -a {EINBLENDEN_ACTION} -n {EINBLENDEN_EMPFAENGER} "
+                          f"--es text {shlex.quote(text)} --ei ms {int(ms)}")
+            return "app"
+        await self.sh(f"cmd notification post -S bigtext -t {shlex.quote('TV-Zapper')} tvzapper {shlex.quote(text)}")
+        return "benachrichtigung"
 
     async def verify(self, cand, cfg):
         """Nach dem Umschalten: Programmzeitschrift oeffnen (startet beim laufenden Sender) und

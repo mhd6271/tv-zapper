@@ -97,6 +97,11 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
   Automation ändern und wirken sofort, auch auf einen laufenden Zapper.
 - `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
 - Ereignis `tv_zapper_durchgang` nach jedem Durchgang (mit allen Treffern) für eigene Automationen.
+- **Einblendung am Fernseher** (Option, Standard an): beim Einschalten („TV-Zapper an – läuft bis …“), nach jedem
+  Umschalten („Sender – Sendung (Kategorien, Punkte)“) und am Ende. HA kann selbst nichts ins Bild zeichnen:
+  Ist die TV-App aus `android/` mit dem Empfänger `EinblendungEmpfaenger` installiert, blendet sie den Text ein
+  (`am broadcast -a io.github.mhd6271.tvzapper.EINBLENDEN … --es text …`), sonst schickt HA eine normale
+  Android-Benachrichtigung – ob Google TV die sichtbar zeigt, ist noch nicht getestet.
 
 Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
 Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten

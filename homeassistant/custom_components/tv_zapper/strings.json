@@ -31,7 +31,8 @@
           "favorit": "Name der Senderliste in der Programmzeitschrift",
           "nur_lesen": "Nur lesen (nie umschalten, zum Testen)",
           "sender_nie": "Sender nie nehmen (Sendernamen wie in der Programmzeitschrift, mit Komma getrennt)",
-          "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)"
+          "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)",
+          "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)"
         }
       }
     },

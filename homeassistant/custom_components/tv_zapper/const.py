@@ -15,6 +15,7 @@ CONF_AUS = "aus"
 CONF_NUR_LESEN = "nur_lesen"
 CONF_SENDER_NIE = "sender_nie"
 CONF_SENDER_BEVORZUGT = "sender_bevorzugt"
+CONF_EINBLENDUNG = "einblendung"
 
 # Grundeinstellung = Kopie von interessen.json im Repo (beim Aendern dort neu kopieren, ein Test prueft das)
 _VORLAGE = json.loads((pathlib.Path(__file__).parent / "vorlage.json").read_text(encoding="utf-8"))
@@ -32,4 +33,5 @@ STANDARD_OPTIONEN = {
     CONF_SENDER_NIE: STANDARD_SENDER_NIE,
     CONF_SENDER_BEVORZUGT: STANDARD_SENDER_BEVORZUGT,
     CONF_NUR_LESEN: False,
+    CONF_EINBLENDUNG: True,
 }

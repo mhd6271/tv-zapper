@@ -112,3 +112,18 @@ def test_echte_programmzeitschrift():
     assert rows[0] == (75, "Comedy Central HD", "Futurama")
     assert [r[0] for r in rows[:4]] == [75, 76, 77, 78]
     assert header["title"] == "Futurama" and tab == "Alle"
+
+
+async def test_einblenden_app_oder_benachrichtigung():
+    from custom_components.tv_zapper import meldung_umgeschaltet
+    assert meldung_umgeschaltet({"sender": "MTV HD", "sendung": "Love & Hip Hop", "punkte": 7,
+                                 "treffer": ["Hip-Hop/Rap", "Dokumentation"]}) == \
+        "MTV HD – Love & Hip Hop  (Hip-Hop/Rap, Dokumentation, 7 P.)"
+    f = tv.Fernseher("x", 1, None)
+    f.sh = AsyncMock(side_effect=["io.github.mhd6271.tvzapper/.EinblendungEmpfaenger", ""])
+    assert await f.einblenden("Bob's Burgers") == "app"
+    befehl = f.sh.call_args_list[1].args[0]
+    assert "am broadcast" in befehl and "'Bob'\"'\"'s Burgers'" in befehl, befehl
+    f.sh = AsyncMock(side_effect=["No receivers found", ""])
+    assert await f.einblenden("TV-Zapper an") == "benachrichtigung"
+    assert "cmd notification post" in f.sh.call_args_list[1].args[0]

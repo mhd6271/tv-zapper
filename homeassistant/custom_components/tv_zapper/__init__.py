@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
-    CONF_SENDER_NIE, CONF_VERWEILEN,
+    CONF_EINBLENDUNG, CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .tv import Fernseher, lade_signer
@@ -43,6 +43,13 @@ async def _optionen_geaendert(hass: HomeAssistant, entry: ZapperEntry) -> None:
     # Kein Neuladen: ein laufender Zapper soll weiterlaufen und liest die Optionen je Durchgang neu.
     entry.runtime_data.tv.fav_tab = entry.runtime_data.opt(CONF_FAVORIT)
     entry.runtime_data.benachrichtigen()
+
+
+def meldung_umgeschaltet(x: dict) -> str:
+    """Wie die Einblendung der TV-App: `Sender – Sendung  (Kategorien, 7 P.)`."""
+    was = ", ".join(x.get("treffer") or [])
+    return f"{x.get('sender')}" + (f" – {x['sendung']}" if x.get("sendung") else "") + \
+        f"  ({was + ', ' if was else ''}{x.get('punkte')} P.)"
 
 
 class Steuerung:
@@ -100,16 +107,32 @@ class Steuerung:
                 await self.task
             except asyncio.CancelledError:
                 pass
+            await self.einblenden("TV-Zapper aus")
         self.task = None
 
     def _restzeit_s(self) -> float:
         return self.start + self.opt(CONF_LAUFZEIT) * 60 - time.monotonic()
 
+    async def einblenden(self, text: str):
+        """Meldung im Fernsehbild (Option "Einblendung"); Fehler dabei stoeren das Zappen nicht."""
+        if not self.opt(CONF_EINBLENDUNG):
+            return
+        async with self._lock:
+            try:
+                weg = await self.tv.einblenden(text)
+                _LOGGER.debug("Einblendung (%s): %s", weg, text)
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.info("Einblendung nicht moeglich: %s", e)
+                await self.tv.trennen()
+
     async def _schleife(self):
         fails = 0
         try:
+            await self.einblenden(f"TV-Zapper an – läuft bis {self.ende:%H:%M}")
             while True:
                 ergebnis = await self.durchgang(self.opt(CONF_NUR_LESEN))
+                if ergebnis["aktion"] == "umgeschaltet" and ergebnis.get("neu"):
+                    await self.einblenden(meldung_umgeschaltet(ergebnis["neu"]))
                 fails = fails + 1 if ergebnis["aktion"] == "fehler" else 0
                 if fails >= 3:
                     _LOGGER.warning("Dreimal hintereinander fehlgeschlagen - TV-Zapper aus")
@@ -119,6 +142,8 @@ class Steuerung:
                     break
                 await asyncio.sleep(takt)
         finally:
+            if not asyncio.current_task().cancelling():
+                await self.einblenden("TV-Zapper aus")
             self.task = None
             self.start = self.ende = None
             await self.tv.trennen()

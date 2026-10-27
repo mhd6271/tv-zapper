@@ -64,7 +64,9 @@ async def test_alles(hass: HomeAssistant):
 
     # Knopf: nur lesen
     dg = AsyncMock(return_value=dict(ERGEBNIS))
+    eb = AsyncMock(return_value="app")
     with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", dg), \
+         patch("custom_components.tv_zapper.tv.Fernseher.einblenden", eb), \
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
         await hass.services.async_call("button", "press", {"entity_id": "button.tv_zapper_jetzt_prufen_nur_lesen"}, blocking=True)
         assert dg.call_args.args[1] is True
@@ -81,11 +83,14 @@ async def test_alles(hass: HomeAssistant):
         await hass.services.async_call("switch", "turn_off", {"entity_id": "switch.tv_zapper_zapper"}, blocking=True)
         await hass.async_block_till_done()
         assert hass.states.get("switch.tv_zapper_zapper").state == "off"
+        texte = [c.args[0] for c in eb.call_args_list]
+        assert texte[0].startswith("TV-Zapper an – läuft bis ") and texte[-1] == "TV-Zapper aus", texte
 
     # Fehler dreimal -> geht aus
     entry.runtime_data.entry.options  # noqa
     hass.config_entries.async_update_entry(entry, options={**entry.options, "verweilen_min": 1, "laufzeit_min": 60})
     with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", AsyncMock(side_effect=OSError("kein TV"))), \
+         patch("custom_components.tv_zapper.tv.Fernseher.einblenden", AsyncMock(side_effect=OSError("kein TV"))), \
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
          patch("custom_components.tv_zapper.asyncio.sleep", AsyncMock()):
         await hass.services.async_call("switch", "turn_on", {"entity_id": "switch.tv_zapper_zapper"}, blocking=True)
