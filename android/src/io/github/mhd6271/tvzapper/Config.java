@@ -41,6 +41,9 @@ final class Config {
     /** Werbung umgehen ueber die FRITZ!Box als zweiten Empfaenger. */
     boolean avoidAds = true;
     String fritz = "fritz.box";
+    /** Spaetestens nach so vielen Minuten zurueck zum Hauptsender, auch wenn der Sensor nichts meldet
+     *  (gemessene Durchschnittsdauer des Senders + 1 min, wenn bekannt). */
+    int pauseMaxMin = 6;
     /** Werbefreie Ausweichsender, bei gleicher Punktzahl gilt die Reihenfolge. */
     List<String> adFree = new ArrayList<>(java.util.Arrays.asList("ZDFinfo HD", "zdf_neo HD", "arte HD",
             "tagesschau24 HD", "3sat HD", "phoenix HD", "WDR HD Köln", "hr-fernsehen HD"));
@@ -99,6 +102,7 @@ final class Config {
         cfg.newChannels = o.optString("neue_sender", AUS);
         cfg.avoidAds = o.optBoolean("werbung_umgehen", true);
         cfg.fritz = o.optString("fritzbox", "fritz.box");
+        cfg.pauseMaxMin = o.optInt("werbepause_max_min", 6);
         if (o.has("werbefrei")) cfg.adFree = strings(o.optJSONArray("werbefrei"));
         for (String n : strings(o.optJSONArray("sender_an"))) cfg.channels.put(n, AN);
         JSONObject pref = o.optJSONObject("sender_bevorzugt");
@@ -131,6 +135,7 @@ final class Config {
         o.put("neue_sender", newChannels);
         o.put("werbung_umgehen", avoidAds);
         o.put("fritzbox", fritz);
+        o.put("werbepause_max_min", pauseMaxMin);
         o.put("werbefrei", new JSONArray(adFree));
         JSONArray on = new JSONArray(), nie = new JSONArray();
         JSONObject pref = new JSONObject();

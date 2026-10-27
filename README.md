@@ -209,7 +209,10 @@ Fernsehbild), nimmt ~3,4 Bilder/s in halber Auflösung und prüft in der Logo-Ec
 sind (`Logo.java`). Werbung = in 10 s mindestens 80 % ohne Logo, vorbei = in 30 s mindestens 80 % mit Logo.
 Dann schaltet sie auf den besten **werbefreien Ausweichsender** (Vorgabe ZDFinfo, zdf_neo, arte, tagesschau24,
 3sat, phoenix, WDR, hr – in der App änderbar, Punkte nach Interessen) und danach zurück, jeweils mit Einblendung.
-Schaltet man selbst um, wird der neue Sender beobachtet. Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
+Schaltet man selbst um, wird der neue Sender beobachtet. Spätestens nach einer Zeitgrenze geht es auf jeden Fall
+zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind: deren Durchschnitt + 1 min). Die
+gemessenen Pausen je Sender zeigt die App an (`werbepausen.json`). Öffentliche Zahlen zur Blocklänge je Sender gibt
+es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
 kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
 5 min und speichert sie.
 

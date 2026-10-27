@@ -33,7 +33,8 @@ public class MainActivity extends Activity {
     private Config cfg;
     private LinearLayout root, catBox, chanBox;
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
-    private EditText never, runH, runM, dwell, bonus, adFree, fritz;
+    private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax;
+    private TextView pauseStats;
     private Button adToggle;
     private TextView status, perms, log;
     private boolean showAllChannels;
@@ -194,6 +195,14 @@ public class MainActivity extends Activity {
         root.addView(text("Werbefreie Ausweichsender (Namen wie in der Senderliste, Reihenfolge = Vorrang):", 14, false));
         adFree = edit(String.join(", ", cfg.adFree), true);
         root.addView(adFree);
+        LinearLayout pm = row();
+        pm.addView(text("Spätestens zurück nach", 16, false));
+        pauseMax = number(String.valueOf(cfg.pauseMaxMin));
+        pm.addView(pauseMax);
+        pm.addView(text("min (gemessener Durchschnitt des Senders + 1 min, sobald bekannt)", 14, false));
+        root.addView(pm);
+        pauseStats = text("", 14, false);
+        root.addView(pauseStats);
         LinearLayout fr = row();
         fr.addView(text("FRITZ!Box-Adresse:", 16, false));
         fritz = edit(cfg.fritz, false);
@@ -282,6 +291,7 @@ public class MainActivity extends Activity {
         cfg.dwellMin = Math.max(1, parse(dwell.getText().toString(), 5));
         cfg.bonus = parse(bonus.getText().toString(), 0);
         cfg.adFree = Config.splitList(adFree.getText().toString());
+        cfg.pauseMaxMin = Math.max(1, parse(pauseMax.getText().toString(), 6));
         String f = fritz.getText().toString().trim();
         cfg.fritz = f.isEmpty() ? "fritz.box" : f;
     }
@@ -300,6 +310,11 @@ public class MainActivity extends Activity {
         status.setText(end > System.currentTimeMillis()
                 ? "Läuft bis " + hm.format(new Date(end)) + (next > 0 ? ", nächste Prüfung " + hm.format(new Date(next)) : "")
                 : "Steht.");
+        StringBuilder ps = new StringBuilder("Gemessene Werbepausen: ");
+        java.util.Map<String, String> st = PauseStats.summary(this);
+        if (st.isEmpty()) ps.append("noch keine");
+        for (java.util.Map.Entry<String, String> e : st.entrySet()) ps.append(e.getKey()).append(' ').append(e.getValue()).append("   ");
+        pauseStats.setText(ps.toString());
         WerbeWaechter w = ZapperService.waechter;
         if (w != null) status.append("   " + w.status());
         boolean listings = checkSelfPermission(PERM_LISTINGS) == PackageManager.PERMISSION_GRANTED;

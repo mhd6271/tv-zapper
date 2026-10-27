@@ -84,7 +84,14 @@ final class WerbeWaechter implements Sensor.Frames {
                 watch(cur);
             }
         }
-        if (away && pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
+        if (away && System.currentTimeMillis() - pauseSince > maxAwayMs()) {
+            Log.add(c, "Werbepause auf " + home.name + " läuft schon " + (System.currentTimeMillis() - pauseSince) / 60_000
+                    + " min – zurück (Zeitgrenze)");
+            away = false;
+            svc.tuneTo(home, "Zurück zu " + home.name);
+            return;
+        }
+        if (pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
             Log.add(c, "Werbung auf " + home.name + " dauert über 12 min – Logo wird neu gelernt, bleibe hier");
             if (logo != null) logo.relearn();
             away = false;
@@ -242,13 +249,22 @@ final class WerbeWaechter implements Sensor.Frames {
             if (Config.load(c).avoidAds) dodge();
         } else if (pause && share(WIN_OUT, true) >= .8f) {
             pause = false;
-            Log.add(c, "Werbung auf " + home.name + " vorbei (" + (System.currentTimeMillis() - pauseSince) / 1000 + " s)");
+            long secs = (System.currentTimeMillis() - pauseSince) / 1000;
+            Log.add(c, "Werbung auf " + home.name + " vorbei (" + secs + " s)");
+            PauseStats.add(c, home.name, secs);
             dump("vorbei_" + homeKey);
             if (away) {
                 away = false;
                 if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name)) awayChannel = -1;
             }
         }
+    }
+
+    /** Zeitgrenze fuer das Ausweichen: gemessener Durchschnitt des Senders + 1 min, sonst die Einstellung. */
+    private long maxAwayMs() {
+        long avg = PauseStats.averageSec(c, home.name);
+        long cfgMs = Config.load(c).pauseMaxMin * 60_000L;
+        return avg > 0 ? Math.min(cfgMs * 2, avg * 1000 + 60_000) : cfgMs;
     }
 
     /** Anteil der letzten n Sekunden mit (logo=true) bzw. ohne Logo. */
