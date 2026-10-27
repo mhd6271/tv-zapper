@@ -109,7 +109,7 @@ final class WerbeWaechter implements Sensor.Frames {
             Log.add(c, "Werbepause auf " + home.name + " läuft schon " + (System.currentTimeMillis() - pauseSince) / 60_000
                     + " min – zurück (Zeitgrenze)");
             away = false;
-            svc.tuneTo(home, "Zurück zu " + home.name);
+            if (svc.tuneTo(home, "Zurück zu " + home.name)) returnedAt = System.currentTimeMillis();
             return;
         }
         if (pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
@@ -267,22 +267,50 @@ final class WerbeWaechter implements Sensor.Frames {
         Log.add(c, "Werbe-Sensor: " + msg);
     }
 
+    /** In den ersten 30 s nach dem Hineinschalten genuegen 5 s (davon 4 ohne Logo): wer mitten in eine Pause
+     *  schaltet, soll nicht erst 10 s Werbung sehen. Gilt nur mit fertiger Maske (sonst wird gelernt). */
+    static final int WIN_FRESH = 5;
+    /** Nach dem Zurueckschalten fruehestens nach so langer Zeit wieder ausweichen (kein Hin und Her). */
+    static final long NO_DODGE_AFTER_RETURN_MS = 3 * 60_000L;
+    private long returnedAt;
+
+    /** Sender, auf denen gerade Werbung erkannt wurde -> bis wann der Zapper sie meidet. */
+    static final java.util.Map<String, Long> adUntil = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static boolean inAd(String channel) {
+        Long t = adUntil.get(channel);
+        return t != null && t > System.currentTimeMillis();
+    }
+
     private void decide() {
-        if (!pause && share(WIN_IN, false) >= .8f) {
+        boolean fresh = System.currentTimeMillis() - watchStart < 30_000;
+        int win = fresh ? WIN_FRESH : WIN_IN;
+        if (!pause && share(win, false) >= .8f) {
             pause = true;
             pauseSince = System.currentTimeMillis();
-            Log.add(c, "WERBUNG auf " + home.name);
+            long avg = PauseStats.averageSec(c, home.name);
+            adUntil.put(home.name, pauseSince + (avg > 0 ? avg * 1000 : Config.load(c).pauseMaxMin * 60_000L));
+            Log.add(c, "WERBUNG auf " + home.name + (fresh ? " (gleich beim Hineinschalten)" : ""));
             dump("werbung_" + homeKey);
-            if (Config.load(c).avoidAds) dodge();
+            if (!Config.load(c).avoidAds) return;
+            if (System.currentTimeMillis() - returnedAt < NO_DODGE_AFTER_RETURN_MS) {
+                Log.add(c, "Eben erst zurückgeschaltet – weiche nicht gleich wieder aus");
+                return;
+            }
+            dodge();
         } else if (pause && share(WIN_OUT, true) >= .8f) {
             pause = false;
             long secs = (System.currentTimeMillis() - pauseSince) / 1000;
             Log.add(c, "Werbung auf " + home.name + " vorbei (" + secs + " s)");
             PauseStats.add(c, home.name, secs);
+            adUntil.remove(home.name);
             dump("vorbei_" + homeKey);
             if (away) {
                 away = false;
-                if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name)) awayChannel = -1;
+                if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name)) {
+                    awayChannel = -1;
+                    returnedAt = System.currentTimeMillis();
+                }
             }
         }
     }

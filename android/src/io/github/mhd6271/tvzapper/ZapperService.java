@@ -149,6 +149,7 @@ public class ZapperService extends Service {
         List<Scored> scored = new ArrayList<>();
         Scored cur = null, best = null;
         int withProg = 0;
+        List<String> skippedAd = new ArrayList<>();
         for (Epg.Channel ch : order) {
             Scored s = new Scored();
             s.ch = ch;
@@ -159,6 +160,10 @@ public class ZapperService extends Service {
             s.points = s.res.points + (s.preferred && s.res.points > 0 ? cfg.bonusFor(ch.name) : 0);
             scored.add(s);
             if (ch.id == curId) cur = s;
+            if (ch.id != curId && WerbeWaechter.inAd(ch.name)) {
+                skippedAd.add(ch.name);
+                continue;   // dort laeuft gerade Werbung – nicht hineinschalten
+            }
             if (best == null || s.points > best.points) best = s;
         }
         if (cur == null) {
@@ -172,6 +177,7 @@ public class ZapperService extends Service {
             }
         }
         int curPoints = cur == null ? 0 : cur.points;
+        if (!skippedAd.isEmpty()) Log.add(this, "Gerade Werbung, deshalb gemieden: " + String.join(", ", skippedAd));
         Log.add(this, order.size() + " Sender geprüft (" + withProg + " mit Sendung), läuft: "
                 + (cur == null ? "unbekannt (" + curId + ")" : describe(cur)));
         scored.sort((a, b) -> b.points - a.points);
