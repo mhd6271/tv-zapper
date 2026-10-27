@@ -1,6 +1,8 @@
 # TV-Zapper
 
-Schaltet am TCL-Google-TV (192.168.20.61) selbstständig auf Sendungen, die mich interessieren.
+Schaltet am TCL-Google-TV selbstständig auf Sendungen, die mich interessieren.
+
+`<TV-IP>` und `<HA-IP>` stehen unten für die Adressen von Fernseher und Home Assistant im eigenen Netz.
 
 ## Was mich interessiert
 
@@ -44,10 +46,10 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 
 ## Voraussetzungen
 
-- `adb` verbunden mit dem Fernseher (`adb connect 192.168.20.61:5555`;
+- `adb` verbunden mit dem Fernseher (`adb connect <TV-IP>:5555`;
   bei Hängern `python3 ~/Projekte/flimmer/tools/tvk.py connect`).
 - Fernseher an und auf dem Tuner-Eingang. Wiedereinschalten aus dem Ruhezustand
-  geht nur per Wake-on-LAN (MAC 14:ea:63:bc:62:e8), nicht über Home Assistant allein.
+  geht nur per Wake-on-LAN (MAC des Fernsehers), nicht über Home Assistant allein.
 
 ## Sendernummern (Favorit1, Stand 27.10.2026)
 
@@ -77,7 +79,7 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 
 | Einstellung | Bedeutung |
 |---|---|
-| Adresse / Port | 192.168.20.61 / 5555 |
+| Adresse / Port | <TV-IP> / 5555 |
 | Senderliste | Name des Reiters in der Programmzeitschrift, Standard `Favorit1` |
 | Interessen | eine Zeile je Kategorie: `Name \| Gewicht \| wort, wort*, …` |
 | Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
@@ -114,10 +116,10 @@ durcheinander.
 
 ### Installieren
 
-1. Im Finder **⌘K** („Mit Server verbinden“) `smb://192.168.20.70/config`, „Registrierter Benutzer“,
+1. Im Finder **⌘K** („Mit Server verbinden“) `smb://<HA-IP>/config`, „Registrierter Benutzer“,
    Name `homeassistant`, Passwort aus Einstellungen → Add-ons → Samba share → Konfiguration.
-   Über `homeassistant.local` klappt es nicht zuverlässig: Der Name zeigt auch auf 192.168.20.49,
-   wo nichts antwortet (Stand 27.10.2026).
+   Über `homeassistant.local` klappt es nicht zuverlässig: Der Name zeigt auch auf eine zweite,
+   alte Adresse, wo nichts antwortet (Stand 27.10.2026).
 2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren –
    mit Finder oder `cp`, nicht mit `rsync` (dessen Hilfsdateien `._…` sperrt das Samba-Add-on).
 3. Home Assistant neu starten (Einstellungen → System → Neu starten).
@@ -182,7 +184,7 @@ android/build.sh
 ```
 
 ```bash
-adb -s 192.168.20.61:5555 install -r android/build/tv-zapper.apk
+adb -s <TV-IP>:5555 install -r android/build/tv-zapper.apk
 ```
 
 Signiert mit dem Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
