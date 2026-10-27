@@ -80,5 +80,6 @@ class JetztSensor(ZapperEntity, SensorEntity):
             "sender": x.get("sender"), "nr": x.get("nr"), "sendung": x.get("sendung"), "folge": x.get("folge"),
             "beschreibung": x.get("beschreibung"), "start": x.get("start"), "ende": x.get("ende"),
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "werbung": j.get("werbung"),
-            "zapper_der_tv_app": j.get("zapper_app"), "vorn": j.get("vorn"), "quelle": j.get("quelle"),
+            "zapper_der_tv_app": j.get("zapper_app"), "werbung_umgehen": j.get("werbung_umgehen"),
+            "ausweichen_bevorzugt": j.get("ausweichen_bevorzugt"), "vorn": j.get("vorn"), "quelle": j.get("quelle"),
         }

@@ -141,7 +141,8 @@ HA bewertet mit seinen eigenen Interessen.
   Kategorien, Aktion (bleibt/umgeschaltet/uebersprungen/fehler), bester und weitere Treffer.
 - `sensor.tv_zapper_lauft_jetzt` – **TV-Protokoll**: jede Minute, was gerade läuft (`167 ProSieben MAXX HD: Futurama`),
   „Fernseher aus“ oder „Andere App: …“; Attribute Sendung, Folge, Beschreibung, Start, Ende, Punkte, Kategorien,
-  Werbung. Der Verlauf des Sensors in HA (Verlauf, Logbuch) zeigt, was wann lief. Sender und Sendung kennt HA nur
+  Werbung, dazu die Einstellungen der TV-App `werbung_umgehen` und `ausweichen_bevorzugt` (nur Anzeige; Werbung
+  umgeht nur die App, HA nicht). Der Verlauf des Sensors in HA (Verlauf, Logbuch) zeigt, was wann lief. Sender und Sendung kennt HA nur
   über die TV-App; ohne sie zeigt der Sensor bloß „Fernsehbild“ bzw. die App im Vordergrund. Liest nicht, solange
   ein Durchgang den Fernseher bedient.
 - `number.tv_zapper_laufzeit`, `number.tv_zapper_verweilzeit` – lassen sich auch im Dashboard oder per

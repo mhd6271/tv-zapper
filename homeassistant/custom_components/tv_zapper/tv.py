@@ -302,6 +302,8 @@ class Fernseher:
         return {"quelle": "app", "fernsehbild_vorn": daten.get("fernsehbild_vorn"), "vorn": daten.get("vorn"),
                 "bildschirm_an": daten.get("bildschirm_an"), "werbung": daten.get("werbung"),
                 "zapper_app": daten.get("zapper_laeuft"),
+                # Einstellungen der TV-App (ab dem Stand nach 0.3.0), nur zur Anzeige
+                "werbung_umgehen": daten.get("werbung_umgehen"), "ausweichen_bevorzugt": daten.get("ausweichen_bevorzugt"),
                 "jetzt": app_sendung(x, cfg) | {"folge": x.get("folge"), "beschreibung": x.get("beschreibung")}
                 if x else None}
 
