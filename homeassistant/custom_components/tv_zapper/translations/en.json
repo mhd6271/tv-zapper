@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TV-Zapper einrichten",
+        "description": "Adresse des Fernsehers (ADB über Netzwerk muss am Fernseher an sein). Beim ersten Verbinden fragt der Fernseher „USB-Debugging zulassen?“ – mit der Fernbedienung „Immer zulassen“ wählen und OK drücken (du hast dafür 60 Sekunden). {fehler}",
+        "data": {
+          "host": "Adresse (IP) des Fernsehers",
+          "port": "ADB-Port",
+          "favorit": "Name der Senderliste in der Programmzeitschrift"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Keine ADB-Verbindung zum Fernseher. Ist er an, ADB über Netzwerk eingeschaltet und die Abfrage am Fernseher bestätigt?"
+    },
+    "abort": {
+      "already_configured": "Dieser Fernseher ist schon eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TV-Zapper: Einstellungen",
+        "description": "Interessen: eine Zeile je Kategorie, `Name | Gewicht | Wort, Wort*, …`. Ein `*` am Wortende passt als Wortanfang (doku* = Doku, Dokumentation). Je Kategorie zählt das Gewicht einmal, die Summe entscheidet. {fehler}",
+        "data": {
+          "interessen": "Interessen",
+          "aus": "Nie nehmen (Wörter, mit Komma getrennt)",
+          "laufzeit_min": "Laufzeit nach dem Einschalten",
+          "verweilen_min": "Verweilzeit pro Sender (Minuten zwischen zwei Prüfungen)",
+          "favorit": "Name der Senderliste in der Programmzeitschrift",
+          "nur_lesen": "Nur lesen (nie umschalten, zum Testen)",
+          "sender_nie": "Sender nie nehmen (Sendernamen wie in der Programmzeitschrift, mit Komma getrennt)",
+          "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)"
+        }
+      }
+    },
+    "error": {
+      "interessen_ungueltig": "Interessen fehlerhaft – siehe Hinweis oben.",
+      "bonus_ungueltig": "Bevorzugte Sender fehlerhaft – siehe Hinweis oben."
+    }
+  }
+}

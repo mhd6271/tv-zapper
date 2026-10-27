@@ -55,3 +55,73 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 29 Kabel Eins HD · 86 DMAX HD · 111 HGTV · 141 N24 DOKU · 167 ProSieben MAXX HD ·
 236 tagesschau24 HD · 244 TLC HD · 260 VOXup HD · 265 WDR HD Köln · 268 WELT HD ·
 270 zdf_neo HD · 271 ZDFinfo HD
+
+## Home-Assistant-Fassung
+
+Im Ordner [`homeassistant/custom_components/tv_zapper`](homeassistant/custom_components/tv_zapper) liegt
+dieselbe Logik als Integration für Home Assistant (Stand von `zapper.py` am 27.10.2026 inkl. Sender nie/bevorzugt
+und Nachprüfen nach dem Umschalten). Alles wird in HA eingestellt, `interessen.json` ist nur
+die Vorlage für die Grundeinstellung.
+
+**Wie sie den Fernseher erreicht:** Die eingebauten Integrationen reichen nicht. „Android TV Remote“
+(`androidtv_remote`, so ist der Fernseher heute als `media_player.smart_tv_pro` eingebunden) kann nur Tasten
+schicken, aber nichts vom Bildschirm lesen. Deshalb spricht die Integration selbst ADB über das Netzwerk
+(Bibliothek `adb-shell`, dieselbe wie in der eingebauten Integration „Android Debug Bridge“) und liest die
+Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür einen **eigenen ADB-Schlüssel**
+(`/config/.storage/tv_zapper_adbkey`); beim ersten Verbinden fragt der Fernseher deshalb einmal
+„USB-Debugging zulassen?“ – mit der Fernbedienung **Immer zulassen** wählen.
+
+**Einstellungen** (beim Einrichten bzw. über „Konfigurieren“ an der Integration):
+
+| Einstellung | Bedeutung |
+|---|---|
+| Adresse / Port | 192.168.20.61 / 5555 |
+| Senderliste | Name des Reiters in der Programmzeitschrift, Standard `Favorit1` |
+| Interessen | eine Zeile je Kategorie: `Name \| Gewicht \| wort, wort*, …` |
+| Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
+| Sender nie nehmen | Sendernamen wie in der Programmzeitschrift, mit Komma getrennt |
+| Bevorzugte Sender | eine Zeile je Sender: `N24 DOKU \| 1` – Bonuspunkte, zählen nur, wenn die Sendung auch passt |
+| Laufzeit | wie lange der Zapper nach dem Einschalten läuft (Minuten) |
+| Verweilzeit | Minuten zwischen zwei Prüfungen |
+| Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
+
+**Entitäten** (Gerät „TV-Zapper“):
+
+- `switch.tv_zapper_zapper` – an: zappt für die Laufzeit, geht danach (oder nach drei Fehlern hintereinander)
+  von selbst aus. Attribut `laeuft_bis`.
+- `sensor.tv_zapper_aktueller_treffer` – z. B. `23 ProSieben HD: …`; Attribute Sender, Nummer, Sendung, Punkte,
+  Kategorien, Aktion (bleibt/umgeschaltet/uebersprungen/fehler), bester und weitere Treffer.
+- `number.tv_zapper_laufzeit`, `number.tv_zapper_verweilzeit` – lassen sich auch im Dashboard oder per
+  Automation ändern und wirken sofort, auch auf einen laufenden Zapper.
+- `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
+- Ereignis `tv_zapper_durchgang` nach jedem Durchgang (mit allen Treffern) für eigene Automationen.
+
+Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
+Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten
+durcheinander.
+
+### Installieren
+
+1. Im Finder **Gehe zu → Mit Server verbinden** `smb://homeassistant.local/config`
+   (Add-on „Samba share“ ist installiert; Benutzer/Passwort stehen in dessen Einstellungen).
+2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren.
+3. Home Assistant neu starten (Einstellungen → System → Neu starten).
+4. Einstellungen → Geräte & Dienste → Integration hinzufügen → **TV-Zapper**, Adresse eintragen,
+   am Fernseher „Immer zulassen“ bestätigen (60 Sekunden Zeit).
+
+### Ohne Home Assistant ausprobieren
+
+`homeassistant/probe_tv.py` führt den Fernseher-Teil der Integration (`tv.py`) direkt vom Mac aus:
+
+```bash
+python3 homeassistant/probe_tv.py --nur-verbinden                         # neuer Schlüssel wie in HA
+python3 homeassistant/probe_tv.py --schluessel ~/.android/adbkey --einmal  # ein Durchgang, nur lesen
+```
+
+Braucht `pip install "adb-shell[async]==0.4.4"`.
+
+Tests (Fernseher nachgebaut, laufen in einem echten Home Assistant 2026.10.4):
+
+```bash
+cd homeassistant && pip install homeassistant==2026.10.4 pytest-homeassistant-custom-component "adb-shell[async]==0.4.4" && python -m pytest tests
+```
