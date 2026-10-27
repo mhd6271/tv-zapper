@@ -205,6 +205,10 @@ Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, läss
 - *Über anderen Apps einblenden* – Android erlaubt einer App im Hintergrund sonst nicht, das Fernsehbild zu öffnen;
   auch für die Einblendung nötig.
 
+**Fertige App:** [neueste Version herunterladen](https://github.com/mhd6271/tv-zapper/releases/latest/download/tv-zapper.apk)
+(Releases auf GitHub, Prüfsumme jeweils in der Release-Notiz). Signiert mit dem Release-Schlüssel des Projekts
+(Zertifikat SHA-256 `8c371cfa…3f06ee`); eigene Builds mit anderem Schlüssel lassen sich nicht darüber installieren.
+
 **Bauen und installieren** (kein Gradle, nur Java 17 und das Android-SDK mit build-tools 36 und platform 35;
 Pfade über `JAVA_HOME`, `ANDROID_HOME`, eigener Schlüssel über `TVZ_KEYSTORE`):
 
@@ -216,7 +220,9 @@ android/build.sh
 adb -s <TV-IP>:5555 install -r android/build/tv-zapper.apk
 ```
 
-Signiert mit dem Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
+`build.sh` signiert mit dem Schlüssel aus `~/.tvzapper/keystore.properties` (`storeFile`, `alias`, `password`;
+nie ins Repo, Sicherungskopie aufbewahren – ohne ihn keine Updates über installierte Apps), sonst mit dem
+Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
 
 **Auf einem anderen Fernseher:** Die App braucht nur Android TV / Google TV mit eingebautem Tuner, der seine
 Sender in die Android-TV-Datenbank schreibt. Tuner-Eingang und Fernseh-App erkennt sie selbst (Eingang vom Typ
