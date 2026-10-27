@@ -135,3 +135,54 @@ Tests (Fernseher nachgebaut, laufen in einem echten Home Assistant 2026.10.4):
 ```bash
 cd homeassistant && pip install homeassistant==2026.10.4 pytest-homeassistant-custom-component "adb-shell[async]==0.4.4" && python -m pytest tests
 ```
+
+## TV-App (läuft direkt auf dem Fernseher)
+
+In [`android/`](android/) liegt die Google-TV-App **TV-Zapper** (`io.github.mhd6271.tvzapper`). Sie macht dasselbe
+wie `zapper.py`, braucht aber keinen Mac und keine Tasten: Sie liest Sender und laufende Sendungen direkt aus der
+Programmdatenbank von Android TV (`TvContract`, gefüllt vom TCL-Tuner) – auf dem Bildschirm passiert dabei nichts, es
+wird also auch nicht beim Lesen umgeschaltet. Umgeschaltet wird nur einmal, auf den besten Treffer, per
+`ACTION_VIEW` auf den Sender (die TCL-App `com.tcl.tv` nimmt das an). Danach blendet sie 6 Sekunden lang oben links
+ein, worauf sie umgeschaltet hat und warum.
+
+**In der App einstellbar** (alles mit der Fernbedienung): Interessen-Kategorien mit Gewicht und Wörtern, Liste
+„Nie“, Laufzeit (Std./Min.), Verweilzeit je Sender, je Sender *an* / *bevorzugt ★* / *aus* (OK wechselt),
+Bonus für bevorzugte Sender. Bevorzugte werden zuerst geprüft und bekommen den Bonus, aber nur bei einem Treffer.
+Die Grundeinstellung ist `interessen.json` zum Zeitpunkt des Baus (gleiches Format inkl. `sender_nie`,
+`sender_bevorzugt`, dazu `sender_an`); „Grundeinstellung laden“ setzt darauf zurück. Welche Sender
+mitmachen, kommt ab Werk vom Fernseher: TCL markiert in der Datenbank 37 Sender mit `internal_provider_flag2 = 1` –
+genau die freien HD-Sender (alle 18 aus der Liste unten, dazu u. a. 1 Das Erste HD, 75 Comedy Central HD,
+81 Deluxe Music HD, 125 kabel eins Doku, 139 MTV HD); verschlüsselte wie Sky haben 0. Dass das genau Favorit1 ist,
+ist abgeleitet, nicht von TCL dokumentiert. In der App zeigt „Alle Sender zeigen“ auch die übrigen.
+
+**Bedienung:** „Start“ läuft im Hintergrund (Vordergrund-Dienst mit Benachrichtigung) bis die Laufzeit um ist,
+„Stopp“ beendet, „Einmal prüfen (nur lesen)“ bewertet nur und schreibt das Ergebnis ins Protokoll unten auf der Seite.
+Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, lässt die App ihn in Ruhe.
+
+**Berechtigungen** (Zeile „Berechtigungen“ in der App zeigt ✓/✗):
+- *Fernsehprogramm lesen* (`READ_TV_LISTINGS`) – Abfrage beim ersten Start.
+- *Nutzungszugriff* – damit die App weiß, ob gerade das Fernsehprogramm vorn ist. Ohne schaltet sie nie um.
+- *Über anderen Apps einblenden* – Android erlaubt einer App im Hintergrund sonst nicht, das Fernsehbild zu öffnen;
+  auch für die Einblendung nötig.
+
+**Bauen und installieren** (kein Gradle, nur Java 17 und Android-SDK wie bei Flimmer):
+
+```bash
+android/build.sh
+```
+
+```bash
+adb -s 192.168.20.61:5555 install -r android/build/tv-zapper.apk
+```
+
+Signiert mit dem Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
+
+**Am Fernseher geprüft (27.10.2026, 15:05–15:11):** 377 Tuner-Sender in der Datenbank, 36 eingeschaltet
+(37 Favoriten ohne Disney Channel HD aus `sender_nie`), alle 36 mit laufender Sendung. „Start“ auf Comedy Central
+(4 P., Bob's Burgers) → nach 10 s umgeschaltet auf 139 MTV HD (7 P., Love & Hip Hop Atlanta), bestätigt über
+`settings get global recent_play_channel_id` (1126 → 1190); Android meldet „Background activity start … allowed
+because SYSTEM_ALERT_WINDOW permission is granted“. Einblendung: in der App per Bildschirmfoto gesehen, über dem
+Fernsehbild meldet Android das Fenster als sichtbar – mit eigenen Augen am Fernseher noch nicht bestätigt
+(Bildschirmfotos vom Tunerbild sind leer).
+Auffällig: Shopping Queen, Barbara Salesch u. Ä. bekommen die Dokumentation-Punkte – die App bewertet auch die
+Beschreibung jeder Sendung; vermutlich steht dort „Doku-Soap“ o. Ä. (nicht nachgesehen).
