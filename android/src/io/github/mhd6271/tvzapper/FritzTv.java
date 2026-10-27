@@ -45,7 +45,7 @@ final class FritzTv {
         s = s.toLowerCase(Locale.GERMAN).trim();
         s = s.replaceAll("\\s+(hd|uhd|sd)$", "");
         s = s.replace("prosieben maxx", "pro7 maxx").replace("rtl television", "rtl").replace("eurosport 1 deutschland", "eurosport 1")
-                .replace("n-tv", "ntv").replace("das erste", "das erste");
+                .replace("n-tv", "ntv").replace("rtl2", "rtlzwei");
         return s.replaceAll("[^a-z0-9äöüß]", "");
     }
 

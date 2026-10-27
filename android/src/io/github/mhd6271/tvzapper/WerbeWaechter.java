@@ -34,7 +34,7 @@ final class WerbeWaechter implements Sensor.Frames {
     private float secSum;
     private int secN;
     private long secStart;
-    private int learnShown = -1;
+    private int learnShown = -1, failedShown;
     private long lastFrame, lastReport, watchStart;
     private boolean gotFrame;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
@@ -134,6 +134,7 @@ final class WerbeWaechter implements Sensor.Frames {
         if (ns != null && ns > System.currentTimeMillis()) return;
         logo = Logo.load(c, homeKey);
         learnShown = -1;
+        failedShown = 0;
         lastFrame = lastReport = watchStart = System.currentTimeMillis();
         gotFrame = false;
         Log.add(c, "Werbe-Sensor beobachtet " + home.name + " (FRITZ!Box: " + fritz.fritzName(home.name) + ")"
@@ -163,6 +164,10 @@ final class WerbeWaechter implements Sensor.Frames {
         boolean wasReady = logo.ready();
         float v = logo.feed(top, bottom, w);
         if (v < 0) {
+            if (logo.failedRounds > failedShown) {
+                failedShown = logo.failedRounds;
+                Log.add(c, "Logo von " + home.name + ": kein eindeutiges Logo gefunden – lerne noch einmal");
+            }
             int pct = logo.learnPercent() / 25 * 25;
             if (pct != learnShown) {
                 learnShown = pct;

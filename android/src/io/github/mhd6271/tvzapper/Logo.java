@@ -21,6 +21,8 @@ final class Logo {
     int points;
     private int[][] counts = new int[4][CW * CH];
     private int learned;
+    /** Lernrunden ohne brauchbares Logo (z. B. weil viel Werbung lief). */
+    int failedRounds;
 
     boolean ready() {
         return mask != null;
@@ -68,7 +70,10 @@ final class Logo {
             }
         }
         points = bestPts;
-        if (points < 30) mask = null;   // kein Logo gefunden – weiter lernen
+        if (points < 30) {   // kein Logo gefunden – weiter lernen
+            mask = null;
+            failedRounds++;
+        }
         counts = new int[4][CW * CH];
         learned = 0;
     }
