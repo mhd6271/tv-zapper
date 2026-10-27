@@ -104,12 +104,20 @@ durcheinander.
 
 ### Installieren
 
-1. Im Finder **Gehe zu → Mit Server verbinden** `smb://homeassistant.local/config`
-   (Add-on „Samba share“ ist installiert; Benutzer/Passwort stehen in dessen Einstellungen).
-2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren.
+1. Im Finder **⌘K** („Mit Server verbinden“) `smb://192.168.20.70/config`, „Registrierter Benutzer“,
+   Name `homeassistant`, Passwort aus Einstellungen → Add-ons → Samba share → Konfiguration.
+   Über `homeassistant.local` klappt es nicht zuverlässig: Der Name zeigt auch auf 192.168.20.49,
+   wo nichts antwortet (Stand 27.10.2026).
+2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren –
+   mit Finder oder `cp`, nicht mit `rsync` (dessen Hilfsdateien `._…` sperrt das Samba-Add-on).
 3. Home Assistant neu starten (Einstellungen → System → Neu starten).
 4. Einstellungen → Geräte & Dienste → Integration hinzufügen → **TV-Zapper**, Adresse eintragen,
-   am Fernseher „Immer zulassen“ bestätigen (60 Sekunden Zeit).
+   am Fernseher „Immer zulassen“ bestätigen (60 Sekunden Zeit). Zu spät bestätigt? Einfach noch einmal
+   „Absenden“ – die Freigabe ist dann schon gespeichert.
+
+Eingerichtet und einmal „nur lesen“ geprüft am 27.10.2026 (HA 2026.10.4): 37 Sender gelesen,
+laufender Sender richtig erkannt, nicht umgeschaltet. Noch nicht geklärt: ob schon das Blättern in der
+Programmzeitschrift den Sender umschaltet (Beobachtung von Max beim Lauf von `zapper.py`).
 
 ### Ohne Home Assistant ausprobieren
 

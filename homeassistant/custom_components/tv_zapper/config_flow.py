@@ -34,7 +34,8 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
         errors, platzhalter = {}, {"fehler": ""}
         if user_input is not None:
             host, port = user_input[CONF_HOST].strip(), int(user_input[CONF_PORT])
-            await self.async_set_unique_id(f"{host}:{port}")
+            # raise_on_progress=False: ein fehlgeschlagener, noch offener Versuch soll keinen neuen blockieren
+            await self.async_set_unique_id(f"{host}:{port}", raise_on_progress=False)
             self._abort_if_unique_id_configured()
             signer = await self.hass.async_add_executor_job(lade_signer, self.hass.config.path(SCHLUESSEL_DATEI))
             tv = Fernseher(host, port, signer)
