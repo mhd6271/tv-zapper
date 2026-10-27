@@ -10,16 +10,66 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Sender und laufende Sendungen aus der Android-TV-Datenbank (TvContract), gefuellt vom TCL-Tuner. */
+/** Sender und laufende Sendungen aus der Android-TV-Datenbank (TvContract), gefuellt vom Tuner des Fernsehers.
+ *  Geprueft auf einem TCL Google TV; Eingang und Fernseh-App werden erkannt, nicht fest vorgegeben. */
 final class Epg {
-    static final String TUNER = "com.tcl.tvinput/.TunerInputService/HW2";
+    private static String input, tvApp;
+    private static boolean tvAppResolved;
+
+    /** Tuner-Eingang: Einstellung "tv_eingang", sonst der Tuner-Eingang (TYPE_TUNER) mit den meisten Sendern,
+     *  sonst der Eingang mit den meisten Sendern ueberhaupt. Am TCL: com.tcl.tvinput/.TunerInputService/HW2. */
+    static synchronized String tunerInput(Context c) {
+        String cfg = Config.load(c).tvInput;
+        if (!cfg.isEmpty()) return cfg;
+        if (input != null) return input;
+        java.util.Map<String, Integer> count = new java.util.HashMap<>();
+        try (Cursor cur = c.getContentResolver().query(TvContract.Channels.CONTENT_URI,
+                new String[]{TvContract.Channels.COLUMN_INPUT_ID}, null, null, null)) {
+            while (cur != null && cur.moveToNext()) count.merge(nz(cur.getString(0)), 1, Integer::sum);
+        } catch (Exception ignored) {
+        }
+        java.util.Set<String> tuners = new java.util.HashSet<>();
+        try {
+            for (android.media.tv.TvInputInfo info : c.getSystemService(android.media.tv.TvInputManager.class).getTvInputList())
+                if (info.getType() == android.media.tv.TvInputInfo.TYPE_TUNER) tuners.add(info.getId());
+        } catch (Exception ignored) {
+        }
+        String best = null;
+        int bestN = 0;
+        for (int pass = 0; pass < 2 && best == null; pass++)
+            for (java.util.Map.Entry<String, Integer> e : count.entrySet())
+                if ((pass == 1 || tuners.contains(e.getKey())) && !e.getKey().isEmpty() && e.getValue() > bestN) {
+                    best = e.getKey();
+                    bestN = e.getValue();
+                }
+        if (best != null) input = best;
+        return best == null ? "" : best;
+    }
+
+    /** App, die einen Sender abspielt (ACTION_VIEW auf eine Sender-Adresse): Einstellung "tv_app", sonst vom
+     *  System erfragt. Am TCL: com.tcl.tv. null, wenn unbekannt. */
+    static synchronized String tvPackage(Context c) {
+        String cfg = Config.load(c).tvApp;
+        if (!cfg.isEmpty()) return cfg;
+        if (tvAppResolved) return tvApp;
+        List<Channel> chs = channels(c);
+        if (chs.isEmpty()) return null;
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                TvContract.buildChannelUri(chs.get(0).id));
+        android.content.pm.ResolveInfo ri = c.getPackageManager().resolveActivity(i, 0);
+        if (ri != null && ri.activityInfo != null && !"android".equals(ri.activityInfo.packageName))
+            tvApp = ri.activityInfo.packageName;
+        tvAppResolved = true;
+        return tvApp;
+    }
 
     static final class Channel {
         long id;
         String number = "", name = "";
         boolean browsable;
-        /** TCL markiert die Sender der Liste Favorit1 mit internal_provider_flag2 = 1 (am Geraet 27.10.2026:
-         *  37 Sender, alle frei; verschluesselte wie Sky haben 0). */
+        /** Vorgabe "an". TCL markiert die Sender seiner Favoritenliste (dort "Favorit1") mit
+         *  internal_provider_flag2 = 1 (am Geraet 27.10.2026: 37 Sender, alle frei; verschluesselte wie Sky 0).
+         *  Markiert der Fernseher keinen Sender so, gelten alle sichtbaren (browsable) Sender als Vorgabe. */
         boolean favorite;
     }
 
@@ -37,7 +87,7 @@ final class Epg {
         String[] proj = {TvContract.Channels._ID, TvContract.Channels.COLUMN_DISPLAY_NUMBER,
                 TvContract.Channels.COLUMN_DISPLAY_NAME, TvContract.Channels.COLUMN_BROWSABLE,
                 TvContract.Channels.COLUMN_INTERNAL_PROVIDER_FLAG2};
-        try (Cursor cur = c.getContentResolver().query(TvContract.buildChannelsUriForInput(TUNER), proj,
+        try (Cursor cur = c.getContentResolver().query(TvContract.buildChannelsUriForInput(tunerInput(c)), proj,
                 null, null, null)) {
             if (cur == null) return list;
             while (cur.moveToNext()) {
@@ -50,6 +100,9 @@ final class Epg {
                 list.add(ch);
             }
         }
+        boolean anyFav = false;
+        for (Channel ch : list) anyFav |= ch.favorite;
+        if (!anyFav) for (Channel ch : list) ch.favorite = ch.browsable;
         list.sort(Comparator.comparingLong(ch -> num(ch.number)));
         return list;
     }
@@ -78,12 +131,23 @@ final class Epg {
         return null;
     }
 
-    /** Zuletzt vom TCL-Fernsehen gespielter Sender (TvContract-_id), -1 wenn unbekannt. */
+    /** Zuletzt von der App umgeschalteter Sender – Rueckfall, wo der Fernseher den laufenden Sender nicht meldet. */
+    static volatile long lastTuned = -1;
+
+    /** Gerade laufender Sender (TvContract-_id). TCL meldet ihn in Settings.Global "recent_play_channel_id"
+     *  (-1, solange das Fernsehbild nicht vorn ist); andere Fernseher nicht oeffentlich – dann der zuletzt von
+     *  der App gewaehlte Sender (selbst Umschalten bemerkt die App dort nicht). */
     static long currentChannelId(Context c) {
+        String v = null;
         try {
-            return Long.parseLong(Settings.Global.getString(c.getContentResolver(), "recent_play_channel_id"));
+            v = Settings.Global.getString(c.getContentResolver(), "recent_play_channel_id");
+        } catch (Exception ignored) {
+        }
+        if (v == null) return lastTuned;
+        try {
+            return Long.parseLong(v.trim());
         } catch (Exception e) {
-            return -1;
+            return lastTuned;
         }
     }
 

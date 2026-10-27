@@ -1,6 +1,6 @@
 #!/bin/sh
 # Baut build/tv-zapper.apk ohne Gradle: aapt2 (Ressourcen), javac + d8 (Code), zipalign, apksigner.
-# Voraussetzungen wie bei Flimmer: Java 17 (brew install openjdk@17), Android-SDK mit build-tools 36 und platform 35.
+# Voraussetzungen: Java 17 (brew install openjdk@17), Android-SDK mit build-tools 36 und platform 35.
 # Signiert mit dem Debug-Schluessel ~/.android/debug.keystore (legt Android Studio/adb an; Passwort "android").
 set -e
 cd "$(dirname "$0")"

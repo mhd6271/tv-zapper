@@ -63,7 +63,7 @@ final class WerbeWaechter implements Sensor.Frames {
     synchronized void tick() {
         PowerManager pm = c.getSystemService(PowerManager.class);
         String fg = ZapperService.foregroundApp(c);
-        if (!pm.isInteractive() || !ZapperService.TV_PKG.equals(fg)) {
+        if (!pm.isInteractive() || fg == null || !fg.equals(Epg.tvPackage(c))) {
             if (sensor != null) {
                 stopSensor();
                 paused = true;   // Fernsehbild nicht vorn: Stream sparen, danach fuer denselben Sender neu starten

@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
     private Config cfg;
     private LinearLayout root, catBox, chanBox;
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
-    private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax;
+    private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats;
     private Button adToggle;
     private TextView status, perms, log;
@@ -172,7 +172,7 @@ public class MainActivity extends Activity {
         b.addView(bonus);
         b.addView(text("P.", 16, false));
         root.addView(b);
-        root.addView(text("Vorgabe: die Sender der Liste Favorit1 des Fernsehers. OK auf einem Sender wechselt: an → bevorzugt ★ → aus. Bevorzugte werden zuerst geprüft.", 14, false));
+        root.addView(text("Vorgabe: die Favoritenliste des Fernsehers (bei TCL „Favorit1“), sonst alle sichtbaren Sender. OK auf einem Sender wechselt: an → bevorzugt ★ → aus. Bevorzugte werden zuerst geprüft.", 14, false));
         root.addView(button("Alle Sender zeigen / nur eingeschaltete", v -> {
             showAllChannels = !showAllChannels;
             fillChannels();
@@ -210,6 +210,22 @@ public class MainActivity extends Activity {
         fritz.setMinWidth(dp(220));
         fr.addView(fritz);
         root.addView(fr);
+
+        section("Fernseher");
+        root.addView(text("Leer lassen = automatisch erkennen. Erkannt: Eingang „" + Epg.tunerInput(this) + "“, App „"
+                + Epg.tvPackage(this) + "“.", 14, false));
+        LinearLayout ti = row();
+        ti.addView(text("Tuner-Eingang:", 16, false));
+        tvInput = edit(cfg.tvInput, false);
+        tvInput.setMinWidth(dp(360));
+        ti.addView(tvInput);
+        root.addView(ti);
+        LinearLayout ta = row();
+        ta.addView(text("Fernseh-App (Paket):", 16, false));
+        tvApp = edit(cfg.tvApp, false);
+        tvApp.setMinWidth(dp(240));
+        ta.addView(tvApp);
+        root.addView(ta);
 
         section("Protokoll");
         log = text("", 13, false);
@@ -274,7 +290,7 @@ public class MainActivity extends Activity {
     private void label(Button bt, Epg.Channel ch) {
         String s = cfg.state(ch);
         bt.setText(ch.number + "   " + ch.name + "   —   " + (Config.BEVORZUGT.equals(s) ? "bevorzugt ★" : s)
-                + (ch.favorite ? "" : "   (nicht in Favorit1)"));
+                + (ch.favorite ? "" : "   (nicht in der Favoritenliste)"));
         bt.setAlpha(Config.AUS.equals(s) ? 0.5f : 1f);
     }
 
@@ -295,6 +311,8 @@ public class MainActivity extends Activity {
         cfg.pauseMaxMin = Math.max(1, parse(pauseMax.getText().toString(), 6));
         String f = fritz.getText().toString().trim();
         cfg.fritz = f.isEmpty() ? "fritz.box" : f;
+        cfg.tvInput = tvInput.getText().toString().trim();
+        cfg.tvApp = tvApp.getText().toString().trim();
     }
 
     private void start(String action, boolean readOnly) {

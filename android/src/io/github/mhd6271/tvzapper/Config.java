@@ -41,6 +41,8 @@ final class Config {
     /** Werbung umgehen ueber die FRITZ!Box als zweiten Empfaenger. */
     boolean avoidAds = true;
     String fritz = "fritz.box";
+    /** Leer = automatisch erkennen. */
+    String tvInput = "", tvApp = "";
     /** Spaetestens nach so vielen Minuten zurueck zum Hauptsender, auch wenn der Sensor nichts meldet
      *  (gemessene Durchschnittsdauer des Senders + 1 min, wenn bekannt). */
     int pauseMaxMin = 6;
@@ -102,6 +104,8 @@ final class Config {
         cfg.newChannels = o.optString("neue_sender", AUS);
         cfg.avoidAds = o.optBoolean("werbung_umgehen", true);
         cfg.fritz = o.optString("fritzbox", "fritz.box");
+        cfg.tvInput = o.optString("tv_eingang", "");
+        cfg.tvApp = o.optString("tv_app", "");
         cfg.pauseMaxMin = o.optInt("werbepause_max_min", 6);
         if (o.has("werbefrei")) cfg.adFree = strings(o.optJSONArray("werbefrei"));
         for (String n : strings(o.optJSONArray("sender_an"))) cfg.channels.put(n, AN);
@@ -135,6 +139,8 @@ final class Config {
         o.put("neue_sender", newChannels);
         o.put("werbung_umgehen", avoidAds);
         o.put("fritzbox", fritz);
+        o.put("tv_eingang", tvInput);
+        o.put("tv_app", tvApp);
         o.put("werbepause_max_min", pauseMaxMin);
         o.put("werbefrei", new JSONArray(adFree));
         JSONArray on = new JSONArray(), nie = new JSONArray();

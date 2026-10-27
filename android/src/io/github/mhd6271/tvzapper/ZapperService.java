@@ -24,7 +24,6 @@ import java.util.List;
 public class ZapperService extends Service {
     static final String ACTION_START = "start", ACTION_ONCE = "once", ACTION_STOP = "stop";
     static final String EXTRA_READ_ONLY = "nurLesen";
-    static final String TV_PKG = "com.tcl.tv";
     private static final String CHANNEL = "lauf";
 
     /** Ende des laufenden Durchgangs (ms) fuer die Anzeige, 0 = steht. */
@@ -63,7 +62,8 @@ public class ZapperService extends Service {
         Config cfg = Config.load(this);
         endAt = once ? System.currentTimeMillis() : System.currentTimeMillis() + cfg.runMin * 60_000L;
         if (!once) {
-            Log.add(this, "Start: " + cfg.runMin + " min Laufzeit, alle " + cfg.dwellMin + " min prüfen");
+            Log.add(this, "Start: " + cfg.runMin + " min Laufzeit, alle " + cfg.dwellMin + " min prüfen; Fernseher: Eingang "
+                    + Epg.tunerInput(this) + ", App " + Epg.tvPackage(this));
             PowerManager pm = getSystemService(PowerManager.class);
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
             wake.acquire(cfg.runMin * 60_000L + 60_000L);
@@ -129,7 +129,8 @@ public class ZapperService extends Service {
         }
         String fg = foregroundApp(this);
         boolean screenOn = getSystemService(PowerManager.class).isInteractive();
-        if (!readOnly && (!screenOn || !TV_PKG.equals(fg))) {
+        String tvApp = Epg.tvPackage(this);
+        if (!readOnly && (!screenOn || tvApp == null || !tvApp.equals(fg))) {
             Log.add(this, "Fernseher zeigt gerade etwas anderes (" + (screenOn ? (fg == null ? "unbekannt – Nutzungszugriff erlaubt?" : fg)
                     : "Bildschirm aus") + ") – lasse ihn in Ruhe");
             return;
@@ -196,7 +197,8 @@ public class ZapperService extends Service {
     /** Auf einen Sender schalten, pruefen, ob der Fernseher ihn meldet, Einblendung zeigen. */
     synchronized boolean tuneTo(Epg.Channel ch, String banner) {
         Intent i = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(ch.id));
-        i.setPackage(TV_PKG);
+        String tvApp = Epg.tvPackage(this);
+        if (tvApp != null) i.setPackage(tvApp);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(i);
@@ -204,6 +206,7 @@ public class ZapperService extends Service {
             Log.add(this, "Umschalten fehlgeschlagen: " + e.getMessage());
             return false;
         }
+        Epg.lastTuned = ch.id;
         boolean ok = false;
         for (int k = 0; k < 8 && !ok; k++) {
             try {

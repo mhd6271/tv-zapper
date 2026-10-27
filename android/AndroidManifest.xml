@@ -24,8 +24,12 @@
     <!-- Pruefen, ob gerade das Fernsehprogramm vorn ist -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
 
+    <!-- Welche App spielt einen Sender ab? (am TCL com.tcl.tv) -->
     <queries>
-        <package android:name="com.tcl.tv" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="vnd.android.cursor.item/channel" />
+        </intent>
     </queries>
 
     <application

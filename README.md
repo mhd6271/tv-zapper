@@ -199,7 +199,8 @@ Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, läss
 - *Über anderen Apps einblenden* – Android erlaubt einer App im Hintergrund sonst nicht, das Fernsehbild zu öffnen;
   auch für die Einblendung nötig.
 
-**Bauen und installieren** (kein Gradle, nur Java 17 und Android-SDK wie bei Flimmer):
+**Bauen und installieren** (kein Gradle, nur Java 17 und das Android-SDK mit build-tools 36 und platform 35;
+Pfade über `JAVA_HOME`, `ANDROID_HOME`, eigener Schlüssel über `TVZ_KEYSTORE`):
 
 ```bash
 android/build.sh
@@ -210,6 +211,16 @@ adb -s <TV-IP>:5555 install -r android/build/tv-zapper.apk
 ```
 
 Signiert mit dem Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
+
+**Auf einem anderen Fernseher:** Die App braucht nur Android TV / Google TV mit eingebautem Tuner, der seine
+Sender in die Android-TV-Datenbank schreibt. Tuner-Eingang und Fernseh-App erkennt sie selbst (Eingang vom Typ
+Tuner mit den meisten Sendern; App, die einen Sender öffnet) und zeigt das Ergebnis unter „Fernseher“, wo man
+beides auch von Hand eintragen kann. TCL-Besonderheiten mit Rückfall: Die Favoritenliste erkennt sie an
+`internal_provider_flag2`, ohne diese Markierung gelten alle sichtbaren Sender als Vorgabe. Den laufenden Sender
+meldet TCL in `recent_play_channel_id`; andere Fernseher tun das nicht öffentlich, dann merkt sich die App den
+zuletzt von ihr gewählten Sender (Umschalten von Hand bemerkt sie dort nicht). Werbung umgehen braucht einen
+SAT>IP-Empfänger im Netz mit M3U-Listen wie die FRITZ!Box Cable (Adresse in der App, Vorgabe `fritz.box`); die
+werbefreien Ausweichsender sind deutsche Vorgaben und in der App änderbar. Geprüft ist das alles nur am TCL.
 
 **Am Fernseher geprüft (27.10.2026, 15:05–15:11):** 377 Tuner-Sender in der Datenbank, 36 eingeschaltet
 (37 Favoriten ohne Disney Channel HD aus `sender_nie`), alle 36 mit laufender Sendung. „Start“ auf Comedy Central
