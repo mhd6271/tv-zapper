@@ -1,4 +1,7 @@
 """Konstanten und Voreinstellungen (Vorlage: interessen.json im Repo)."""
+import json
+import pathlib
+
 DOMAIN = "tv_zapper"
 PLATFORMS = ["switch", "sensor", "number", "button"]
 EVENT_DURCHGANG = "tv_zapper_durchgang"
@@ -13,142 +16,17 @@ CONF_NUR_LESEN = "nur_lesen"
 CONF_SENDER_NIE = "sender_nie"
 CONF_SENDER_BEVORZUGT = "sender_bevorzugt"
 
-STANDARD_INTERESSEN = [
-    {
-        "name": "Hip-Hop/Rap",
-        "gewicht": 5,
-        "woerter": [
-            "hip-hop",
-            "hip hop",
-            "hiphop",
-            "rap",
-            "rapper*",
-            "rapperin*",
-            "deutschrap",
-            "gangsta-rap",
-            "grime",
-            "drill",
-            "beatbox*",
-            "breakdance*"
-        ]
-    },
-    {
-        "name": "Erwachsenen-Cartoons",
-        "gewicht": 4,
-        "woerter": [
-            "futurama",
-            "american dad*",
-            "family guy",
-            "die simpsons",
-            "simpsons",
-            "south park",
-            "rick and morty",
-            "bob's burgers",
-            "bobs burgers",
-            "king of the hill",
-            "king of queens*",
-            "solar opposites",
-            "f is for family",
-            "archer",
-            "bojack*",
-            "big mouth",
-            "disenchantment",
-            "central park",
-            "the cleveland show",
-            "cleveland show"
-        ]
-    },
-    {
-        "name": "Mysterien/Aliens",
-        "gewicht": 4,
-        "woerter": [
-            "unerklärlich*",
-            "phänomen*",
-            "alien*",
-            "ancient aliens",
-            "ufo*",
-            "außerirdisch*",
-            "pyramide*",
-            "däniken",
-            "von däniken",
-            "mysterium",
-            "mysterien",
-            "mystery",
-            "rätsel*",
-            "atlantis",
-            "area 51",
-            "prä-astronautik",
-            "maya",
-            "stonehenge",
-            "verschwörung*",
-            "übernatürlich*",
-            "paranormal*"
-        ]
-    },
-    {
-        "name": "Musik",
-        "gewicht": 3,
-        "woerter": [
-            "musik*",
-            "music",
-            "konzert*",
-            "concert",
-            "charts",
-            "festival*",
-            "musikvideo*",
-            "song*",
-            "band",
-            "sänger*",
-            "album",
-            "dj",
-            "unplugged",
-            "live-auftritt*",
-            "popstar*",
-            "soul",
-            "r&b",
-            "jazz",
-            "rock",
-            "techno"
-        ]
-    },
-    {
-        "name": "Dokumentation",
-        "gewicht": 2,
-        "woerter": [
-            "doku",
-            "dokumentation*",
-            "dokumentarfilm*",
-            "dokureihe*",
-            "documentary"
-        ]
-    },
-    {
-        "name": "Lifestyle",
-        "gewicht": 2,
-        "woerter": [
-            "lifestyle",
-            "fashion",
-            "streetwear",
-            "sneaker*",
-            "street food",
-            "foodtruck*",
-            "beauty",
-            "luxus*",
-            "tattoo*"
-        ]
-    }
-]
-
-STANDARD_AUS = ["teleshopping", "dauerwerbesendung", "verkaufsshow", "shopping-tipps", "disney*", "micky*", "mickey*"]
-
-STANDARD_SENDER_NIE = ["Disney Channel", "Disney Channel HD"]
-
-STANDARD_SENDER_BEVORZUGT = {"N24 DOKU": 1, "ZDFinfo HD": 1}
+# Grundeinstellung = Kopie von interessen.json im Repo (beim Aendern dort neu kopieren, ein Test prueft das)
+_VORLAGE = json.loads((pathlib.Path(__file__).parent / "vorlage.json").read_text(encoding="utf-8"))
+STANDARD_INTERESSEN = _VORLAGE["interessen"]
+STANDARD_AUS = _VORLAGE.get("aus", [])
+STANDARD_SENDER_NIE = _VORLAGE.get("sender_nie", [])
+STANDARD_SENDER_BEVORZUGT = _VORLAGE.get("sender_bevorzugt", {})
 
 STANDARD_OPTIONEN = {
     CONF_FAVORIT: "Favorit1",
     CONF_LAUFZEIT: 60,
-    CONF_VERWEILEN: 5,
+    CONF_VERWEILEN: _VORLAGE.get("verweilen_min", 5),
     CONF_INTERESSEN: STANDARD_INTERESSEN,
     CONF_AUS: STANDARD_AUS,
     CONF_SENDER_NIE: STANDARD_SENDER_NIE,

@@ -76,3 +76,11 @@ async def test_disney_nie():
     cfg = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS}
     from custom_components.tv_zapper.logik import score
     assert score("Micky Maus Wunderhaus", cfg)[0] == -1 and score("Futurama", cfg)[0] > 0
+
+
+def test_vorlage_gleich_interessen_json():
+    import json, pathlib
+    repo = pathlib.Path(__file__).resolve().parents[2] / "interessen.json"
+    assert json.loads(repo.read_text(encoding="utf-8")) == json.loads(
+        (pathlib.Path(const.__file__).parent / "vorlage.json").read_text(encoding="utf-8")), \
+        "interessen.json geaendert: nach homeassistant/custom_components/tv_zapper/vorlage.json kopieren"
