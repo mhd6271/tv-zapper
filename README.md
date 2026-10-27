@@ -101,7 +101,9 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
   Umschalten („Sender – Sendung (Kategorien, Punkte)“) und am Ende. HA kann selbst nichts ins Bild zeichnen:
   Ist die TV-App aus `android/` mit dem Empfänger `EinblendungEmpfaenger` installiert, blendet sie den Text ein
   (`am broadcast -a io.github.mhd6271.tvzapper.EINBLENDEN … --es text …`), sonst schickt HA eine normale
-  Android-Benachrichtigung – ob Google TV die sichtbar zeigt, ist noch nicht getestet.
+  Android-Benachrichtigung – ob Google TV die sichtbar zeigt, ist noch nicht getestet. Weg über die App
+  am 27.10.2026 16:11 mit dem Code der Integration geprüft: Einblendung erschien (Empfänger verlangt das Recht
+  DUMP, das nur die adb-Shell hat).
 
 Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
 Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten
