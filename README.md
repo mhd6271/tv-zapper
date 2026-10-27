@@ -2,7 +2,7 @@
 
 Schaltet am TCL-Google-TV selbstständig auf Sendungen, die mich interessieren.
 
-`<TV-IP>` und `<HA-IP>` stehen unten für die Adressen von Fernseher und Home Assistant im eigenen Netz.
+`<TV-IP>` steht unten für die Adresse des Fernsehers im eigenen Netz.
 
 ## Was mich interessiert
 
@@ -116,10 +116,10 @@ durcheinander.
 
 ### Installieren
 
-1. Im Finder **⌘K** („Mit Server verbinden“) `smb://<HA-IP>/config`, „Registrierter Benutzer“,
+1. Im Finder **⌘K** („Mit Server verbinden“) `smb://homeassistant.local/config`, „Registrierter Benutzer“,
    Name `homeassistant`, Passwort aus Einstellungen → Add-ons → Samba share → Konfiguration.
-   Über `homeassistant.local` klappt es nicht zuverlässig: Der Name zeigt auch auf eine zweite,
-   alte Adresse, wo nichts antwortet (Stand 27.10.2026).
+   Klappt die Anmeldung damit nicht, die IP-Adresse von Home Assistant statt `homeassistant.local`
+   nehmen: Hier zeigte der Name am 27.10.2026 auch auf eine zweite, alte Adresse, wo nichts antwortet.
 2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren –
    mit Finder oder `cp`, nicht mit `rsync` (dessen Hilfsdateien `._…` sperrt das Samba-Add-on).
 3. Home Assistant neu starten (Einstellungen → System → Neu starten).
