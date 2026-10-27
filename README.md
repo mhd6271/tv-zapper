@@ -231,6 +231,9 @@ Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, läss
 **Fertige App:** [neueste Version herunterladen](https://github.com/mhd6271/tv-zapper/releases/latest/download/tv-zapper.apk)
 (Releases auf GitHub, Prüfsumme jeweils in der Release-Notiz). Signiert mit dem Release-Schlüssel des Projekts
 (Zertifikat SHA-256 `8c371cfa…3f06ee`); eigene Builds mit anderem Schlüssel lassen sich nicht darüber installieren.
+Neue Versionen: `versionCode`/`versionName` in `android/AndroidManifest.xml` erhöhen, `android/build.sh`, dann ein
+GitHub-Release als „latest“ (kein Pre-Release) mit der Datei genau unter dem Namen `tv-zapper.apk` – muehlbronner.de
+holt sich alle 15 min das neueste Release und zeigt Version und Prüfsumme an.
 
 **Bauen und installieren** (kein Gradle, nur Java 17 und das Android-SDK mit build-tools 36 und platform 35;
 Pfade über `JAVA_HOME`, `ANDROID_HOME`, eigener Schlüssel über `TVZ_KEYSTORE`):
