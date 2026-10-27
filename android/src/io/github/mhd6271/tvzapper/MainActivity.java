@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
     private LinearLayout root, catBox, chanBox;
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
-    private TextView pauseStats;
+    private TextView pauseStats, apiInfo;
     private Button adToggle, setupButton, startButton;
     private TextView status, perms, log;
     private boolean showAllChannels;
@@ -281,6 +281,11 @@ public class MainActivity extends Activity {
         ta.addView(tvApp);
         root.addView(ta);
 
+        section("Schnittstelle für Home Assistant");
+        apiInfo = text("", 14, false);
+        apiInfo.setTypeface(android.graphics.Typeface.MONOSPACE);
+        root.addView(apiInfo);
+
         section("Protokoll");
         log = text("", 13, false);
         log.setTypeface(android.graphics.Typeface.MONOSPACE);
@@ -425,6 +430,7 @@ public class MainActivity extends Activity {
         if (st.isEmpty()) ps.append("noch keine");
         for (java.util.Map.Entry<String, String> e : st.entrySet()) ps.append(e.getKey()).append(' ').append(e.getValue()).append("   ");
         pauseStats.setText(ps.toString());
+        apiInfo.setText(apiText());
         WerbeWaechter w = ZapperService.waechter;
         if (w != null) status.append("   " + w.status());
         boolean listings = checkSelfPermission(PERM_LISTINGS) == PackageManager.PERMISSION_GRANTED;
@@ -436,6 +442,41 @@ public class MainActivity extends Activity {
         StringBuilder b = new StringBuilder();
         for (int i = lines.size() - 1; i >= Math.max(0, lines.size() - 60); i--) b.append(lines.get(i)).append('\n');
         log.setText(b.length() == 0 ? "(noch leer)" : b.toString());
+    }
+
+    /** Was man in Home Assistant eintragen muss: Adresse des Fernsehers, adb an/aus und Port, die Befehle. */
+    private String apiText() {
+        StringBuilder ip = new StringBuilder();
+        try {
+            android.net.ConnectivityManager cm = getSystemService(android.net.ConnectivityManager.class);
+            android.net.LinkProperties lp = cm.getLinkProperties(cm.getActiveNetwork());
+            if (lp != null) for (android.net.LinkAddress a : lp.getLinkAddresses())
+                if (a.getAddress() instanceof java.net.Inet4Address)
+                    ip.append(ip.length() > 0 ? ", " : "").append(a.getAddress().getHostAddress());
+        } catch (Exception ignored) {
+        }
+        String adb = Settings.Global.getString(getContentResolver(), Settings.Global.ADB_ENABLED);
+        String port = "";
+        try {
+            port = (String) Class.forName("android.os.SystemProperties").getMethod("get", String.class)
+                    .invoke(null, "service.adb.tcp.port");
+        } catch (Exception ignored) {
+        }
+        boolean adbOn = "1".equals(adb);
+        return "Adresse dieses Fernsehers: " + (ip.length() > 0 ? ip : "unbekannt (kein Netz?)") + "\n"
+                + "adb-Debugging: " + (adbOn ? "an" : "aus") + ", Port: " + (port == null || port.isEmpty() || "-1".equals(port)
+                ? "nicht im Netz freigegeben" : port) + "\n"
+                + "In Home Assistant (TV-Zapper bzw. Android TV / adb): Host = obige Adresse, Port = "
+                + (port == null || port.isEmpty() || "-1".equals(port) ? "5555" : port) + ".\n"
+                + (adbOn && port != null && !port.isEmpty() && !"-1".equals(port) ? ""
+                : "Einschalten (Menüwege je Hersteller verschieden): in den Einstellungen die Build-Nummer mehrmals mit OK\n"
+                + "drücken (Entwickleroptionen), dort USB-Debugging an. Für Zugriff übers Netz muss der Fernseher auf\n"
+                + "Port 5555 lauschen: einmal per USB-Kabel „adb tcpip 5555“.\n")
+                + "Befehle (über adb, nur adb-Shell darf sie senden):\n"
+                + "  am broadcast -a io.github.mhd6271.tvzapper.ABFRAGEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger [--es was liste|pausen]\n"
+                + "  am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger --es nr <Nr>\n"
+                + "  am broadcast -a io.github.mhd6271.tvzapper.EINBLENDEN -n io.github.mhd6271.tvzapper/.EinblendungEmpfaenger --es text <Text>\n"
+                + "  am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true";
     }
 
     private boolean usageAccess() {

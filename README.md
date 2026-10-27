@@ -262,6 +262,24 @@ adb -s <TV-IP>:5555 install -r android/build/tv-zapper.apk
 nie ins Repo, Sicherungskopie aufbewahren – ohne ihn keine Updates über installierte Apps), sonst mit dem
 Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper`.
 
+**Alle Einstellungen der TV-App im Überblick** (alles in der App, nichts fest im Code, nichts nur per adb):
+
+| Wert | Wo in der App | Vorgabe |
+|---|---|---|
+| Berechtigungen (Fernsehprogramm lesen, Nutzungszugriff, Über anderen Apps) | Knopf „Einrichten“ (startet beim ersten Öffnen von selbst); Zeile „Berechtigungen“ zeigt ✓/✗ | – |
+| Start/Stopp | Knöpfe oben; „Start“ öffnet das Fernsehbild | – |
+| Laufzeit, Verweilen je Sender | „Zeit“ | ohne Ende (0), 5 min |
+| Interessen (Name, Gewicht, Wörter), „Nie“ | „Interessen“, „Nie“; „Grundeinstellung laden“ | aus `interessen.json` |
+| Sender an / bevorzugt / aus, Bonus | „Sender“ | Favoritenliste des Fernsehers, sonst alle sichtbaren |
+| Werbung umgehen an/aus, werbefreie Ausweichsender, Zeitgrenze | „Werbung umgehen“ | an; ZDFinfo, zdf_neo, arte …; 6 min |
+| FRITZ!Box-Adresse | „Werbung umgehen“ | `fritz.box` |
+| Tuner-Eingang, Fernseh-App | „Fernseher“ (leer = automatisch, Erkanntes steht dabei) | automatisch |
+| Für Home Assistant: IP des Fernsehers, adb an/aus, adb-Port, Befehle | „Schnittstelle für Home Assistant“ (nur Anzeige) | – |
+
+Die Schnittstelle hat keinen eigenen Port: Home Assistant spricht den Fernseher über adb an (IP des Fernsehers,
+Port 5555). Dafür muss am Fernseher USB-Debugging an sein und adb übers Netz lauschen – die App zeigt, ob das so
+ist, und wie man es einschaltet (einmal per USB `adb tcpip 5555`; Menüwege je Hersteller verschieden).
+
 **Auf einem anderen Fernseher:** Die App braucht nur Android TV / Google TV mit eingebautem Tuner, der seine
 Sender in die Android-TV-Datenbank schreibt. Tuner-Eingang und Fernseh-App erkennt sie selbst (Eingang vom Typ
 Tuner mit den meisten Sendern; App, die einen Sender öffnet) und zeigt das Ergebnis unter „Fernseher“, wo man
