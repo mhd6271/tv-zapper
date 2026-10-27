@@ -213,12 +213,12 @@ Schaltet man selbst um, wird der neue Sender beobachtet. Logos von ProSieben, SA
 kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
 5 min und speichert sie.
 
-**Am Mac geprüft** (20 min Aufnahme von 6 Sendern, 17:00–17:20 Uhr, Bilder angesehen): In allen Lücken ohne Logo
+**Am Mac geprüft** (20 min Aufnahme von 6 Sendern, 15:56–16:16 Uhr, Bilder angesehen): In allen Lücken ohne Logo
 liefen echte Spots (Kaufland, Lidl, Milkana, ERGO …, bei sixx der „WERBUNG“-Trenner), mit Logo lief die Sendung.
 Logo-Wert in der Sendung meist 0,97–1,0, in der Werbung meist 0,05–0,2. Erkennung des Pausenbeginns nach 7–19 s,
 keine Fehlalarme in der Sendung. Lautstärke taugt nicht als Merkmal (Werbung und Sendung gleich laut, 62–64 dB).
 
-**Am Fernseher geprüft:** Sensor auf kabel eins Doku 40 min stabil (Logo-Wert 0,93–1,0); 17:05:16 „Werbung“
+**Am Fernseher geprüft:** Sensor auf kabel eins Doku 16:28–17:20 stabil (Logo-Wert 0,93–1,0); 17:05:16 „Werbung“
 erkannt → phoenix HD, 17:06:31 zurück auf kabel eins Doku (beide Wechsel vom Fernseher bestätigt). Ob das eine
 echte Werbepause war (nur 74 s), ist nicht belegt – deshalb legt die App seitdem bei jeder Entscheidung
 Kontrollbilder ab: `adb pull /sdcard/Android/data/io.github.mhd6271.tvzapper/files/kontrolle`.
