@@ -46,6 +46,15 @@ final class WerbeWaechter implements Sensor.Frames {
         this.c = svc;
     }
 
+    /** Weiss der Sensor gerade etwas ueber Werbung (laeuft und Logo gelernt)? */
+    synchronized boolean knowsPause() {
+        return sensor != null && logo != null && logo.ready();
+    }
+
+    synchronized boolean isPause() {
+        return pause;
+    }
+
     boolean isAway() {
         return away;
     }

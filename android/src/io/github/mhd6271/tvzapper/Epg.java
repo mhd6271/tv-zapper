@@ -75,6 +75,7 @@ final class Epg {
 
     static final class Program {
         String title = "", episode = "", desc = "", genre = "";
+        long start, end;
 
         String text() {
             return String.join(" ", title, episode, genre, desc);
@@ -125,6 +126,8 @@ final class Epg {
                 p.episode = nz(cur.getString(1));
                 p.desc = nz(cur.getString(2));
                 p.genre = (nz(cur.getString(3)) + " " + nz(cur.getString(4))).trim();
+                p.start = cur.getLong(5);
+                p.end = cur.getLong(6);
                 return p;
             }
         }

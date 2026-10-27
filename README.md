@@ -294,4 +294,21 @@ etwas anderes als das Fernsehbild vorn ist, und läuft danach für denselben Sen
 - Sender ohne Logo-Ausblendung in der Werbung werden nicht erkannt; Senderwerbung/Trailer ohne Logo gelten als
   Werbung.
 
+**Schnittstelle für Home Assistant & Co.** (per adb, nur mit DUMP-Recht, also adb-Shell oder System; Antwort als
+JSON in `data="…"` der Ausgabe von `am broadcast`):
+
+```bash
+adb shell am broadcast -a io.github.mhd6271.tvzapper.ABFRAGEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger
+adb shell am broadcast -a io.github.mhd6271.tvzapper.ABFRAGEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger --es was liste
+adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger --es nr 167 --es text "'Hinweis im Bild'"
+```
+
+`ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
+`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt) und `jetzt` = laufender Sender mit `nr`, `sender`,
+`id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
+DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
+alle nicht ausgeschalteten Sender in derselben Form. `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
+Einblendung) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
+Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s.
+
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
