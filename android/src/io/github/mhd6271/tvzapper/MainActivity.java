@@ -61,6 +61,21 @@ public class MainActivity extends Activity {
                 || checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{PERM_LISTINGS, "android.permission.POST_NOTIFICATIONS"}, 1);
         }
+        handleStartExtra(getIntent());
+    }
+
+    /** am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true  (z. B. aus Home Assistant) */
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        handleStartExtra(i);
+    }
+
+    private void handleStartExtra(Intent i) {
+        if (i != null && i.getBooleanExtra("start", false)) {
+            i.removeExtra("start");
+            start(ZapperService.ACTION_START, false);
+        }
     }
 
     @Override

@@ -194,3 +194,39 @@ Fernsehbild meldet Android das Fenster als sichtbar – mit eigenen Augen am Fer
 kabel eins Doku (6 P., Ancient Aliens), 15:20 „bleibt“; der Vordergrund-Dienst lief noch, TCL hat ihn nicht beendet.
 Auffällig: Shopping Queen, Barbara Salesch u. Ä. bekommen die Dokumentation-Punkte – die App bewertet auch die
 Beschreibung jeder Sendung; vermutlich steht dort „Doku-Soap“ o. Ä. (nicht nachgesehen).
+
+### Werbung umgehen (TV-App, seit 27.10.2026)
+
+Der Fernseher selbst gibt einer App weder Bild noch Ton des Tuners: Bildschirmfotos sind leer, und der
+Ton-Mitschnitt (`android/tonprobe/`, `AudioPlaybackCapture` mit Freigabe) liefert nur Stille (Wert 0); das Mikrofon
+hört nur Rauschen. Deshalb nimmt die **FRITZ!Box 6660 Cable** den laufenden Sender nebenher als zweiter Empfänger
+auf (DVB-C über SAT>IP, Senderlisten unter `http://fritz.box/dvb/m3u/tvsd.m3u` bzw. `tvhd.m3u`). Geguckt wird
+weiter über den Tuner des Fernsehers.
+
+**Wie es erkennt:** Private Sender blenden in der Werbung ihr Senderlogo aus. Die App (`Sensor.java`) holt den
+Stream per RTSP/RTP, decodiert ihn mit dem Hardware-Decoder des TCL (`c2.mtk.mpeg2.decoder`, läuft parallel zum
+Fernsehbild), nimmt ~3,4 Bilder/s in halber Auflösung und prüft in der Logo-Ecke, ob die gelernten Logo-Kanten da
+sind (`Logo.java`). Werbung = in 10 s mindestens 80 % ohne Logo, vorbei = in 30 s mindestens 80 % mit Logo.
+Dann schaltet sie auf den besten **werbefreien Ausweichsender** (Vorgabe ZDFinfo, zdf_neo, arte, tagesschau24,
+3sat, phoenix, WDR, hr – in der App änderbar, Punkte nach Interessen) und danach zurück, jeweils mit Einblendung.
+Schaltet man selbst um, wird der neue Sender beobachtet. Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
+kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
+5 min und speichert sie.
+
+**Am Mac geprüft** (20 min Aufnahme von 6 Sendern, 17:00–17:20 Uhr, Bilder angesehen): In allen Lücken ohne Logo
+liefen echte Spots (Kaufland, Lidl, Milkana, ERGO …, bei sixx der „WERBUNG“-Trenner), mit Logo lief die Sendung.
+Logo-Wert in der Sendung meist 0,97–1,0, in der Werbung meist 0,05–0,2. Erkennung des Pausenbeginns nach 7–19 s,
+keine Fehlalarme in der Sendung. Lautstärke taugt nicht als Merkmal (Werbung und Sendung gleich laut, 62–64 dB).
+
+**Am Fernseher geprüft:** Sensor auf kabel eins Doku 40 min stabil (Logo-Wert 0,93–1,0); 17:05:16 „Werbung“
+erkannt → phoenix HD, 17:06:31 zurück auf kabel eins Doku (beide Wechsel vom Fernseher bestätigt). Ob das eine
+echte Werbepause war (nur 74 s), ist nicht belegt – deshalb legt die App seitdem bei jeder Entscheidung
+Kontrollbilder ab: `adb pull /sdcard/Android/data/io.github.mhd6271.tvzapper/files/kontrolle`.
+
+**Grenzen:**
+- Die FRITZ!Box liefert die Frequenz 562 MHz nicht (MTV, Comedy Central) – dort keine Werbeerkennung.
+- Ein Stream je Gerät: Ein zweites Gerät (z. B. der Mac) daneben lief bei uns nur ~3 min.
+- Sender ohne Logo-Ausblendung in der Werbung werden nicht erkannt; Senderwerbung/Trailer ohne Logo gelten als
+  Werbung.
+
+Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.

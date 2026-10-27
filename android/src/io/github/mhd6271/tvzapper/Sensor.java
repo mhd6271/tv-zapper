@@ -28,6 +28,10 @@ final class Sensor {
         /** top/bottom: Graubild-Streifen w x (h/4), Zeile fuer Zeile. */
         void frame(byte[] top, byte[] bottom, int w, int h);
 
+        /** Ganzes Bild klein (Viertel-Aufloesung, grau) fuer Kontrollbilder. */
+        default void thumb(byte[] g, int w, int h) {
+        }
+
         void error(String msg);
     }
 
@@ -192,7 +196,16 @@ final class Sensor {
             }
         }
         out.frame(top, bottom, W, H);
+        if (++thumbCount % 8 == 0) {   // etwa alle 2 s
+            int tw = img.getWidth() / 4, th = img.getHeight() / 4;
+            byte[] t = new byte[tw * th];
+            for (int r = 0; r < th; r++)
+                for (int x = 0; x < tw; x++) t[r * tw + x] = b.get(4 * r * rs + 4 * x * ps);
+            out.thumb(t, tw, th);
+        }
     }
+
+    private int thumbCount;
 
     /** Minimaler MPEG-TS-Zerleger: PAT -> PMT -> Video-PID -> PES -> Zugriffseinheiten. */
     static final class Demux {

@@ -35,7 +35,10 @@ final class WerbeWaechter implements Sensor.Frames {
     private int secN;
     private long secStart;
     private int learnShown = -1;
-    private long lastFrame, lastReport;
+    private long lastFrame, lastReport, watchStart;
+    private boolean gotFrame;
+    /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
+    private final java.util.Map<String, Long> noSignal = new java.util.HashMap<>();
     private int framesSinceReport;
 
     WerbeWaechter(ZapperService svc) {
@@ -49,7 +52,7 @@ final class WerbeWaechter implements Sensor.Frames {
 
     String status() {
         if (home == null) return "Werbe-Sensor: wartet";
-        if (sensor == null) return "Werbe-Sensor: kein FRITZ!Box-Stream für " + home.name;
+        if (sensor == null) return "Werbe-Sensor: " + home.name + " wird nicht beobachtet";
         if (logo == null || !logo.ready())
             return "Werbe-Sensor: lernt Logo von " + home.name + " (" + (logo == null ? 0 : logo.learnPercent()) + " %)";
         return "Werbe-Sensor: " + home.name + (pause ? " – WERBUNG" : " – Sendung") + (away ? ", ausgewichen" : "");
@@ -70,9 +73,16 @@ final class WerbeWaechter implements Sensor.Frames {
             away = false;
         }
         if (!away && (home == null || home.id != cur) && System.currentTimeMillis() >= retryAt) watch(cur);
-        if (sensor != null && System.currentTimeMillis() - lastFrame > 20_000 && lastFrame > 0) {
-            Log.add(c, "Werbe-Sensor: keine Bilder mehr – starte neu");
-            watch(cur);
+        if (sensor != null && System.currentTimeMillis() - lastFrame > 20_000) {
+            if (!gotFrame) {
+                Log.add(c, "Werbe-Sensor: FRITZ!Box liefert für " + home.name + " kein Bild – keine Werbeerkennung, "
+                        + "neuer Versuch in 30 min");
+                noSignal.put(homeKey, System.currentTimeMillis() + 30 * 60_000L);
+                stopSensor();
+            } else {
+                Log.add(c, "Werbe-Sensor: keine Bilder mehr – starte neu");
+                watch(cur);
+            }
         }
         if (away && pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
             Log.add(c, "Werbung auf " + home.name + " dauert über 12 min – Logo wird neu gelernt, bleibe hier");
@@ -92,6 +102,10 @@ final class WerbeWaechter implements Sensor.Frames {
         secN = 0;
         for (Epg.Channel ch : Epg.channels(c)) if (ch.id == channelId) home = ch;
         if (home == null) return;
+        if (Config.load(c).adFree.contains(home.name)) {
+            Log.add(c, "Werbe-Sensor: " + home.name + " ist werbefrei – nichts zu beobachten");
+            return;
+        }
         try {
             if (fritz == null || System.currentTimeMillis() - fritzLoaded > 6 * 3600_000L) {
                 fritz = FritzTv.load(Config.load(c).fritz);
@@ -109,9 +123,12 @@ final class WerbeWaechter implements Sensor.Frames {
             return;
         }
         homeKey = FritzTv.norm(home.name);
+        Long ns = noSignal.get(homeKey);
+        if (ns != null && ns > System.currentTimeMillis()) return;
         logo = Logo.load(c, homeKey);
         learnShown = -1;
-        lastFrame = System.currentTimeMillis();
+        lastFrame = lastReport = watchStart = System.currentTimeMillis();
+        gotFrame = false;
         Log.add(c, "Werbe-Sensor beobachtet " + home.name + " (FRITZ!Box: " + fritz.fritzName(home.name) + ")"
                 + (logo.ready() ? "" : " – Logo wird gelernt, etwa 5 min"));
         sensor = new Sensor(url, this);
@@ -134,6 +151,7 @@ final class WerbeWaechter implements Sensor.Frames {
     public synchronized void frame(byte[] top, byte[] bottom, int w, int h) {
         if (logo == null || home == null) return;
         lastFrame = System.currentTimeMillis();
+        gotFrame = true;
         framesSinceReport++;
         boolean wasReady = logo.ready();
         float v = logo.feed(top, bottom, w);
@@ -168,6 +186,48 @@ final class WerbeWaechter implements Sensor.Frames {
         decide();
     }
 
+    // --- Kontrollbilder: die letzten 60 s und 30 s nach jeder Entscheidung, als PGM unter
+    //     /sdcard/Android/data/io.github.mhd6271.tvzapper/files/kontrolle/<Zeit>_<Ereignis>/ (adb pull) ---
+    private final ArrayDeque<Object[]> thumbs = new ArrayDeque<>();
+    private long dumpUntil;
+    private java.io.File dumpDir;
+
+    @Override
+    public synchronized void thumb(byte[] g, int w, int h) {
+        long now = System.currentTimeMillis();
+        thumbs.addLast(new Object[]{now, g, w, h});
+        while (thumbs.size() > 30) thumbs.removeFirst();
+        if (dumpDir != null && now <= dumpUntil) writeThumb(dumpDir, now, g, w, h);
+    }
+
+    private void dump(String what) {
+        java.io.File base = c.getExternalFilesDir("kontrolle");
+        if (base == null) return;
+        String stamp = new java.text.SimpleDateFormat("MMdd-HHmmss", java.util.Locale.GERMANY).format(new java.util.Date());
+        dumpDir = new java.io.File(base, stamp + "_" + what);
+        dumpDir.mkdirs();
+        for (Object[] t : thumbs) writeThumb(dumpDir, (Long) t[0], (byte[]) t[1], (Integer) t[2], (Integer) t[3]);
+        dumpUntil = System.currentTimeMillis() + 30_000;
+        java.io.File[] old = base.listFiles();
+        if (old != null && old.length > 40) {
+            java.util.Arrays.sort(old);
+            for (int i = 0; i < old.length - 40; i++) {
+                java.io.File[] fs = old[i].listFiles();
+                if (fs != null) for (java.io.File f : fs) f.delete();
+                old[i].delete();
+            }
+        }
+    }
+
+    private static void writeThumb(java.io.File dir, long t, byte[] g, int w, int h) {
+        String name = new java.text.SimpleDateFormat("HHmmss", java.util.Locale.GERMANY).format(new java.util.Date(t)) + ".pgm";
+        try (java.io.FileOutputStream o = new java.io.FileOutputStream(new java.io.File(dir, name))) {
+            o.write(("P5\n" + w + " " + h + "\n255\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            o.write(g);
+        } catch (Exception ignored) {
+        }
+    }
+
     @Override
     public void error(String msg) {
         Log.add(c, "Werbe-Sensor: " + msg);
@@ -178,10 +238,12 @@ final class WerbeWaechter implements Sensor.Frames {
             pause = true;
             pauseSince = System.currentTimeMillis();
             Log.add(c, "WERBUNG auf " + home.name);
+            dump("werbung_" + homeKey);
             if (Config.load(c).avoidAds) dodge();
         } else if (pause && share(WIN_OUT, true) >= .8f) {
             pause = false;
             Log.add(c, "Werbung auf " + home.name + " vorbei (" + (System.currentTimeMillis() - pauseSince) / 1000 + " s)");
+            dump("vorbei_" + homeKey);
             if (away) {
                 away = false;
                 if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name)) awayChannel = -1;
