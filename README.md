@@ -46,10 +46,13 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 
 ## Voraussetzungen
 
-- `adb` verbunden mit dem Fernseher (`adb connect <TV-IP>:5555`;
-  bei Hängern `python3 ~/Projekte/flimmer/tools/tvk.py connect`).
+- Ein TCL-Fernseher mit Google TV (getestet: TCL Smart TV Pro; die Paketnamen `com.tcl.tv` und die
+  Programmzeitschrift sind TCL-spezifisch), ADB über Netzwerk in den Entwickleroptionen eingeschaltet.
+- `adb` verbunden mit dem Fernseher (`adb connect <TV-IP>:5555`; bei Hängern `adb kill-server` und neu verbinden).
 - Adresse des Fernsehers für `zapper.py`: Umgebungsvariable `TVZ_TV=<TV-IP>:5555` oder eine Zeile
   `<TV-IP>:5555` in der Datei `.tvz_tv` neben dem Skript (steht in `.gitignore`, kommt nicht ins Repo).
+- Senderliste: Vorgabe ist die Liste „Favorit1“ der TV-Programmzeitschrift, eine andere über `TVZ_FAV=Favorit2`.
+- Eigene Interessen: `interessen.json` anpassen (die mitgelieferte ist ein Beispiel).
 - Fernseher an und auf dem Tuner-Eingang. Wiedereinschalten aus dem Ruhezustand
   geht nur per Wake-on-LAN (MAC des Fernsehers), nicht über Home Assistant allein.
 

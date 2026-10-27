@@ -36,7 +36,7 @@ TV = _tv_adresse()
 TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 LOG = HERE / "protokoll.jsonl"
-FAV_TAB = "Favorit1"
+FAV_TAB = os.environ.get("TVZ_FAV", "Favorit1")   # Senderliste im TV-Guide, z. B. Favorit2
 
 
 def now():
