@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats, apiInfo;
-    private Button adToggle, setupButton, startButton;
+    private Button adToggle, setupButton, startButton, prefToggle;
     private TextView status, perms, log;
     private boolean showAllChannels;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -247,6 +247,13 @@ public class MainActivity extends Activity {
         });
         adToggle.setText("Werbung umgehen: " + (cfg.avoidAds ? "an" : "aus"));
         root.addView(adToggle);
+        prefToggle = button("", v -> {
+            cfg.dodgePreferred = !cfg.dodgePreferred;
+            prefToggle.setText("Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen: " + (cfg.dodgePreferred ? "an" : "aus"));
+            cfg.save(this);
+        });
+        prefToggle.setText("Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen: " + (cfg.dodgePreferred ? "an" : "aus"));
+        root.addView(prefToggle);
         root.addView(text("Werbefreie Ausweichsender (Namen wie in der Senderliste, Reihenfolge = Vorrang):", 14, false));
         adFree = edit(String.join(", ", cfg.adFree), true);
         root.addView(adFree);

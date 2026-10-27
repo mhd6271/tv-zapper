@@ -62,6 +62,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("vorn", fg == null ? JSONObject.NULL : fg);
         out.put("fernsehbild_vorn", on && fg != null && fg.equals(tvApp));
         out.put("zapper_laeuft", ZapperService.endAt > System.currentTimeMillis());
+        out.put("werbung_umgehen", cfg.avoidAds);
+        out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
         WerbeWaechter w = ZapperService.waechter;
         out.put("werbe_sensor", w == null ? JSONObject.NULL : w.status());
         out.put("werbung", w == null || !w.knowsPause() ? JSONObject.NULL : w.isPause());

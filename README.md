@@ -273,6 +273,7 @@ Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper
 | Interessen (Name, Gewicht, Wörter), „Nie“ | „Interessen“, „Nie“; „Grundeinstellung laden“ | aus `interessen.json` |
 | Sender an / bevorzugt / aus, Bonus | „Sender“ | Favoritenliste des Fernsehers, sonst alle sichtbaren |
 | Werbung umgehen an/aus, werbefreie Ausweichsender, Zeitgrenze | „Werbung umgehen“ | an; ZDFinfo, zdf_neo, arte …; 6 min |
+| Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen (`ausweichen_bevorzugt`): bester bevorzugter Sender, der nicht gerade selbst Werbung hat, sonst ein werbefreier | „Werbung umgehen“ | aus |
 | FRITZ!Box-Adresse | „Werbung umgehen“ | `fritz.box` |
 | Tuner-Eingang, Fernseh-App | „Fernseher“ (leer = automatisch, Erkanntes steht dabei) | automatisch |
 | Für Home Assistant: IP des Fernsehers, adb an/aus, adb-Port, Befehle | „Schnittstelle für Home Assistant“ (nur Anzeige) | – |
@@ -358,7 +359,7 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 ```
 
 `ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
-`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt) und `jetzt` = laufender Sender mit `nr`, `sender`,
+`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `werbung_umgehen`, `ausweichen_bevorzugt` und `jetzt` = laufender Sender mit `nr`, `sender`,
 `id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
 alle nicht ausgeschalteten Sender in derselben Form. `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die

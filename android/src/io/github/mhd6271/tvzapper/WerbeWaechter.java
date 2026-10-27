@@ -353,8 +353,20 @@ final class WerbeWaechter implements Sensor.Frames {
         Config cfg = Config.load(c);
         List<Epg.Channel> all = Epg.channels(c);
         Epg.Channel best = null;
+        if (cfg.dodgePreferred) {   // zuerst der beste bevorzugte Sender, der nicht selbst gerade Werbung hat
+            int bp = Integer.MIN_VALUE;
+            for (Epg.Channel ch : all) {
+                if (ch.id == home.id || !Config.BEVORZUGT.equals(cfg.state(ch)) || inAd(ch.name)) continue;
+                Epg.Program p = Epg.current(c, ch.id);
+                int pts = Scorer.score(ch.name + " " + (p == null ? "" : p.text()), cfg).points;
+                if (pts >= 0 && pts > bp) {
+                    best = ch;
+                    bp = pts;
+                }
+            }
+        }
         int bestPts = Integer.MIN_VALUE, bestRank = Integer.MAX_VALUE;
-        for (Epg.Channel ch : all) {
+        for (Epg.Channel ch : best != null ? java.util.Collections.<Epg.Channel>emptyList() : all) {
             int rank = cfg.adFree.indexOf(ch.name);
             if (rank < 0 || ch.id == home.id) continue;
             Epg.Program p = Epg.current(c, ch.id);
