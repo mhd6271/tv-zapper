@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(48), dp(24), dp(48), dp(24));
         scroll.addView(root);
+        scroll.setKeepScreenOn(true);   // sonst springt am TV sofort der Bildschirmschoner an
         setContentView(scroll);
         build();
         if (checkSelfPermission(PERM_LISTINGS) != PackageManager.PERMISSION_GRANTED

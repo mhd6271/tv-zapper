@@ -57,7 +57,10 @@ final class Logo {
 
     private void finishLearning() {
         int bestPts = 0;
+        // Senderlogos sitzen oben; untere Ecken nur, wenn oben nichts ist (dort sind oft Sendungslogos,
+        // Spielstaende oder Laufbaender – am Mac bei SAT.1, RTL und n-tv so passiert)
         for (int c = 0; c < 4; c++) {
+            if (c == 2 && bestPts >= 30) break;
             boolean[] m = new boolean[CW * CH];
             for (int i = 0; i < m.length; i++) m[i] = counts[c][i] > 0.7 * learned;
             clean(m);
@@ -152,7 +155,7 @@ final class Logo {
     private static File file(Context c, String key) {
         File d = new File(c.getFilesDir(), "logos");
         d.mkdirs();
-        return new File(d, key + ".txt");
+        return new File(d, key + "_v2.txt");   // v2: nur noch obere Ecken bevorzugt; aeltere Dateien neu lernen
     }
 
     void save(Context c, String key) {

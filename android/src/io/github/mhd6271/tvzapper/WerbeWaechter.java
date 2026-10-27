@@ -36,7 +36,7 @@ final class WerbeWaechter implements Sensor.Frames {
     private long secStart;
     private int learnShown = -1, failedShown;
     private long lastFrame, lastReport, watchStart;
-    private boolean gotFrame;
+    private boolean gotFrame, paused;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
     private final java.util.Map<String, Long> noSignal = new java.util.HashMap<>();
     private int framesSinceReport;
@@ -52,6 +52,7 @@ final class WerbeWaechter implements Sensor.Frames {
 
     String status() {
         if (home == null) return "Werbe-Sensor: wartet";
+        if (paused) return "Werbe-Sensor: " + home.name + " – ruht, solange das Fernsehbild nicht vorn ist";
         if (sensor == null) return "Werbe-Sensor: " + home.name + " wird nicht beobachtet";
         if (logo == null || !logo.ready())
             return "Werbe-Sensor: lernt Logo von " + home.name + " (" + (logo == null ? 0 : logo.learnPercent()) + " %)";
@@ -63,8 +64,19 @@ final class WerbeWaechter implements Sensor.Frames {
         PowerManager pm = c.getSystemService(PowerManager.class);
         String fg = ZapperService.foregroundApp(c);
         if (!pm.isInteractive() || !ZapperService.TV_PKG.equals(fg)) {
-            stopSensor();
+            if (sensor != null) {
+                stopSensor();
+                paused = true;   // Fernsehbild nicht vorn: Stream sparen, danach fuer denselben Sender neu starten
+            }
             return;
+        }
+        if (paused && home != null) {
+            paused = false;
+            Log.add(c, "Werbe-Sensor: Fernsehbild wieder vorn – beobachte " + home.name + " weiter");
+            lastFrame = System.currentTimeMillis();
+            gotFrame = false;
+            sensor = new Sensor(fritz.urlFor(home.name), this);
+            sensor.start();
         }
         long cur = Epg.currentChannelId(c);
         if (cur < 0) return;
@@ -101,6 +113,7 @@ final class WerbeWaechter implements Sensor.Frames {
 
     private void watch(long channelId) {
         stopSensor();
+        paused = false;
         home = null;
         pause = false;
         seconds.clear();
