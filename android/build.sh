@@ -1,7 +1,8 @@
 #!/bin/sh
 # Baut build/tv-zapper.apk ohne Gradle: aapt2 (Ressourcen), javac + d8 (Code), zipalign, apksigner.
 # Voraussetzungen: Java 17 (brew install openjdk@17), Android-SDK mit build-tools 36 und platform 35.
-# Signiert mit dem Debug-Schluessel ~/.android/debug.keystore (legt Android Studio/adb an; Passwort "android").
+# Signiert mit dem Release-Schluessel aus ~/.tvzapper/keystore.properties (storeFile, alias, password; liegt
+# nicht im Repo), sonst mit dem Debug-Schluessel ~/.android/debug.keystore (Passwort "android").
 set -e
 cd "$(dirname "$0")"
 JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}
@@ -9,7 +10,13 @@ SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
 BT=$SDK/build-tools/36.0.0
 JAR=$SDK/platforms/android-35/android.jar
 export PATH="$JAVA_HOME/bin:$PATH"
-KS=${TVZ_KEYSTORE:-$HOME/.android/debug.keystore}
+PROPS=${TVZ_KEYPROPS:-$HOME/.tvzapper/keystore.properties}
+if [ -f "$PROPS" ]; then
+  KS=$(sed -n 's/^storeFile=//p' "$PROPS"); KA=$(sed -n 's/^alias=//p' "$PROPS"); KP=$(sed -n 's/^password=//p' "$PROPS")
+else
+  KS=$HOME/.android/debug.keystore; KA=androiddebugkey; KP=android
+fi
+export TVZ_KP="$KP"   # Passwort nur ueber die Umgebung an apksigner, nicht auf der Befehlszeile
 OUT=build
 
 rm -rf $OUT && mkdir -p $OUT/res $OUT/classes $OUT/dex $OUT/assets
@@ -24,5 +31,5 @@ javac -source 11 -target 11 -Xlint:-options -encoding UTF-8 -classpath "$JAR" -d
 "$BT/d8" --min-api 26 --lib "$JAR" --output $OUT/dex $(find $OUT/classes -name '*.class')
 (cd $OUT/dex && zip -q ../unsigned.apk classes.dex)
 "$BT/zipalign" -f 4 $OUT/unsigned.apk $OUT/aligned.apk
-"$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out $OUT/tv-zapper.apk $OUT/aligned.apk
-echo "fertig: $(pwd)/$OUT/tv-zapper.apk"
+"$BT/apksigner" sign --ks "$KS" --ks-key-alias "$KA" --ks-pass env:TVZ_KP --key-pass env:TVZ_KP --out $OUT/tv-zapper.apk $OUT/aligned.apk
+echo "fertig: $(pwd)/$OUT/tv-zapper.apk ($(basename "$KS"))"
