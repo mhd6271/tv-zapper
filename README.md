@@ -104,6 +104,9 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
   Android-Benachrichtigung – ob Google TV die sichtbar zeigt, ist noch nicht getestet. Weg über die App
   am 27.10.2026 16:11 mit dem Code der Integration geprüft: Einblendung erschien (Empfänger verlangt das Recht
   DUMP, das nur die adb-Shell hat).
+- **Symbol:** `brand/icon.png` (256 px) und `icon@2x.png` (512 px), gezeichnet wie das Symbol der TV-App
+  (`android/res/drawable/icon.xml`). HA 2026.10 liest den Ordner `brand/` einer eigenen Integration erst nach
+  einem Neustart; bis dahin zeigt HA „icon not available“.
 
 Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
 Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten
