@@ -99,6 +99,14 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 (`/config/.storage/tv_zapper_adbkey`); beim ersten Verbinden fragt der Fernseher deshalb einmal
 „USB-Debugging zulassen?“ – mit der Fernbedienung **Immer zulassen** wählen.
 
+**Mit der TV-App (ab 0.3.0) geht es ohne Programmzeitschrift:** Ist die App aus `android/` installiert, fragt HA
+sie über ihre Schnittstelle (`ABFRAGEN` mit `was=liste`, siehe „Schnittstelle für Home Assistant“ unten) nach allen
+Sendern mit der laufenden Sendung, bewertet sie mit den Interessen aus HA (Sender, Sendung, Folge, Beschreibung;
+`genre` ist beim TCL nur ein Zahlencode und zählt nicht) und schaltet per `UMSCHALTEN` – keine Tastendrücke,
+ein Durchgang dauert Sekunden statt Minuten. Als Senderliste gilt dann die der TV-App (alle nicht ausgeschalteten
+Sender), nicht der Reiter aus den Einstellungen. Läuft gerade der Zapper der TV-App, überspringt HA den Durchgang,
+damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Programmzeitschrift.
+
 **Einstellungen** (beim Einrichten bzw. über „Konfigurieren“ an der Integration):
 
 | Einstellung | Bedeutung |
@@ -113,6 +121,7 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 | Verweilzeit | Minuten zwischen zwei Prüfungen |
 | Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
 | Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
+| TV-Protokoll | jede Minute nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
 | MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 **Entitäten** (Gerät „TV-Zapper“):
@@ -121,6 +130,11 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
   von selbst aus. Attribut `laeuft_bis`.
 - `sensor.tv_zapper_aktueller_treffer` – z. B. `23 ProSieben HD: …`; Attribute Sender, Nummer, Sendung, Punkte,
   Kategorien, Aktion (bleibt/umgeschaltet/uebersprungen/fehler), bester und weitere Treffer.
+- `sensor.tv_zapper_lauft_jetzt` – **TV-Protokoll**: jede Minute, was gerade läuft (`167 ProSieben MAXX HD: Futurama`),
+  „Fernseher aus“ oder „Andere App: …“; Attribute Sendung, Folge, Beschreibung, Start, Ende, Punkte, Kategorien,
+  Werbung. Der Verlauf des Sensors in HA (Verlauf, Logbuch) zeigt, was wann lief. Sender und Sendung kennt HA nur
+  über die TV-App; ohne sie zeigt der Sensor bloß „Fernsehbild“ bzw. die App im Vordergrund. Liest nicht, solange
+  ein Durchgang den Fernseher bedient.
 - `number.tv_zapper_laufzeit`, `number.tv_zapper_verweilzeit` – lassen sich auch im Dashboard oder per
   Automation ändern und wirken sofort, auch auf einen laufenden Zapper.
 - `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
@@ -163,8 +177,10 @@ durcheinander.
    [`homeassistant/dashboard-beispiel.yaml`](homeassistant/dashboard-beispiel.yaml), Anleitung steht in der Datei.
 
 Eingerichtet und einmal „nur lesen“ geprüft am 27.10.2026 (HA 2026.10.4): 37 Sender gelesen,
-laufender Sender richtig erkannt, nicht umgeschaltet. Noch nicht geklärt: ob schon das Blättern in der
-Programmzeitschrift den Sender umschaltet (beim Lauf von `zapper.py` beobachtet).
+laufender Sender richtig erkannt, nicht umgeschaltet. Umschalten über die Programmzeitschrift am 27.10.2026
+19:21–19:26 am Fernseher geprüft: 37 Sender gelesen, auf 167 ProSieben MAXX HD (Futurama, 4 Punkte) umgeschaltet,
+nachgelesen passt. Das Blättern in der Programmzeitschrift schaltet nicht um: `recent_play_channel_id` blieb die
+fünf Minuten im Programmführer gleich und wechselte erst beim Umschalten.
 
 ### Ohne Home Assistant ausprobieren
 

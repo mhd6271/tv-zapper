@@ -107,3 +107,21 @@ async def test_alles(hass: HomeAssistant):
         assert hass.states.get("sensor.tv_zapper_aktueller_treffer").state == "Fehler"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_laeuft_jetzt(hass: HomeAssistant):
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    jetzt = {"quelle": "app", "fernsehbild_vorn": True, "bildschirm_an": True, "vorn": "com.tcl.tv",
+             "jetzt": {"nr": 167, "sender": "ProSieben MAXX HD", "sendung": "Futurama", "punkte": 4,
+                       "treffer": ["Erwachsenen-Cartoons"]}}
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.jetzt", AsyncMock(return_value=jetzt)):
+        await st.jetzt_lesen()
+    s = hass.states.get("sensor.tv_zapper_lauft_jetzt")
+    assert s.state == "167 ProSieben MAXX HD: Futurama" and s.attributes["kategorien"] == ["Erwachsenen-Cartoons"]
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock(side_effect=OSError("aus"))), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
+        await st.jetzt_lesen()
+    assert hass.states.get("sensor.tv_zapper_lauft_jetzt").state == "Fernseher aus"

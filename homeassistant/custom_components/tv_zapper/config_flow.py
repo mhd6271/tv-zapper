@@ -10,7 +10,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers import selector
 
 from .const import (
-    CONF_AUS, CONF_EINBLENDUNG, CONF_FAVORIT, CONF_MAC, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
+    CONF_AUS, CONF_EINBLENDUNG, CONF_FAVORIT, CONF_MAC, CONF_PROTOKOLL, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
     CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
@@ -105,6 +105,7 @@ class TvZapperOptionsFlow(OptionsFlow):
                     CONF_NUR_LESEN: user_input[CONF_NUR_LESEN],
                     CONF_EINBLENDUNG: user_input[CONF_EINBLENDUNG],
                     CONF_MAC: mac,
+                    CONF_PROTOKOLL: user_input.get(CONF_PROTOKOLL, True),
                 })
         vorgabe = user_input or {
             **opt,
@@ -123,6 +124,7 @@ class TvZapperOptionsFlow(OptionsFlow):
             vol.Required(CONF_FAVORIT, default=vorgabe[CONF_FAVORIT]): str,
             vol.Required(CONF_NUR_LESEN, default=vorgabe[CONF_NUR_LESEN]): bool,
             vol.Required(CONF_EINBLENDUNG, default=vorgabe[CONF_EINBLENDUNG]): bool,
+            vol.Required(CONF_PROTOKOLL, default=vorgabe.get(CONF_PROTOKOLL, True)): bool,
             vol.Optional(CONF_MAC, default=vorgabe.get(CONF_MAC, "")): str,
         })
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors,

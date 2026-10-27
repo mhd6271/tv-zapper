@@ -6,6 +6,7 @@ dieselbe wie in der eingebauten Integration "Android Debug Bridge") mit eigenem 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import re
@@ -25,6 +26,30 @@ TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
 EINBLENDEN_ACTION = "io.github.mhd6271.tvzapper.EINBLENDEN"
 EINBLENDEN_EMPFAENGER = "io.github.mhd6271.tvzapper/.EinblendungEmpfaenger"
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
+# Schnittstelle der TV-App ab 0.3.0: Sender und Sendungen aus TvContract, Umschalten ohne Tasten
+ABFRAGEN_ACTION = "io.github.mhd6271.tvzapper.ABFRAGEN"
+UMSCHALTEN_ACTION = "io.github.mhd6271.tvzapper.UMSCHALTEN"
+ABFRAGE_EMPFAENGER = "io.github.mhd6271.tvzapper/.AbfrageEmpfaenger"
+
+
+def broadcast_daten(ausgabe: str) -> dict | None:
+    """`Broadcast completed: result=0, data="{...}"` -> dict; None, wenn kein Empfaenger geantwortet hat."""
+    m = re.search(r'Broadcast completed: result=(-?\d+), data="(.*)"\s*$', ausgabe, re.S)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(2))
+    except ValueError:
+        return None
+
+
+def app_sendung(x: dict, cfg) -> dict:
+    """Ein Sender aus der TV-App wie eine Zeile der Programmzeitschrift bewerten. genre ist bei TCL ein
+    DVB-Zahlencode und wird nicht mitbewertet; Folge und Beschreibung zaehlen wie die Info im Kopf."""
+    info = " ".join(t for t in (x.get("folge"), x.get("beschreibung")) if t)
+    b = bewerte_sendung(int(x["nr"]), x.get("sender", ""), x.get("sendung") or None, {"info": info}, cfg)
+    b.update(id=x.get("id"), start=x.get("start"), ende=x.get("ende"))
+    return b
 
 
 def lade_signer(pfad: str) -> PythonRSASigner:
@@ -254,6 +279,52 @@ class Fernseher:
         except Exception as e:  # noqa: BLE001
             _LOGGER.warning("Programmzeitschrift liess sich nach Fehler nicht schliessen: %s", e)
 
+    async def app_abfragen(self, liste: bool = False) -> dict | None:
+        """Zustand von der TV-App (ab 0.3.0); None, wenn sie nicht installiert ist oder nicht antwortet."""
+        zusatz = " --es was liste" if liste else ""
+        return broadcast_daten(await self.sh(f"am broadcast -a {ABFRAGEN_ACTION} -n {ABFRAGE_EMPFAENGER}{zusatz}"))
+
+    async def app_umschalten(self, nr: int, text: str = "") -> dict:
+        zusatz = f" --es text {shlex.quote(text)}" if text else ""
+        antwort = broadcast_daten(await self.sh(
+            f"am broadcast -a {UMSCHALTEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es nr {int(nr)}{zusatz}"))
+        if not antwort or not antwort.get("ok"):
+            raise RuntimeError(f"TV-App hat nicht umgeschaltet: {antwort}")
+        return antwort
+
+    async def jetzt(self, cfg) -> dict:
+        """Was laeuft gerade (fuer das TV-Protokoll, ohne Tasten). Ohne TV-App nur, ob das Fernsehbild vorn ist."""
+        daten = await self.app_abfragen()
+        if daten is None:
+            app = await self.focus_app()
+            return {"quelle": "adb", "fernsehbild_vorn": app == TV_APP, "vorn": app, "jetzt": None}
+        x = daten.get("jetzt")
+        return {"quelle": "app", "fernsehbild_vorn": daten.get("fernsehbild_vorn"), "vorn": daten.get("vorn"),
+                "bildschirm_an": daten.get("bildschirm_an"), "werbung": daten.get("werbung"),
+                "zapper_app": daten.get("zapper_laeuft"),
+                "jetzt": app_sendung(x, cfg) | {"folge": x.get("folge"), "beschreibung": x.get("beschreibung")}
+                if x else None}
+
+    async def durchgang_app(self, daten: dict, cfg, nur_lesen: bool) -> dict:
+        """Durchgang ueber die TV-App: Liste lesen, bewerten, einmal umschalten, nachfragen."""
+        scored = [app_sendung(x, cfg) for x in daten["liste"]]
+        jetzt = daten.get("jetzt") or {}
+        current = int(jetzt["nr"]) if jetzt.get("nr") else None
+        cur = next((x for x in scored if x["nr"] == current), {"nr": current, "punkte": 0})
+        best = max(scored, key=lambda x: (x["punkte"], x["nr"] == current), default=None)
+        aktion, neu, nachgelesen = "bleibt", None, None
+        if soll_umschalten(cur, best) and not nur_lesen:
+            await self.app_umschalten(best["nr"])
+            aktion, neu = "umgeschaltet", best
+            await asyncio.sleep(1)
+            danach = await self.app_abfragen()
+            if danach and danach.get("jetzt") and int(danach["jetzt"]["nr"]) == best["nr"]:
+                nachgelesen = neu = app_sendung(danach["jetzt"], cfg)
+        return {"aktion": aktion, "quelle": "app", "vorher": cur, "bester": best, "neu": neu,
+                "passt_nach_umschalten": None if nachgelesen is None else nachgelesen["punkte"] > 0,
+                "treffer": sorted((x for x in scored if x["punkte"] > 0), key=lambda x: -x["punkte"]),
+                "sender_gelesen": len(scored)}
+
     async def einblenden(self, text: str, ms: int = 6000) -> str:
         """Text im Fernsehbild zeigen. Ueber die TV-App, wenn sie den Auftrag annimmt, sonst als
         Android-Benachrichtigung (ob Google TV die sichtbar einblendet, ist geraeteabhaengig).
@@ -279,7 +350,16 @@ class Fernseher:
         return bewerte_sendung(num, name, prog, header, cfg)
 
     async def durchgang(self, cfg, nur_lesen=False) -> dict:
-        """Ein Durchgang wie zapper.cycle(). Ergebnis-dict (aktion: uebersprungen/bleibt/umgeschaltet/...)."""
+        """Ein Durchgang wie zapper.cycle(). Ergebnis-dict (aktion: uebersprungen/bleibt/umgeschaltet/...).
+        Mit TV-App ab 0.3.0 ueber deren Schnittstelle, sonst ueber die Programmzeitschrift."""
+        daten = await self.app_abfragen(liste=True)
+        if daten is not None and daten.get("liste"):
+            if not daten.get("fernsehbild_vorn"):
+                return {"aktion": "uebersprungen", "quelle": "app", "app": daten.get("vorn")}
+            if daten.get("zapper_laeuft") and not nur_lesen:
+                # Zappen beide, schalten sie gegeneinander: dann bewertet nur die TV-App
+                return {"aktion": "uebersprungen", "quelle": "app", "app": "Zapper der TV-App laeuft"}
+            return await self.durchgang_app(daten, cfg, nur_lesen)
         app = await self.focus_app()
         if app not in (TV_APP, GUIDE_APP):
             return {"aktion": "uebersprungen", "app": app}

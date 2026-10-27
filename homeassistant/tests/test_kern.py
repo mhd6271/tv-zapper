@@ -14,6 +14,7 @@ CHANS = {23: ("ProSieben HD", "Navy CIS"), 24: ("sixx HD", "Hip-Hop Party"), 141
 def fernseher(verify_ergebnisse):
     f = tv.Fernseher("x", 1, None)
     f.focus_app = AsyncMock(return_value=tv.TV_APP)
+    f.app_abfragen = AsyncMock(return_value=None)   # ohne TV-App: Weg ueber die Programmzeitschrift
     f.collect = AsyncMock(return_value=(23, CHANS, {}))
     f.tune = AsyncMock()
     f.verify = AsyncMock(side_effect=verify_ergebnisse)
@@ -159,3 +160,46 @@ async def test_wecken():
         assert False
     except OSError:
         pass
+
+
+# Antwort der TV-App 0.3.0 (am TCL 27.10.2026, gekuerzt)
+APP_AUSGABE = '''Broadcasting: Intent { act=io.github.mhd6271.tvzapper.ABFRAGEN flg=0x400000 cmp=io.github.mhd6271.tvzapper/.AbfrageEmpfaenger (has extras) }
+Broadcast completed: result=0, data="{"zeit":"2026-10-27T19:29:59+01:00","bildschirm_an":true,"vorn":"com.tcl.tv","fernsehbild_vorn":true,"zapper_laeuft":false,"werbe_sensor":"","werbung":null,"jetzt":{"nr":"23","sender":"ProSieben HD","id":1074,"zustand":"an","sendung":"Galileo","folge":"","genre":"32","beschreibung":"Folge 8314. Magazin, D 2026.","start":"2026-10-27T19:05:00+01:00","ende":"2026-10-27T20:15:00+01:00","punkte":0,"treffer":[]},"liste":[{"nr":"23","sender":"ProSieben HD","id":1074,"zustand":"an","sendung":"Galileo","folge":"","genre":"32","beschreibung":"Folge 8314. Magazin, D 2026.","start":"","ende":"","punkte":0,"treffer":[]},{"nr":"167","sender":"ProSieben MAXX HD","id":1218,"zustand":"an","sendung":"Futurama","folge":"","genre":"83","beschreibung":"4 .Staffel, Folge 9. Zeichentrickserie, USA 2003.","start":"","ende":"","punkte":4,"treffer":["Erwachsenen-Cartoons"]}]}"
+'''
+
+
+def test_broadcast_daten():
+    d = tv.broadcast_daten(APP_AUSGABE)
+    assert d["jetzt"]["sender"] == "ProSieben HD" and len(d["liste"]) == 2
+    assert tv.broadcast_daten("Broadcasting: Intent { … }\nBroadcast completed: result=0") is None
+
+
+async def test_durchgang_ueber_app():
+    f = tv.Fernseher("x", 1, None)
+    daten = tv.broadcast_daten(APP_AUSGABE)
+    danach = {"jetzt": daten["liste"][1]}
+    f.app_abfragen = AsyncMock(side_effect=[daten, danach])
+    f.app_umschalten = AsyncMock(return_value={"ok": True})
+    f.focus_app, f.collect = AsyncMock(), AsyncMock()
+    with patch("asyncio.sleep", AsyncMock()):
+        e = await f.durchgang(CFG)
+    assert e["quelle"] == "app" and e["aktion"] == "umgeschaltet" and e["neu"]["nr"] == 167
+    assert e["passt_nach_umschalten"] is True and f.app_umschalten.call_args.args == (167,)
+    f.collect.assert_not_called()   # keine Programmzeitschrift, keine Tasten
+
+    # Zappt die TV-App selbst, schaltet HA nicht dazwischen
+    f.app_abfragen = AsyncMock(return_value={**daten, "zapper_laeuft": True})
+    f.app_umschalten.reset_mock()
+    e = await f.durchgang(CFG)
+    assert e["aktion"] == "uebersprungen" and "TV-App" in e["app"]
+    f.app_umschalten.assert_not_called()
+
+
+async def test_jetzt():
+    f = tv.Fernseher("x", 1, None)
+    f.app_abfragen = AsyncMock(return_value=tv.broadcast_daten(APP_AUSGABE))
+    j = await f.jetzt(CFG)
+    assert j["jetzt"]["sender"] == "ProSieben HD" and j["jetzt"]["beschreibung"].startswith("Folge")
+    f.app_abfragen = AsyncMock(return_value=None)
+    f.focus_app = AsyncMock(return_value=tv.TV_APP)
+    assert (await f.jetzt(CFG)) == {"quelle": "adb", "fernsehbild_vorn": True, "vorn": tv.TV_APP, "jetzt": None}

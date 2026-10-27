@@ -11,16 +11,18 @@ from typing import Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
-    CONF_EINBLENDUNG, CONF_MAC, CONF_SENDER_NIE, CONF_VERWEILEN,
+    CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .tv import Fernseher, lade_signer
 
 _LOGGER = logging.getLogger(__name__)
+JETZT_TAKT_S = 60
 
 type ZapperEntry = ConfigEntry[Steuerung]
 
@@ -29,6 +31,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZapperEntry) -> bool:
     signer = await hass.async_add_executor_job(lade_signer, hass.config.path(SCHLUESSEL_DATEI))
     entry.runtime_data = Steuerung(hass, entry, signer)
     entry.async_on_unload(entry.add_update_listener(_optionen_geaendert))
+    entry.async_on_unload(async_track_time_interval(
+        hass, entry.runtime_data.jetzt_lesen, datetime.timedelta(seconds=JETZT_TAKT_S), name="tv_zapper_jetzt"))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -62,6 +66,7 @@ class Steuerung:
         self.start: float | None = None          # time.monotonic() beim Einschalten
         self.ende = None                          # datetime, nur zur Anzeige
         self.letztes: dict | None = None          # Ergebnis des letzten Durchgangs
+        self.jetzt: dict | None = None            # was gerade laeuft (Sensor "Laeuft jetzt")
         self.beschaeftigt = False
         self._lock = asyncio.Lock()
         self._zuhoerer: list[Callable[[], None]] = []
@@ -124,6 +129,22 @@ class Steuerung:
             except Exception as e:  # noqa: BLE001
                 _LOGGER.info("Einblendung nicht moeglich: %s", e)
                 await self.tv.trennen()
+
+    async def jetzt_lesen(self, _now=None):
+        """Jede Minute: was laeuft gerade. Nur wenn kein Durchgang den Fernseher bedient (sonst beim naechsten Mal)."""
+        if not self.opt(CONF_PROTOKOLL) or self._lock.locked():
+            return
+        async with self._lock:
+            try:
+                await self.tv.verbinden(timeout=5)
+                self.jetzt = await self.tv.jetzt(self.cfg())
+            except Exception as e:  # noqa: BLE001 - aus oder nicht erreichbar
+                _LOGGER.debug("Fernseher nicht erreichbar: %s", e)
+                self.jetzt = {"aus": True}
+                await self.tv.trennen()
+            if not self.laeuft:
+                await self.tv.trennen()
+        self.benachrichtigen()
 
     async def wecken(self):
         """Fernseher vor dem ersten Durchgang wecken (Wake-on-LAN nur mit MAC in den Optionen).
