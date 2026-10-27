@@ -183,6 +183,7 @@ Signiert mit dem Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb l
 `settings get global recent_play_channel_id` (1126 → 1190); Android meldet „Background activity start … allowed
 because SYSTEM_ALERT_WINDOW permission is granted“. Einblendung: in der App per Bildschirmfoto gesehen, über dem
 Fernsehbild meldet Android das Fenster als sichtbar – mit eigenen Augen am Fernseher noch nicht bestätigt
-(Bildschirmfotos vom Tunerbild sind leer).
+(Bildschirmfotos vom Tunerbild sind leer). Danach im Hintergrund weitergelaufen: 15:15 MTV (inzwischen 2 P.) →
+kabel eins Doku (6 P., Ancient Aliens), 15:20 „bleibt“; der Vordergrund-Dienst lief noch, TCL hat ihn nicht beendet.
 Auffällig: Shopping Queen, Barbara Salesch u. Ä. bekommen die Dokumentation-Punkte – die App bewertet auch die
 Beschreibung jeder Sendung; vermutlich steht dort „Doku-Soap“ o. Ä. (nicht nachgesehen).
