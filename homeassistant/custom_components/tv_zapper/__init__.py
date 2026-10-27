@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
-    CONF_EINBLENDUNG, CONF_SENDER_NIE, CONF_VERWEILEN,
+    CONF_EINBLENDUNG, CONF_MAC, CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .tv import Fernseher, lade_signer
@@ -125,9 +125,21 @@ class Steuerung:
                 _LOGGER.info("Einblendung nicht moeglich: %s", e)
                 await self.tv.trennen()
 
+    async def wecken(self):
+        """Fernseher vor dem ersten Durchgang wecken (Wake-on-LAN nur mit MAC in den Optionen).
+        Klappt es nicht, meldet der erste Durchgang den Fehler."""
+        async with self._lock:
+            try:
+                weg = await self.tv.wecken(self.opt(CONF_MAC))
+                _LOGGER.info("Fernseher vor dem Zappen: %s", weg)
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("Fernseher nicht erreichbar: %s", e)
+                await self.tv.trennen()
+
     async def _schleife(self):
         fails = 0
         try:
+            await self.wecken()
             await self.einblenden(f"TV-Zapper an – läuft bis {self.ende:%H:%M}")
             while True:
                 ergebnis = await self.durchgang(self.opt(CONF_NUR_LESEN))

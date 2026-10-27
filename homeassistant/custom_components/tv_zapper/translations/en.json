@@ -32,13 +32,15 @@
           "nur_lesen": "Nur lesen (nie umschalten, zum Testen)",
           "sender_nie": "Sender nie nehmen (Sendernamen wie in der Programmzeitschrift, mit Komma getrennt)",
           "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)",
-          "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)"
+          "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)",
+          "mac": "MAC-Adresse des Fernsehers für Wake-on-LAN (leer = nicht wecken, z. B. aa:bb:cc:dd:ee:ff)"
         }
       }
     },
     "error": {
       "interessen_ungueltig": "Interessen fehlerhaft – siehe Hinweis oben.",
-      "bonus_ungueltig": "Bevorzugte Sender fehlerhaft – siehe Hinweis oben."
+      "bonus_ungueltig": "Bevorzugte Sender fehlerhaft – siehe Hinweis oben.",
+      "mac_ungueltig": "MAC-Adresse fehlerhaft – siehe Hinweis oben."
     }
   }
 }

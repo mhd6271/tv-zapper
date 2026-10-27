@@ -127,3 +127,35 @@ async def test_einblenden_app_oder_benachrichtigung():
     f.sh = AsyncMock(side_effect=["No receivers found", ""])
     assert await f.einblenden("TV-Zapper an") == "benachrichtigung"
     assert "cmd notification post" in f.sh.call_args_list[1].args[0]
+
+
+def test_magic_packet():
+    p = tv.magic_packet("AA-bb-cc-dd-ee-ff")
+    assert len(p) == 102 and p[:6] == b"\xff" * 6 and p[6:12] == bytes.fromhex("aabbccddeeff")
+    for falsch in ("", "aa:bb:cc", "zz:bb:cc:dd:ee:ff"):
+        try:
+            tv.magic_packet(falsch)
+            assert False, falsch
+        except ValueError:
+            pass
+
+
+async def test_wecken():
+    async def mit(verbindungen, wach, mac):
+        f = tv.Fernseher("x", 1, None)
+        f.verbinden = AsyncMock(side_effect=verbindungen)
+        f.wach = AsyncMock(return_value=wach)
+        f.key, f.trennen = AsyncMock(), AsyncMock()
+        with patch.object(tv, "sende_wol") as wol, patch("asyncio.sleep", AsyncMock()):
+            weg = await f.wecken(mac, warten=60)
+        return weg, wol.call_count, f.key.call_args_list
+
+    assert await mit([None], True, "") == ("wach", 0, [])
+    weg, _, tasten = await mit([None], False, "")
+    assert weg == "geweckt" and tasten[0].args == ("KEYCODE_WAKEUP",)
+    assert (await mit([OSError("zu"), OSError("zu"), None], True, "aa:bb:cc:dd:ee:ff"))[:2] == ("wol", 2)
+    try:   # ohne MAC: Fehler weiterreichen, kein Wake-on-LAN
+        await mit([OSError("zu")], True, "")
+        assert False
+    except OSError:
+        pass

@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import shlex
+import socket
 
 from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
@@ -40,18 +41,38 @@ def lade_signer(pfad: str) -> PythonRSASigner:
     return PythonRSASigner(pub, priv)
 
 
+def magic_packet(mac: str) -> bytes:
+    """Wake-on-LAN-Paket: 6x FF, dann 16x die MAC. Wirft ValueError bei ungueltiger MAC."""
+    ziffern = re.sub(r"[:\-. ]", "", mac.strip())
+    if not re.fullmatch(r"[0-9a-fA-F]{12}", ziffern):
+        raise ValueError("MAC-Adresse bitte als 12 Hex-Ziffern, z. B. aa:bb:cc:dd:ee:ff")
+    return b"\xff" * 6 + bytes.fromhex(ziffern) * 16
+
+
+def sende_wol(mac: str, host: str):
+    """Paket an die Broadcast-Adresse (Port 9) und direkt an den Fernseher schicken (blockierend)."""
+    paket = magic_packet(mac)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for ziel in ("255.255.255.255", host):
+            try:
+                s.sendto(paket, (ziel, 9))
+            except OSError as e:
+                _LOGGER.debug("Wake-on-LAN an %s nicht gesendet: %s", ziel, e)
+
+
 class Fernseher:
     def __init__(self, host: str, port: int, signer: PythonRSASigner, fav_tab: str = "Favorit1"):
         self.host, self.port, self.signer, self.fav_tab = host, port, signer, fav_tab
         self.dev: AdbDeviceTcpAsync | None = None
 
     # --- Verbindung -------------------------------------------------------------------
-    async def verbinden(self, auth_timeout: float = 10.0):
+    async def verbinden(self, auth_timeout: float = 10.0, timeout: float | None = None):
         if self.dev and self.dev.available:
             return
         self.dev = AdbDeviceTcpAsync(self.host, self.port, default_transport_timeout_s=30.0)  # uiautomator dump braucht manchmal >9 s
         # auth_timeout: so lange wird auf "USB-Debugging zulassen?" am Fernseher gewartet
-        await self.dev.connect(rsa_keys=[self.signer], auth_timeout_s=auth_timeout)
+        await self.dev.connect(rsa_keys=[self.signer], transport_timeout_s=timeout, auth_timeout_s=auth_timeout)
 
     async def trennen(self):
         if self.dev:
@@ -68,6 +89,40 @@ class Fernseher:
         except Exception:
             await self.trennen()
             raise
+
+    # --- Wecken ---------------------------------------------------------------------------
+    async def wach(self) -> bool:
+        return "mWakefulness=Awake" in await self.sh("dumpsys power | grep mWakefulness=")
+
+    async def wecken(self, mac: str = "", warten: float = 90) -> str:
+        """Vor dem Zappen: Fernseher nicht erreichbar -> Wake-on-LAN (nur mit MAC) und warten, bis ADB antwortet;
+        erreichbar, aber Bild aus -> Taste WAKEUP. -> "wach", "geweckt" oder "wol"."""
+        weg = "wach"
+        try:
+            await self.verbinden(timeout=8)
+        except Exception:
+            await self.trennen()
+            if not mac:
+                raise
+            loop = asyncio.get_running_loop()
+            ende = loop.time() + warten
+            while True:
+                await loop.run_in_executor(None, sende_wol, mac, self.host)
+                await asyncio.sleep(5)
+                try:
+                    await self.verbinden(timeout=8)
+                    break
+                except Exception:  # noqa: BLE001 - weiter warten
+                    await self.trennen()
+                    if loop.time() > ende:
+                        raise RuntimeError(f"Fernseher antwortet {warten:.0f} s nach Wake-on-LAN nicht") from None
+            weg = "wol"
+        if not await self.wach():
+            await self.key("KEYCODE_WAKEUP")
+            weg = "geweckt" if weg == "wach" else weg
+        if weg != "wach":
+            await asyncio.sleep(8)   # Fernsehbild und Tuner brauchen nach dem Aufwachen ein paar Sekunden
+        return weg
 
     # --- Bausteine wie in zapper.py -------------------------------------------------------
     async def key(self, *names):

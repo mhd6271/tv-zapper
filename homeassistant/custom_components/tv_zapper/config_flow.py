@@ -10,12 +10,12 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers import selector
 
 from .const import (
-    CONF_AUS, CONF_EINBLENDUNG, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
+    CONF_AUS, CONF_EINBLENDUNG, CONF_FAVORIT, CONF_MAC, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
     CONF_SENDER_NIE, CONF_VERWEILEN,
     DOMAIN, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .logik import bonus_zu_text, interessen_zu_text, text_zu_bonus, text_zu_interessen, woerter_zu_liste
-from .tv import Fernseher, lade_signer
+from .tv import Fernseher, lade_signer, magic_packet
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,6 +86,13 @@ class TvZapperOptionsFlow(OptionsFlow):
             except ValueError as e:
                 errors[CONF_SENDER_BEVORZUGT] = "bonus_ungueltig"
                 platzhalter["fehler"] = str(e)
+            mac = user_input.get(CONF_MAC, "").strip()
+            if mac:
+                try:
+                    magic_packet(mac)
+                except ValueError as e:
+                    errors[CONF_MAC] = "mac_ungueltig"
+                    platzhalter["fehler"] = str(e)
             if not errors:
                 return self.async_create_entry(data={
                     CONF_FAVORIT: user_input[CONF_FAVORIT].strip(),
@@ -97,6 +104,7 @@ class TvZapperOptionsFlow(OptionsFlow):
                     CONF_SENDER_BEVORZUGT: bonus,
                     CONF_NUR_LESEN: user_input[CONF_NUR_LESEN],
                     CONF_EINBLENDUNG: user_input[CONF_EINBLENDUNG],
+                    CONF_MAC: mac,
                 })
         vorgabe = user_input or {
             **opt,
@@ -115,6 +123,7 @@ class TvZapperOptionsFlow(OptionsFlow):
             vol.Required(CONF_FAVORIT, default=vorgabe[CONF_FAVORIT]): str,
             vol.Required(CONF_NUR_LESEN, default=vorgabe[CONF_NUR_LESEN]): bool,
             vol.Required(CONF_EINBLENDUNG, default=vorgabe[CONF_EINBLENDUNG]): bool,
+            vol.Optional(CONF_MAC, default=vorgabe.get(CONF_MAC, "")): str,
         })
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors,
                                     description_placeholders=platzhalter)

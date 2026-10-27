@@ -50,12 +50,17 @@ async def test_alles(hass: HomeAssistant):
     r2 = await hass.config_entries.options.async_configure(r["flow_id"], {
         "interessen": "Kaputt | x | a", "aus": "", "laufzeit_min": 30, "verweilen_min": 3, "favorit": "Favorit1", "nur_lesen": True})
     assert r2["errors"] == {"interessen": "interessen_ungueltig"}
+    r2 = await hass.config_entries.options.async_configure(r2["flow_id"], {
+        "interessen": "Doku | 2 | doku*", "laufzeit_min": 30, "verweilen_min": 3, "favorit": "Favorit1", "nur_lesen": True,
+        "mac": "aa:bb:cc"})
+    assert r2["errors"] == {"mac": "mac_ungueltig"}
     r3 = await hass.config_entries.options.async_configure(r2["flow_id"], {
         "interessen": "Hip-Hop | 5 | rap, hip hop\nDoku | 2 | doku*", "aus": "teleshopping, dauerwerbesendung",
-        "laufzeit_min": 30, "verweilen_min": 3, "favorit": "Favorit1", "nur_lesen": True})
+        "laufzeit_min": 30, "verweilen_min": 3, "favorit": "Favorit1", "nur_lesen": True, "mac": "AA:BB:CC:DD:EE:FF"})
     assert r3["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     assert entry.options["interessen"][1] == {"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}
+    assert entry.options["mac"] == "AA:BB:CC:DD:EE:FF"
     assert hass.states.get("number.tv_zapper_verweilzeit").state == "3"
 
     # Zahl aendern
@@ -67,7 +72,8 @@ async def test_alles(hass: HomeAssistant):
     eb = AsyncMock(return_value="app")
     with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", dg), \
          patch("custom_components.tv_zapper.tv.Fernseher.einblenden", eb), \
-         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.wecken", AsyncMock(return_value="wach")) as wk:
         await hass.services.async_call("button", "press", {"entity_id": "button.tv_zapper_jetzt_prufen_nur_lesen"}, blocking=True)
         assert dg.call_args.args[1] is True
         s = hass.states.get("sensor.tv_zapper_aktueller_treffer")
@@ -85,6 +91,7 @@ async def test_alles(hass: HomeAssistant):
         assert hass.states.get("switch.tv_zapper_zapper").state == "off"
         texte = [c.args[0] for c in eb.call_args_list]
         assert texte[0].startswith("TV-Zapper an – läuft bis ") and texte[-1] == "TV-Zapper aus", texte
+        assert wk.call_count == 1   # nur beim Einschalten wecken, nicht je Durchgang
 
     # Fehler dreimal -> geht aus
     entry.runtime_data.entry.options  # noqa
@@ -92,6 +99,7 @@ async def test_alles(hass: HomeAssistant):
     with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", AsyncMock(side_effect=OSError("kein TV"))), \
          patch("custom_components.tv_zapper.tv.Fernseher.einblenden", AsyncMock(side_effect=OSError("kein TV"))), \
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.wecken", AsyncMock(side_effect=OSError("kein TV"))), \
          patch("custom_components.tv_zapper.asyncio.sleep", AsyncMock()):
         await hass.services.async_call("switch", "turn_on", {"entity_id": "switch.tv_zapper_zapper"}, blocking=True)
         await hass.async_block_till_done()

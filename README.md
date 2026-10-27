@@ -113,6 +113,7 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 | Verweilzeit | Minuten zwischen zwei Prüfungen |
 | Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
 | Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
+| MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 **Entitäten** (Gerät „TV-Zapper“):
 
@@ -134,6 +135,12 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 - **Symbol:** `brand/icon.png` (256 px) und `icon@2x.png` (512 px), gezeichnet wie das Symbol der TV-App
   (`android/res/drawable/icon.xml`). HA 2026.10 liest den Ordner `brand/` einer eigenen Integration erst nach
   einem Neustart; bis dahin zeigt HA „icon not available“.
+
+**Wecken:** Beim Einschalten des Zappers prüft die Integration zuerst den Fernseher. Antwortet ADB, aber das Bild
+ist aus (`mWakefulness` nicht `Awake`), drückt sie die Taste WAKEUP. Antwortet ADB nicht und ist unter „Konfigurieren“
+eine MAC-Adresse eingetragen, schickt sie Wake-on-LAN (Broadcast, Port 9) und wartet bis zu 90 Sekunden auf ADB.
+Am Fernseher muss dafür Wake-on-LAN eingeschaltet sein. Danach gilt wie sonst: Zeigt er nicht das Fernsehbild,
+wird nicht gezappt.
 
 Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
 Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten
