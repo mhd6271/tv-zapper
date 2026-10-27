@@ -189,8 +189,14 @@ def collect():
     take(dump())
     if focus_app() != GUIDE_APP:
         raise RuntimeError(f"Programmzeitschrift nicht vorn ({focus_app()}) - Abbruch")
-    key(*["KEYCODE_DPAD_UP"] * 120)          # an den Anfang der Liste
-    time.sleep(1.5)
+    # an den Anfang der Liste - in kleinen Stuecken und jedes Mal pruefen, dass die
+    # Programmzeitschrift noch vorn ist: im Fernsehbild schaltet jedes Hoch einen Sender weiter.
+    for _ in range(6):
+        if focus_app() != GUIDE_APP:
+            raise RuntimeError(f"Programmzeitschrift nicht mehr vorn ({focus_app()}) - Abbruch")
+        key(*["KEYCODE_DPAD_UP"] * 20)
+        time.sleep(0.5)
+    time.sleep(1)
     take(dump())
     idle = 0
     for step in range(200):
