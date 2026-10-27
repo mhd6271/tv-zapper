@@ -376,6 +376,9 @@ Einblendung) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den
 Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was pausen` liefert `ABFRAGEN` die gemessenen Werbepausen je Sender
 (`anzahl`, `durchschnitt_s`, Einzelwerte `pausen` mit `ende` in ms und `s`); `PAUSEN_LOESCHEN` (`--es sender …`,
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
-entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`.
+entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false` und/oder
+`--es werbung_umgehen true|false` und antwortet `{"ok", "ausweichen_bevorzugt", "werbung_umgehen"}` (ungültiger Wert:
+`result=1` mit `fehler`). Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
+Stand – dann den Schalter in der App benutzen.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.

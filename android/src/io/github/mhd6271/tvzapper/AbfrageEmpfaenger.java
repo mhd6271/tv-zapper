@@ -26,6 +26,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
     static final String ABFRAGEN = "io.github.mhd6271.tvzapper.ABFRAGEN";
     static final String UMSCHALTEN = "io.github.mhd6271.tvzapper.UMSCHALTEN";
     /** --es sender "ProSieben MAXX HD" [--el von <ms>] [--el bis <ms>] [--ez alt true] – siehe PauseStats.delete */
+    /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] */
+    static final String EINSTELLEN = "io.github.mhd6271.tvzapper.EINSTELLEN";
     static final String PAUSEN_LOESCHEN = "io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN";
 
     @Override
@@ -33,7 +35,18 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         JSONObject out = new JSONObject();
         try {
             if (UMSCHALTEN.equals(i.getAction())) umschalten(c, i, out);
-            else if (PAUSEN_LOESCHEN.equals(i.getAction())) {
+            else if (EINSTELLEN.equals(i.getAction())) {
+                Config cfg = Config.load(c);
+                String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen");
+                if (ab == null && wu == null) throw new IllegalArgumentException("nichts zu setzen");
+                if (ab != null) cfg.dodgePreferred = parseBool(ab);
+                if (wu != null) cfg.avoidAds = parseBool(wu);
+                cfg.save(c);
+                out.put("ok", true);
+                out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
+                out.put("werbung_umgehen", cfg.avoidAds);
+                Log.add(c, "Einstellung von außen: ausweichen_bevorzugt=" + cfg.dodgePreferred + ", werbung_umgehen=" + cfg.avoidAds);
+            } else if (PAUSEN_LOESCHEN.equals(i.getAction())) {
                 String ch = i.getStringExtra("sender");
                 if (ch == null) throw new IllegalArgumentException("sender fehlt");
                 JSONObject before = PauseStats.toJson(c).optJSONObject(ch);
@@ -136,6 +149,13 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("ok", ok);
         out.put("nr", target.number);
         out.put("sender", target.name);
+    }
+
+    private static boolean parseBool(String v) {
+        v = v.trim().toLowerCase(Locale.ROOT);
+        if (v.equals("true") || v.equals("1") || v.equals("an") || v.equals("ja")) return true;
+        if (v.equals("false") || v.equals("0") || v.equals("aus") || v.equals("nein")) return false;
+        throw new IllegalArgumentException("ungültiger Wert: " + v);
     }
 
     private static void put(JSONObject o, String k, Object v) {

@@ -72,6 +72,7 @@
                 <action android:name="io.github.mhd6271.tvzapper.ABFRAGEN" />
                 <action android:name="io.github.mhd6271.tvzapper.UMSCHALTEN" />
                 <action android:name="io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN" />
+                <action android:name="io.github.mhd6271.tvzapper.EINSTELLEN" />
             </intent-filter>
         </receiver>
 
