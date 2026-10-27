@@ -47,6 +47,16 @@ def key(*names):
     adb("shell", "input", "keyevent", *names)
 
 
+def close_guide():
+    """BACK nur, wenn die Programmzeitschrift vorn ist: im Fernsehbild springt BACK beim TCL
+    auf den vorigen Sender."""
+    for _ in range(2):
+        if focus_app() != GUIDE_APP:
+            return
+        key("KEYCODE_BACK")
+        time.sleep(1.2)
+
+
 def focus_app():
     m = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", adb("shell", "dumpsys", "window"))
     return m.group(1).strip() if m else ""
@@ -180,8 +190,7 @@ def collect():
         idle = idle + 1 if n == 0 else 0
         if idle >= 15:
             break
-    key("KEYCODE_BACK")
-    time.sleep(1.2)
+    close_guide()
     return current, chans, infos
 
 
@@ -210,9 +219,9 @@ def score(text, cfg):
 
 
 def tune(num):
+    close_guide()
     if focus_app() != TV_APP:
-        key("KEYCODE_BACK")
-        time.sleep(1)
+        raise RuntimeError(f"Fernsehbild nicht vorn ({focus_app()}) - schalte nicht um")
     for d in str(num):
         key(f"KEYCODE_{d}")
         time.sleep(0.8)
@@ -231,8 +240,7 @@ def verify(cand, cfg):
     time.sleep(3)
     nodes = open_guide()
     rows, header, _ = parse_guide(nodes)
-    key("KEYCODE_BACK")
-    time.sleep(1.2)
+    close_guide()
     if not rows or rows[0][0] != cand["nr"]:
         return None
     num, name, prog = rows[0]
@@ -269,23 +277,15 @@ def cycle(read_only=False):
     best = max(scored, key=lambda x: (x["punkte"], x["nr"] == current), default=None)
     action = "bleibt"
     if best and best["punkte"] > 0 and best["punkte"] > cur.get("punkte", 0) and not read_only:
-        # Die Beschreibung in der Programmzeitschrift ist erst nach dem Anwaehlen sicher aktuell:
-        # nach dem Umschalten neu lesen und notfalls den naechstbesten Treffer nehmen.
-        tried = set()
-        for cand in sorted((x for x in scored if x["punkte"] > max(0, cur.get("punkte", 0))),
-                           key=lambda x: -x["punkte"])[:3]:
-            tried.add(cand["nr"])
-            tune(cand["nr"])
-            fresh = verify(cand, cfg)
-            if fresh is not None and fresh["punkte"] > 0:
-                best = fresh
-                action = "umgeschaltet"
-                break
-            say(f"   {cand['nr']} {cand['sender']}: nach dem Umschalten passt es doch nicht "
-                f"({(fresh or {}).get('sendung', '?')})")
-        if action != "umgeschaltet" and tried:
-            tune(current)
-            action = "bleibt (Treffer passten nach dem Anwaehlen nicht)"
+        # Nur einmal umschalten. Die Beschreibung ist erst nach dem Anwaehlen sicher aktuell -
+        # danach nur nachlesen, nicht weiter herumschalten.
+        tune(best["nr"])
+        action = "umgeschaltet"
+        fresh = verify(best, cfg)
+        if fresh is not None:
+            if fresh["punkte"] <= 0:
+                say(f"   nach dem Umschalten: {fresh['sendung']} - passt doch nicht, naechster Durchgang entscheidet neu")
+            best = fresh
     say(f"{len(chans)} Sender gelesen, laeuft: {current} {cur.get('sender', '')} - {cur.get('sendung', '')} ({cur.get('punkte', 0)} P.)")
     for x in sorted((x for x in scored if x["punkte"] > 0), key=lambda x: -x["punkte"])[:6]:
         say(f"   {x['punkte']:>2} P. {x['nr']:>4} {x['sender']}: {x['sendung']}  [{', '.join(x['treffer'])}] {x['genre']}")
