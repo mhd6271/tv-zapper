@@ -20,6 +20,32 @@
       ]
     },
     {
+      "name": "Erwachsenen-Cartoons",
+      "gewicht": 4,
+      "woerter": [
+        "futurama",
+        "american dad*",
+        "family guy",
+        "die simpsons",
+        "simpsons",
+        "south park",
+        "rick and morty",
+        "bob's burgers",
+        "bobs burgers",
+        "king of the hill",
+        "king of queens*",
+        "solar opposites",
+        "f is for family",
+        "archer",
+        "bojack*",
+        "big mouth",
+        "disenchantment",
+        "central park",
+        "the cleveland show",
+        "cleveland show"
+      ]
+    },
+    {
       "name": "Musik",
       "gewicht": 3,
       "woerter": [
@@ -76,10 +102,16 @@
     "teleshopping",
     "dauerwerbesendung",
     "verkaufsshow",
-    "shopping-tipps"
+    "shopping-tipps",
+    "disney*",
+    "micky*",
+    "mickey*"
   ],
   "verweilen_min": 5,
-  "sender_nie": [],
+  "sender_nie": [
+    "Disney Channel",
+    "Disney Channel HD"
+  ],
   "sender_bevorzugt": {
     "N24 DOKU": 1,
     "ZDFinfo HD": 1
