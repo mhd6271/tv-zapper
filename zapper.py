@@ -178,7 +178,7 @@ def collect():
     for _ in range(200):
         n = take(dump("KEYCODE_DPAD_DOWN", 0.35))
         idle = idle + 1 if n == 0 else 0
-        if idle >= 6:
+        if idle >= 15:
             break
     key("KEYCODE_BACK")
     time.sleep(1.2)
@@ -225,6 +225,26 @@ def log(entry):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def verify(cand, cfg):
+    """Nach dem Umschalten: Programmzeitschrift oeffnen (startet beim laufenden Sender) und
+    die nun aktuelle Sendung samt Beschreibung neu bewerten."""
+    time.sleep(3)
+    nodes = open_guide()
+    rows, header, _ = parse_guide(nodes)
+    key("KEYCODE_BACK")
+    time.sleep(1.2)
+    if not rows or rows[0][0] != cand["nr"]:
+        return None
+    num, name, prog = rows[0]
+    text = " ".join(x for x in (name, prog or "", header.get("genre", ""), header.get("info", "")) if x)
+    s, hits = score(text, cfg)
+    if s > 0 and name in cfg.get("sender_bevorzugt", {}):
+        s += cfg["sender_bevorzugt"][name]
+        hits.append("bevorzugter Sender")
+    return {"nr": num, "sender": name, "sendung": prog, "genre": header.get("genre", ""),
+            "info": header.get("info", ""), "punkte": s, "treffer": hits}
+
+
 def cycle(read_only=False):
     cfg = load_interests()
     app = focus_app()
@@ -238,14 +258,34 @@ def cycle(read_only=False):
         h = infos.get(num, {})
         text = " ".join(x for x in (name, prog or "", h.get("genre", ""), h.get("info", "")) if x)
         s, hits = score(text, cfg)
+        if name in cfg.get("sender_nie", []):
+            s, hits = -1, ["Sender ausgeschlossen"]
+        elif s > 0 and name in cfg.get("sender_bevorzugt", {}):
+            s += cfg["sender_bevorzugt"][name]
+            hits.append("bevorzugter Sender")
         scored.append({"nr": num, "sender": name, "sendung": prog, "genre": h.get("genre", ""),
-                       "punkte": s, "treffer": hits})
+                       "info": h.get("info", ""), "punkte": s, "treffer": hits})
     cur = next((x for x in scored if x["nr"] == current), {"nr": current, "punkte": 0})
     best = max(scored, key=lambda x: (x["punkte"], x["nr"] == current), default=None)
     action = "bleibt"
     if best and best["punkte"] > 0 and best["punkte"] > cur.get("punkte", 0) and not read_only:
-        tune(best["nr"])
-        action = "umgeschaltet"
+        # Die Beschreibung in der Programmzeitschrift ist erst nach dem Anwaehlen sicher aktuell:
+        # nach dem Umschalten neu lesen und notfalls den naechstbesten Treffer nehmen.
+        tried = set()
+        for cand in sorted((x for x in scored if x["punkte"] > max(0, cur.get("punkte", 0))),
+                           key=lambda x: -x["punkte"])[:3]:
+            tried.add(cand["nr"])
+            tune(cand["nr"])
+            fresh = verify(cand, cfg)
+            if fresh is not None and fresh["punkte"] > 0:
+                best = fresh
+                action = "umgeschaltet"
+                break
+            say(f"   {cand['nr']} {cand['sender']}: nach dem Umschalten passt es doch nicht "
+                f"({(fresh or {}).get('sendung', '?')})")
+        if action != "umgeschaltet" and tried:
+            tune(current)
+            action = "bleibt (Treffer passten nach dem Anwaehlen nicht)"
     say(f"{len(chans)} Sender gelesen, laeuft: {current} {cur.get('sender', '')} - {cur.get('sendung', '')} ({cur.get('punkte', 0)} P.)")
     for x in sorted((x for x in scored if x["punkte"] > 0), key=lambda x: -x["punkte"])[:6]:
         say(f"   {x['punkte']:>2} P. {x['nr']:>4} {x['sender']}: {x['sendung']}  [{', '.join(x['treffer'])}] {x['genre']}")
