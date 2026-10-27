@@ -44,6 +44,15 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".EinblendungEmpfaenger"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="io.github.mhd6271.tvzapper.EINBLENDEN" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".ZapperService"
             android:exported="false"
