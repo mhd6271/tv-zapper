@@ -69,6 +69,7 @@ public class ZapperService extends Service {
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
             wake.acquire(cfg.runMin <= 0 ? 24 * 3600_000L : cfg.runMin * 60_000L + 60_000L);
         }
+        if (!once) greet(0);
         // Beim Start aus der App heraus ist sie selbst noch vorn – kurz warten, bis das Fernsehbild zurueck ist
         handler.postDelayed(this::tick, once ? 0 : 5000);
         return START_NOT_STICKY;
@@ -93,6 +94,15 @@ public class ZapperService extends Service {
                 adHandler.postDelayed(this, 2500);
             }
         });
+    }
+
+    /** Maskottchen gruessen lassen, sobald das Fernsehbild vorn ist (hoechstens 15 s warten). */
+    private void greet(int tries) {
+        new Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            String tv = Epg.tvPackage(this);
+            if (tv != null && tv.equals(foregroundApp(this))) Maskottchen.show(this);
+            else if (tries < 5) greet(tries + 1);
+        }, 3000);
     }
 
     private void tick() {

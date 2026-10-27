@@ -168,6 +168,7 @@ public class MainActivity extends Activity {
                 .setAction(ZapperService.ACTION_STOP))));
         ctl.addView(button("Einmal prüfen (nur lesen)", v -> start(ZapperService.ACTION_ONCE, true)));
         ctl.addView(button("Einblendung testen", v -> Banner.show(this, "TV-Zapper – so sieht die Einblendung aus", 6000)));
+        ctl.addView(button("Maskottchen", v -> Maskottchen.show(this)));
         root.addView(ctl);
 
         perms = text("", 14, false);
