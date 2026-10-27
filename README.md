@@ -229,7 +229,12 @@ keine Fehlalarme in der Sendung. Lautstärke taugt nicht als Merkmal (Werbung un
 **Am Fernseher geprüft:** Sensor auf kabel eins Doku 16:28–17:20 stabil (Logo-Wert 0,93–1,0); 17:05:16 „Werbung“
 erkannt → phoenix HD, 17:06:31 zurück auf kabel eins Doku (beide Wechsel vom Fernseher bestätigt). Ob das eine
 echte Werbepause war (nur 74 s), ist nicht belegt – deshalb legt die App seitdem bei jeder Entscheidung
-Kontrollbilder ab: `adb pull /sdcard/Android/data/io.github.mhd6271.tvzapper/files/kontrolle`.
+Kontrollbilder ab: `adb pull /sdcard/Android/data/io.github.mhd6271.tvzapper/files/kontrolle`. Erste so belegte Pause:
+ProSieben 18:14:56 erkannt (2 s vor dem „WERBUNG“-Trenner, Simpsons-Abspann ohne Logo), Wechsel zu ZDFinfo,
+18:20:58 zurück über die 6-min-Grenze, Logo kam fast gleichzeitig zurück (Pause 410 s).
+Logos werden nur in den oberen Ecken gesucht, solange dort eines ist: Unten lernte das Verfahren am Mac sonst
+Sendungslogos (SAT.1 „Auf Streife“), Spielstände (RTL Fußball) oder Laufbänder (n-tv). Der Sensor ruht, solange
+etwas anderes als das Fernsehbild vorn ist, und läuft danach für denselben Sender weiter.
 
 **Grenzen:**
 - Die FRITZ!Box liefert die Frequenz 562 MHz nicht (MTV, Comedy Central) – dort keine Werbeerkennung.
