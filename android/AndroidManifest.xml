@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.mhd6271.tvzapper"
-    android:versionCode="5"
-    android:versionName="0.3.1">
+    android:versionCode="6"
+    android:versionName="0.3.2">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -68,6 +68,7 @@
             <intent-filter>
                 <action android:name="io.github.mhd6271.tvzapper.ABFRAGEN" />
                 <action android:name="io.github.mhd6271.tvzapper.UMSCHALTEN" />
+                <action android:name="io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN" />
             </intent-filter>
         </receiver>
 

@@ -25,13 +25,25 @@ import java.util.Locale;
 public class AbfrageEmpfaenger extends BroadcastReceiver {
     static final String ABFRAGEN = "io.github.mhd6271.tvzapper.ABFRAGEN";
     static final String UMSCHALTEN = "io.github.mhd6271.tvzapper.UMSCHALTEN";
+    /** --es sender "ProSieben MAXX HD" [--el von <ms>] [--el bis <ms>] [--ez alt true] – siehe PauseStats.delete */
+    static final String PAUSEN_LOESCHEN = "io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN";
 
     @Override
     public void onReceive(Context c, Intent i) {
         JSONObject out = new JSONObject();
         try {
             if (UMSCHALTEN.equals(i.getAction())) umschalten(c, i, out);
-            else abfragen(c, i, out);
+            else if (PAUSEN_LOESCHEN.equals(i.getAction())) {
+                String ch = i.getStringExtra("sender");
+                if (ch == null) throw new IllegalArgumentException("sender fehlt");
+                JSONObject before = PauseStats.toJson(c).optJSONObject(ch);
+                out.put("vorher", before == null ? JSONObject.NULL : before);
+                out.put("entfernt", PauseStats.delete(c, ch, i.getLongExtra("von", 0), i.getLongExtra("bis", 0),
+                        i.getBooleanExtra("alt", false)));
+                JSONObject after = PauseStats.toJson(c).optJSONObject(ch);
+                out.put("nachher", after == null ? JSONObject.NULL : after);
+                Log.add(c, "Pausenstatistik " + ch + ": " + out.getInt("entfernt") + " Einträge entfernt (von außen)");
+            } else abfragen(c, i, out);
         } catch (Exception e) {
             put(out, "fehler", e.toString());
         }
@@ -67,6 +79,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         }
         out.put("jetzt", jetzt == null ? JSONObject.NULL : jetzt);
         if (all) out.put("liste", liste);
+        if ("pausen".equals(was)) out.put("pausen", PauseStats.toJson(c));
     }
 
     private static JSONObject channelJson(Context c, Config cfg, Epg.Channel ch, String state) throws Exception {

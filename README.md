@@ -332,6 +332,9 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
 alle nicht ausgeschalteten Sender in derselben Form. `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
 Einblendung) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
-Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s.
+Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was pausen` liefert `ABFRAGEN` die gemessenen Werbepausen je Sender
+(`anzahl`, `durchschnitt_s`, Einzelwerte `pausen` mit `ende` in ms und `s`); `PAUSEN_LOESCHEN` (`--es sender …`,
+optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
+entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
