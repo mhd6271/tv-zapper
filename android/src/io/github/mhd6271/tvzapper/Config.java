@@ -31,7 +31,8 @@ final class Config {
     List<Cat> cats = new ArrayList<>();
     List<String> never = new ArrayList<>();
     int dwellMin = 5;
-    int runMin = 60;
+    /** Laufzeit in Minuten, 0 = ohne Ende (bis Stopp). */
+    int runMin = 0;
     int bonus = 2;
     /** Sendername -> an / bevorzugt / aus, nur wo vom Fernseher abweichend eingestellt.
      *  Gespeichert wie in interessen.json: sender_nie (Liste), sender_bevorzugt (Name -> Bonus), dazu sender_an. */
@@ -99,7 +100,7 @@ final class Config {
         }
         cfg.never = strings(o.optJSONArray("aus"));
         cfg.dwellMin = o.optInt("verweilen_min", 5);
-        cfg.runMin = o.optInt("laufzeit_min", 60);
+        cfg.runMin = o.optInt("laufzeit_min", 0);
         cfg.bonus = o.optInt("bonus_bevorzugt", 2);
         cfg.newChannels = o.optString("neue_sender", AUS);
         cfg.avoidAds = o.optBoolean("werbung_umgehen", true);

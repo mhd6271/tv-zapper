@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats;
-    private Button adToggle;
+    private Button adToggle, setupButton, startButton;
     private TextView status, perms, log;
     private boolean showAllChannels;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -59,10 +59,7 @@ public class MainActivity extends Activity {
         scroll.setKeepScreenOn(true);   // sonst springt am TV sofort der Bildschirmschoner an
         setContentView(scroll);
         build();
-        if (checkSelfPermission(PERM_LISTINGS) != PackageManager.PERMISSION_GRANTED
-                || checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{PERM_LISTINGS, "android.permission.POST_NOTIFICATIONS"}, 1);
-        }
+        if (!allGranted()) setupNext();   // erster Start: Einrichten von selbst
         handleStartExtra(getIntent());
     }
 
@@ -84,6 +81,55 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         ui.post(refresher);
+        if (setupRunning) ui.postDelayed(this::setupNext, 400);   // zurueck aus einer Einstellungsseite
+    }
+
+    // --- Einrichten: alle Berechtigungen nacheinander, man muss nur jeweils OK druecken ---
+
+    private boolean setupRunning;
+    private int setupStep;
+
+    private boolean listingsGranted() {
+        return checkSelfPermission(PERM_LISTINGS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean allGranted() {
+        return listingsGranted() && usageAccess() && Settings.canDrawOverlays(this);
+    }
+
+    /** Naechste fehlende Berechtigung abfragen; jeder Schritt hoechstens einmal je Durchgang (wer ablehnt,
+     *  landet nicht in einer Schleife). */
+    private void setupNext() {
+        setupRunning = true;
+        refreshStatus();
+        if (setupStep < 1 && !listingsGranted()) {
+            setupStep = 1;
+            requestPermissions(new String[]{PERM_LISTINGS, "android.permission.POST_NOTIFICATIONS"}, 1);
+            return;
+        }
+        if (setupStep < 2 && !usageAccess()) {
+            setupStep = 2;
+            hint("Gleich: „TV-Zapper“ auswählen und auf „Zugelassen“ stellen, dann Zurück.");
+            Intent i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:" + getPackageName()));
+            if (i.resolveActivity(getPackageManager()) == null) i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            openSettings(i);
+            return;
+        }
+        if (setupStep < 3 && !Settings.canDrawOverlays(this)) {
+            setupStep = 3;
+            hint("Gleich: „TV-Zapper“ auswählen und auf „Zugelassen“ stellen, dann Zurück.");
+            openSettings(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        setupRunning = false;
+        setupStep = 0;
+        hint(allGranted() ? "Eingerichtet – jetzt „Start“ drücken." : "Es fehlt noch etwas – „Einrichten“ noch einmal drücken.");
+        refreshStatus();
+        if (allGranted()) startButton.requestFocus();
+    }
+
+    private void hint(String msg) {
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -98,6 +144,7 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int code, String[] p, int[] r) {
         fillChannels();
         refreshStatus();
+        if (setupRunning) ui.postDelayed(this::setupNext, 300);
     }
 
     private void build() {
@@ -108,8 +155,15 @@ public class MainActivity extends Activity {
         status = text("", 17, true);
         status.setPadding(0, dp(12), 0, dp(4));
         root.addView(status);
+        setupButton = button("Einrichten – alle Berechtigungen nacheinander erteilen", v -> {
+            setupStep = 0;
+            setupNext();
+        });
+        setupButton.setTextSize(18);
+        root.addView(setupButton);
         LinearLayout ctl = row();
-        ctl.addView(button("Start", v -> start(ZapperService.ACTION_START, false)));
+        startButton = button("Start", v -> start(ZapperService.ACTION_START, false));
+        ctl.addView(startButton);
         ctl.addView(button("Stopp", v -> startService(new Intent(this, ZapperService.class)
                 .setAction(ZapperService.ACTION_STOP))));
         ctl.addView(button("Einmal prüfen (nur lesen)", v -> start(ZapperService.ACTION_ONCE, true)));
@@ -134,7 +188,7 @@ public class MainActivity extends Activity {
         t.addView(text("Std.", 16, false));
         runM = number(String.valueOf(cfg.runMin % 60));
         t.addView(runM);
-        t.addView(text("Min.   Verweilen je Sender", 16, false));
+        t.addView(text("Min. (0 = ohne Ende)   Verweilen je Sender", 16, false));
         dwell = number(String.valueOf(cfg.dwellMin));
         t.addView(dwell);
         t.addView(text("Min.", 16, false));
@@ -304,7 +358,7 @@ public class MainActivity extends Activity {
             if (!cat.name.isEmpty() || !cat.words.isEmpty()) cfg.cats.add(cat);
         }
         cfg.never = Config.splitList(never.getText().toString());
-        cfg.runMin = Math.max(1, parse(runH.getText().toString(), 0) * 60 + parse(runM.getText().toString(), 0));
+        cfg.runMin = Math.max(0, parse(runH.getText().toString(), 0) * 60 + parse(runM.getText().toString(), 0));
         cfg.dwellMin = Math.max(1, parse(dwell.getText().toString(), 5));
         cfg.bonus = parse(bonus.getText().toString(), 0);
         cfg.adFree = Config.splitList(adFree.getText().toString());
@@ -320,14 +374,51 @@ public class MainActivity extends Activity {
         cfg.save(this);
         startForegroundService(new Intent(this, ZapperService.class).setAction(action)
                 .putExtra(ZapperService.EXTRA_READ_ONLY, readOnly));
-        if (!readOnly) moveTaskToBack(true);   // zurueck zum Fernsehbild
+        if (!readOnly) openTv();
+    }
+
+    /** Fernsehbild oeffnen (laufender bzw. erster eingeschalteter Sender) – wer die App vom Startbildschirm
+     *  startet, kaeme sonst nur dorthin zurueck, und der Zapper wartete aufs Fernsehbild. */
+    private void openTv() {
+        String tvPkg = Epg.tvPackage(this);
+        Intent launch = tvPkg == null ? null : getPackageManager().getLeanbackLaunchIntentForPackage(tvPkg);
+        if (launch == null && tvPkg != null) launch = getPackageManager().getLaunchIntentForPackage(tvPkg);
+        if (launch != null) {   // Fernseh-App selbst oeffnen: sie macht mit dem zuletzt gesehenen Sender weiter
+            try {
+                startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+        long id = Epg.currentChannelId(this);
+        if (id < 0) {
+            for (Epg.Channel ch : Epg.channels(this)) {
+                if (!Config.AUS.equals(cfg.state(ch))) {
+                    id = ch.id;
+                    break;
+                }
+            }
+        }
+        if (id < 0) {
+            moveTaskToBack(true);
+            return;
+        }
+        Intent i = new Intent(Intent.ACTION_VIEW, android.media.tv.TvContract.buildChannelUri(id));
+        String pkg = Epg.tvPackage(this);
+        if (pkg != null) i.setPackage(pkg);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(i);
+        } catch (Exception e) {
+            moveTaskToBack(true);
+        }
     }
 
     private void refreshStatus() {
         SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.GERMANY);
         long end = ZapperService.endAt, next = ZapperService.nextAt;
         status.setText(end > System.currentTimeMillis()
-                ? "Läuft bis " + hm.format(new Date(end)) + (next > 0 ? ", nächste Prüfung " + hm.format(new Date(next)) : "")
+                ? (end == Long.MAX_VALUE ? "Läuft (bis Stopp)" : "Läuft bis " + hm.format(new Date(end))) + (next > 0 ? ", nächste Prüfung " + hm.format(new Date(next)) : "")
                 : "Steht.");
         StringBuilder ps = new StringBuilder("Gemessene Werbepausen: ");
         java.util.Map<String, String> st = PauseStats.summary(this);

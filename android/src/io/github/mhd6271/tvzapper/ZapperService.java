@@ -60,13 +60,14 @@ public class ZapperService extends Service {
         if (!once && waechter == null) startWaechter();
         readOnly = intent.getBooleanExtra(EXTRA_READ_ONLY, false);
         Config cfg = Config.load(this);
-        endAt = once ? System.currentTimeMillis() : System.currentTimeMillis() + cfg.runMin * 60_000L;
+        endAt = once ? System.currentTimeMillis()
+                : cfg.runMin <= 0 ? Long.MAX_VALUE : System.currentTimeMillis() + cfg.runMin * 60_000L;
         if (!once) {
-            Log.add(this, "Start: " + cfg.runMin + " min Laufzeit, alle " + cfg.dwellMin + " min prüfen; Fernseher: Eingang "
+            Log.add(this, "Start: " + (cfg.runMin <= 0 ? "ohne Ende" : cfg.runMin + " min Laufzeit") + ", alle " + cfg.dwellMin + " min prüfen; Fernseher: Eingang "
                     + Epg.tunerInput(this) + ", App " + Epg.tvPackage(this));
             PowerManager pm = getSystemService(PowerManager.class);
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
-            wake.acquire(cfg.runMin * 60_000L + 60_000L);
+            wake.acquire(cfg.runMin <= 0 ? 24 * 3600_000L : cfg.runMin * 60_000L + 60_000L);
         }
         // Beim Start aus der App heraus ist sie selbst noch vorn – kurz warten, bis das Fernsehbild zurueck ist
         handler.postDelayed(this::tick, once ? 0 : 5000);
