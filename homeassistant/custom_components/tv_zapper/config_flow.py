@@ -59,7 +59,7 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
         vorgabe = user_input or {}
         schema = vol.Schema({
-            vol.Required(CONF_HOST, default=vorgabe.get(CONF_HOST, "192.168.20.61")): str,
+            vol.Required(CONF_HOST, default=vorgabe.get(CONF_HOST, "")): str,
             vol.Required(CONF_PORT, default=vorgabe.get(CONF_PORT, 5555)): int,
             vol.Required(CONF_FAVORIT, default=vorgabe.get(CONF_FAVORIT, "Favorit1")): str,
         })

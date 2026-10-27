@@ -24,7 +24,7 @@ const = importlib.import_module("tvz.const")
 
 async def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="192.168.20.61")
+    ap.add_argument("--host", required=True, help="Adresse des Fernsehers, z. B. <TV-IP>")
     ap.add_argument("--port", type=int, default=5555)
     ap.add_argument("--schluessel", default=str(HIER / "probe_adbkey"), help="wird angelegt, falls nicht vorhanden")
     ap.add_argument("--nur-verbinden", action="store_true")

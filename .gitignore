@@ -3,3 +3,4 @@ homeassistant/probe_adbkey*
 lauf.log
 protokoll.jsonl
 *.log
+.tvz_tv

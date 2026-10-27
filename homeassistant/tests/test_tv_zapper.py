@@ -25,7 +25,7 @@ async def _einrichten(hass):
          patch("custom_components.tv_zapper.tv.Fernseher.sh", AsyncMock(return_value="tvz-ok\n")):
         r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
         assert r["type"] is FlowResultType.FORM
-        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.168.20.61", "port": 5555, "favorit": "Favorit1"})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.0.2.61", "port": 5555, "favorit": "Favorit1"})
         assert r["type"] is FlowResultType.CREATE_ENTRY, r
         await hass.async_block_till_done()
     return r["result"]

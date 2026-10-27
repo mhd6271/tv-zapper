@@ -9,7 +9,7 @@ Aufruf:  python3 zapper.py                 (60 min, alle 5 min pruefen)
          python3 zapper.py --minuten 30
          python3 zapper.py --einmal        (ein Durchgang, zum Testen)
          python3 zapper.py --nur-lesen     (nur auslesen und bewerten, nicht umschalten)
-Geraet:  Umgebungsvariable TVZ_TV (Standard 192.168.20.61:5555)
+Geraet:  Umgebungsvariable TVZ_TV oder Datei .tvz_tv neben dem Skript (z. B. <TV-IP>:5555, nicht im Repo)
 """
 import argparse
 import datetime
@@ -23,7 +23,16 @@ import time
 import xml.etree.ElementTree as ET
 
 HERE = pathlib.Path(__file__).resolve().parent
-TV = os.environ.get("TVZ_TV", "192.168.20.61:5555")
+def _tv_adresse():
+    if os.environ.get("TVZ_TV"):
+        return os.environ["TVZ_TV"]
+    f = HERE / ".tvz_tv"
+    if f.exists():
+        return f.read_text().strip()
+    sys.exit("Adresse des Fernsehers fehlt: TVZ_TV=<TV-IP>:5555 setzen oder in die Datei .tvz_tv schreiben")
+
+
+TV = _tv_adresse()
 TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 LOG = HERE / "protokoll.jsonl"
