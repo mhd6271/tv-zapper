@@ -190,6 +190,9 @@ laufender Sender richtig erkannt, nicht umgeschaltet. Umschalten über die Progr
 19:21–19:26 am Fernseher geprüft: 37 Sender gelesen, auf 167 ProSieben MAXX HD (Futurama, 4 Punkte) umgeschaltet,
 nachgelesen passt. Das Blättern in der Programmzeitschrift schaltet nicht um: `recent_play_channel_id` blieb die
 fünf Minuten im Programmführer gleich und wechselte erst beim Umschalten.
+Über die TV-App (0.3.0) am 27.10.2026 19:53 geprüft: von 1 Das Erste aus 36 Sender gelesen, per `UMSCHALTEN` auf
+75 Comedy Central HD (Bob's Burgers) geschaltet, Nachfrage passt – ganzer Durchgang etwa 4 Sekunden, ohne Tastendruck.
+Der Sensor „Läuft jetzt“ läuft seit dem HA-Neustart um 19:39 mit Daten der TV-App.
 
 ### Ohne Home Assistant ausprobieren
 
