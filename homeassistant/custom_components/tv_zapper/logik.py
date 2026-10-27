@@ -26,7 +26,14 @@ def parse_guide(nodes, fav_tab="Favorit1"):
     """-> (rows, header, tab). rows: Liste (nummer, sender, sendung) in Bildschirm-Reihenfolge,
     header: dict title/genre/info der gerade markierten Sendung, tab: gewaehlter Reiter."""
     texts = [(n.get("text", ""), n.get("content-desc", "")) for n in nodes]
-    rows, i = [], 0
+    # Zeilen erst nach dem Kopf der markierten Sendung suchen: dort steht z. B. die Altersangabe "12"
+    # als eigene Zahl und wurde sonst als Sendernummer gelesen (Befund am Geraet 27.10.2026).
+    start = 0
+    for k, (t, _) in enumerate(texts):
+        if t == "Programmzeitschrift":
+            start = next((m + 1 for m in range(k + 1, len(texts)) if texts[m][0].startswith("Drücken Sie")), k + 1)
+            break
+    rows, i = [], start
     while i < len(texts):
         t = texts[i][0]
         if re.fullmatch(r"\d{1,4}", t):

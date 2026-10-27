@@ -84,3 +84,31 @@ def test_vorlage_gleich_interessen_json():
     assert json.loads(repo.read_text(encoding="utf-8")) == json.loads(
         (pathlib.Path(const.__file__).parent / "vorlage.json").read_text(encoding="utf-8")), \
         "interessen.json geaendert: nach homeassistant/custom_components/tv_zapper/vorlage.json kopieren"
+
+
+async def test_blaettert_nicht_in_senderliste():
+    """Senderliste statt Programmzeitschrift vorn: keine einzige Hoch/Runter-Taste."""
+    f = tv.Fernseher("x", 1, None)
+    f.key = AsyncMock()
+    liste = "com.tcl.tv/com.tcl.tv.channellist.NewChannelListActivity"
+    f.focus_app = AsyncMock(return_value=liste)
+    f.dump = AsyncMock(return_value=[{"text": "12"}, {"text": "Drücken Sie OK zur Bestätigung"}])
+    with patch("custom_components.tv_zapper.tv.asyncio.sleep", AsyncMock()):
+        try:
+            await f.collect()
+            raise AssertionError("haette abbrechen muessen")
+        except RuntimeError as e:
+            assert "nicht vorn" in str(e)
+    gedrueckt = [a for c in f.key.call_args_list for a in c.args]
+    assert not any(k in gedrueckt for k in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_CENTER")), gedrueckt
+
+
+def test_echte_programmzeitschrift():
+    """Abzug vom Geraet: Altersangabe "12" im Kopf ist keine Sendernummer, erste Zeile = laufender Sender."""
+    import pathlib
+    from custom_components.tv_zapper.logik import parse_guide, parse_xml
+    nodes = parse_xml((pathlib.Path(__file__).parent / "guide_27-10-2026.xml").read_text(encoding="utf-8"))
+    rows, header, tab = parse_guide(nodes)
+    assert rows[0] == (75, "Comedy Central HD", "Futurama")
+    assert [r[0] for r in rows[:4]] == [75, 76, 77, 78]
+    assert header["title"] == "Futurama" and tab == "Alle"

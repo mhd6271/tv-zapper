@@ -29,8 +29,10 @@ def lade_signer(pfad: str) -> PythonRSASigner:
         keygen(pfad)
     with open(pfad, encoding="utf-8") as f:
         priv = f.read()
-    with open(pfad + ".pub", encoding="utf-8") as f:
-        pub = f.read()
+    pub = None   # ohne .pub geht nur ein schon freigegebener Schluessel (z. B. ~/.android/adbkey)
+    if os.path.isfile(pfad + ".pub"):
+        with open(pfad + ".pub", encoding="utf-8") as f:
+            pub = f.read()
     return PythonRSASigner(pub, priv)
 
 
@@ -43,7 +45,7 @@ class Fernseher:
     async def verbinden(self, auth_timeout: float = 10.0):
         if self.dev and self.dev.available:
             return
-        self.dev = AdbDeviceTcpAsync(self.host, self.port, default_transport_timeout_s=9.0)
+        self.dev = AdbDeviceTcpAsync(self.host, self.port, default_transport_timeout_s=30.0)  # uiautomator dump braucht manchmal >9 s
         # auth_timeout: so lange wird auf "USB-Debugging zulassen?" am Fernseher gewartet
         await self.dev.connect(rsa_keys=[self.signer], auth_timeout_s=auth_timeout)
 
@@ -76,6 +78,12 @@ class Fernseher:
             await self.key("KEYCODE_BACK")
             await asyncio.sleep(1.2)
 
+    async def nur_in_guide(self, was: str):
+        """Schutz: Hoch/Runter/OK nur in der Programmzeitschrift. In der Senderliste
+        (z. B. NewChannelListActivity) schaltet jedes Hoch/Runter um."""
+        if (app := await self.focus_app()) != GUIDE_APP:
+            raise RuntimeError(f"Programmzeitschrift nicht vorn ({app or 'nichts'}) - {was} abgebrochen")
+
     async def focus_app(self) -> str:
         out = await self.sh("dumpsys window | grep mCurrentFocus")
         m = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", out)
@@ -97,17 +105,20 @@ class Fernseher:
             await asyncio.sleep(1)
             nodes = await self.dump()
             rows, _, _ = self.guide(nodes)
-            if rows:
+            if rows and await self.focus_app() == GUIDE_APP:
                 return nodes
+        await self.nur_in_guide("Lesen")
         return await self.dump()
 
     async def ensure_fav_tab(self, nodes):
         _, _, tab = self.guide(nodes)
         if tab == self.fav_tab:
             return True
+        await self.nur_in_guide("Reiterwahl")
         await self.key("KEYCODE_DPAD_LEFT")
         await asyncio.sleep(0.8)
         for _ in range(8):
+            await self.nur_in_guide("Reiterwahl")
             f = [n.get("content-desc") for n in await self.dump() if n.get("focused") == "true"]
             if self.fav_tab in f:
                 await self.key("KEYCODE_DPAD_CENTER")
@@ -145,11 +156,14 @@ class Fernseher:
             return new
 
         take(await self.dump())
+        await self.nur_in_guide("Blaettern")
         await self.key(*["KEYCODE_DPAD_UP"] * 120)          # an den Anfang der Liste
         await asyncio.sleep(1.5)
         take(await self.dump())
         idle = 0
-        for _ in range(200):
+        for schritt in range(200):
+            if schritt % 5 == 0:
+                await self.nur_in_guide("Blaettern")
             n = take(await self.dump("KEYCODE_DPAD_DOWN", 0.35))
             idle = idle + 1 if n == 0 else 0
             if idle >= 15:
@@ -166,6 +180,14 @@ class Fernseher:
             await asyncio.sleep(0.8)
         await self.key("KEYCODE_DPAD_CENTER")
         await asyncio.sleep(4)
+
+    async def aufraeumen(self):
+        """Nach einem Fehler: Programmzeitschrift schliessen, falls sie noch offen ist (neue Verbindung)."""
+        await self.trennen()
+        try:
+            await self.close_guide()
+        except Exception as e:  # noqa: BLE001
+            _LOGGER.warning("Programmzeitschrift liess sich nach Fehler nicht schliessen: %s", e)
 
     async def verify(self, cand, cfg):
         """Nach dem Umschalten: Programmzeitschrift oeffnen (startet beim laufenden Sender) und
@@ -184,7 +206,11 @@ class Fernseher:
         app = await self.focus_app()
         if app not in (TV_APP, GUIDE_APP):
             return {"aktion": "uebersprungen", "app": app}
-        current, chans, infos = await self.collect()
+        try:
+            current, chans, infos = await self.collect()
+        except Exception:
+            await self.aufraeumen()
+            raise
         scored, cur, best = bewerte(current, chans, infos, cfg)
         aktion, neu, nachgelesen = "bleibt", None, None
         if soll_umschalten(cur, best) and not nur_lesen:
