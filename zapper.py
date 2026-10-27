@@ -149,7 +149,8 @@ def ensure_fav_tab(nodes):
             time.sleep(1.5)
             key("KEYCODE_DPAD_RIGHT")
             time.sleep(1)
-            return True
+            # nachpruefen, dass wirklich Favorit1 gewaehlt ist
+            return parse_guide(dump())[2] == FAV_TAB
         key("KEYCODE_DPAD_DOWN")
         time.sleep(0.6)
     return False
@@ -163,7 +164,9 @@ def collect():
         raise RuntimeError("Programmzeitschrift liess sich nicht lesen")
     current = rows[0][0]
     if not ensure_fav_tab(nodes):
-        say("Favorit1 nicht gefunden - lese die aktuelle Liste")
+        # nie in "Alle" blaettern: dort sind Hunderte Sender
+        close_guide()
+        raise RuntimeError(f"Reiter {FAV_TAB} liess sich nicht waehlen - Abbruch")
     chans, infos = {}, {}
 
     def take(nodes):
