@@ -143,7 +143,7 @@ class Fernseher:
             raise RuntimeError("Programmzeitschrift liess sich nicht lesen")
         current = rows[0][0]
         if not await self.ensure_fav_tab(nodes):
-            # nie in "Alle" blaettern: dort sind Hunderte Sender (Vorgabe Max)
+            # nie in "Alle" blaettern: dort sind Hunderte Sender
             raise RuntimeError(f"Reiter {self.fav_tab} liess sich nicht waehlen - Abbruch")
         chans, infos = {}, {}
 

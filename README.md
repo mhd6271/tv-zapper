@@ -71,9 +71,22 @@ pro Durchgang nur einmal umschalten und danach nachlesen, BACK nur bei offener P
 die Vorlage für die Grundeinstellung: Sie liegt als Kopie `tv_zapper/vorlage.json` in der Integration. Nach einer
 Änderung an `interessen.json` neu kopieren (`cp interessen.json homeassistant/custom_components/tv_zapper/vorlage.json`),
 ein Test meldet sonst den Unterschied. Eine schon eingerichtete Integration behält ihre Einstellungen.
+Die Grundeinstellung sind meine Interessen – nach dem Einrichten unter „Konfigurieren“ an die eigenen anpassen.
+
+**Was man braucht** (alles Weitere stellt man in HA ein, im Code steht keine Adresse):
+
+- einen **TCL-Fernseher mit Google TV** und eingebautem Tuner. Erprobt nur an einem Gerät mit Android 14;
+  die Integration bedient die TCL-eigene Programmzeitschrift (`com.tcl.tv`), andere Hersteller gehen nicht.
+- Fernseher-Sprache **Deutsch**: Die Programmzeitschrift wird an deutschen Texten erkannt
+  („Programmzeitschrift“, „Drücken Sie …“).
+- In der Programmzeitschrift eine **eigene Senderliste** (Reiter) mit den Sendern, die in Frage kommen;
+  ihr Name wird beim Einrichten eingetragen (bei mir `Favorit1`).
+- Am Fernseher **Entwickleroptionen → USB-Debugging** und **ADB über Netzwerk** an, Port 5555.
+  Die Adresse des Fernsehers steht unter Einstellungen → Netzwerk; am besten im Router fest vergeben.
+- Home Assistant mit Zugriff auf den Ordner `config` (z. B. Add-on „Samba share“).
 
 **Wie sie den Fernseher erreicht:** Die eingebauten Integrationen reichen nicht. „Android TV Remote“
-(`androidtv_remote`, so ist der Fernseher heute als `media_player.smart_tv_pro` eingebunden) kann nur Tasten
+(`androidtv_remote`) kann nur Tasten
 schicken, aber nichts vom Bildschirm lesen. Deshalb spricht die Integration selbst ADB über das Netzwerk
 (Bibliothek `adb-shell`, dieselbe wie in der eingebauten Integration „Android Debug Bridge“) und liest die
 Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür einen **eigenen ADB-Schlüssel**
@@ -84,7 +97,7 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 
 | Einstellung | Bedeutung |
 |---|---|
-| Adresse / Port | <TV-IP> / 5555 |
+| Adresse / Port | IP-Adresse des Fernsehers / 5555 |
 | Senderliste | Name des Reiters in der Programmzeitschrift, Standard `Favorit1` |
 | Interessen | eine Zeile je Kategorie: `Name \| Gewicht \| wort, wort*, …` |
 | Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
@@ -93,6 +106,7 @@ Programmzeitschrift wie `zapper.py` mit `uiautomator dump`. HA bekommt dafür ei
 | Laufzeit | wie lange der Zapper nach dem Einschalten läuft (Minuten) |
 | Verweilzeit | Minuten zwischen zwei Prüfungen |
 | Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
+| Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
 
 **Entitäten** (Gerät „TV-Zapper“):
 
@@ -121,28 +135,31 @@ durcheinander.
 
 ### Installieren
 
-1. Im Finder **⌘K** („Mit Server verbinden“) `smb://homeassistant.local/config`, „Registrierter Benutzer“,
-   Name `homeassistant`, Passwort aus Einstellungen → Add-ons → Samba share → Konfiguration.
-   Klappt die Anmeldung damit nicht, die IP-Adresse von Home Assistant statt `homeassistant.local`
-   nehmen: Hier zeigte der Name am 27.10.2026 auch auf eine zweite, alte Adresse, wo nichts antwortet.
+1. Den Ordner `config` von Home Assistant öffnen, z. B. über das Add-on „Samba share“: am Mac im Finder
+   **⌘K** `smb://homeassistant.local/config`, unter Windows `\\homeassistant.local\config`; Benutzer und
+   Passwort stehen in der Konfiguration des Add-ons. Klappt es über den Namen nicht, die IP-Adresse von
+   Home Assistant nehmen (bei mir zeigte `homeassistant.local` am 27.10.2026 auch auf eine alte Adresse).
 2. Den Ordner `homeassistant/custom_components/tv_zapper` nach `config/custom_components/` kopieren –
    mit Finder oder `cp`, nicht mit `rsync` (dessen Hilfsdateien `._…` sperrt das Samba-Add-on).
 3. Home Assistant neu starten (Einstellungen → System → Neu starten).
 4. Einstellungen → Geräte & Dienste → Integration hinzufügen → **TV-Zapper**, Adresse eintragen,
    am Fernseher „Immer zulassen“ bestätigen (60 Sekunden Zeit). Zu spät bestätigt? Einfach noch einmal
    „Absenden“ – die Freigabe ist dann schon gespeichert.
+5. Danach unter „Konfigurieren“ Interessen, Sender und Zeiten anpassen; zum Ausprobieren zuerst **Nur lesen** an.
+6. Wer einen fertigen Dashboard-Abschnitt will (Schalter, Treffer, Laufzeit, Verweilzeit, Prüfknopf):
+   [`homeassistant/dashboard-beispiel.yaml`](homeassistant/dashboard-beispiel.yaml), Anleitung steht in der Datei.
 
 Eingerichtet und einmal „nur lesen“ geprüft am 27.10.2026 (HA 2026.10.4): 37 Sender gelesen,
 laufender Sender richtig erkannt, nicht umgeschaltet. Noch nicht geklärt: ob schon das Blättern in der
-Programmzeitschrift den Sender umschaltet (Beobachtung von Max beim Lauf von `zapper.py`).
+Programmzeitschrift den Sender umschaltet (beim Lauf von `zapper.py` beobachtet).
 
 ### Ohne Home Assistant ausprobieren
 
-`homeassistant/probe_tv.py` führt den Fernseher-Teil der Integration (`tv.py`) direkt vom Mac aus:
+`homeassistant/probe_tv.py` führt den Fernseher-Teil der Integration (`tv.py`) direkt vom Rechner aus:
 
 ```bash
-python3 homeassistant/probe_tv.py --nur-verbinden                         # neuer Schlüssel wie in HA
-python3 homeassistant/probe_tv.py --schluessel ~/.android/adbkey --einmal  # ein Durchgang, nur lesen
+python3 homeassistant/probe_tv.py --host <TV-IP> --nur-verbinden                          # neuer Schlüssel wie in HA
+python3 homeassistant/probe_tv.py --host <TV-IP> --schluessel ~/.android/adbkey --einmal  # ein Durchgang, nur lesen
 ```
 
 Braucht `pip install "adb-shell[async]==0.4.4"`.

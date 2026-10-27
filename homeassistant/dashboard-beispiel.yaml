@@ -1,0 +1,44 @@
+# Abschnitt "TV-Zapper" fuer ein Dashboard (Abschnitte-Ansicht): Dashboard bearbeiten ->
+# Abschnitt hinzufuegen -> Drei-Punkte-Menue des Abschnitts -> "In YAML bearbeiten", das hier einfuegen.
+# Die Entitaetsnamen passen, solange die Integration einmal eingerichtet ist und nichts umbenannt wurde.
+type: grid
+cards:
+  - type: heading
+    heading: TV-Zapper
+    icon: mdi:television-shimmer
+  - type: tile
+    entity: switch.tv_zapper_zapper
+    name: Zapper
+    grid_options:
+      columns: 12
+  - type: tile
+    entity: sensor.tv_zapper_aktueller_treffer
+    name: Läuft gerade
+    grid_options:
+      columns: 12
+  - type: tile
+    entity: number.tv_zapper_laufzeit
+    name: Laufzeit
+    features:
+      - type: numeric-input
+        style: buttons
+  - type: tile
+    entity: number.tv_zapper_verweilzeit
+    name: Verweilzeit
+    features:
+      - type: numeric-input
+        style: buttons
+  - type: button
+    entity: button.tv_zapper_jetzt_prufen_nur_lesen
+    name: Jetzt prüfen (nur lesen)
+    icon: mdi:magnify
+    tap_action:
+      action: perform-action
+      perform_action: button.press
+      target:
+        entity_id: button.tv_zapper_jetzt_prufen_nur_lesen
+      confirmation:
+        text: Jetzt einmal die Programmzeitschrift lesen (ca. 5 Minuten, schaltet nicht um)?
+    grid_options:
+      columns: 12
+      rows: 2
