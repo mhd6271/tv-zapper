@@ -146,6 +146,16 @@ class Steuerung:
                 await self.tv.trennen()
         self.benachrichtigen()
 
+    async def app_einstellen(self, name: str, wert: bool):
+        """Einstellung der TV-App setzen und gleich nachlesen (Schalter zeigt den Stand der App)."""
+        async with self._lock:
+            try:
+                await self.tv.app_einstellen(name, wert)
+            finally:
+                if not self.laeuft:
+                    await self.tv.trennen()
+        await self.jetzt_lesen()
+
     async def wecken(self):
         """Fernseher vor dem ersten Durchgang wecken (Wake-on-LAN nur mit MAC in den Optionen).
         Klappt es nicht, meldet der erste Durchgang den Fehler."""

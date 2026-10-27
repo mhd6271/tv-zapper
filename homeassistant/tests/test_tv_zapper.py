@@ -140,3 +140,30 @@ async def test_adresse_aendern(hass: HomeAssistant):
     assert entry.data == {"host": "192.0.2.62", "port": 5556} and entry.unique_id == "192.0.2.62:5556"
     assert entry.runtime_data.tv.host == "192.0.2.62"   # neu geladen, Optionen bleiben
     assert entry.options["favorit"] == "Favorit1"
+
+
+async def test_ausweichen_bevorzugt(hass: HomeAssistant):
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    sw = "switch.tv_zapper_bei_werbung_zuerst_bevorzugte_sender"
+    assert hass.states.get(sw).state == "unavailable"   # App hat noch nichts gemeldet
+    stand = {"wert": False}
+
+    async def jetzt(_cfg):
+        return {"quelle": "app", "fernsehbild_vorn": True, "jetzt": None, "ausweichen_bevorzugt": stand["wert"]}
+
+    async def einstellen(name, wert):
+        assert name == "ausweichen_bevorzugt"
+        stand["wert"] = wert
+        return {"ok": True, name: wert}
+
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.jetzt", side_effect=jetzt), \
+         patch("custom_components.tv_zapper.tv.Fernseher.app_einstellen", side_effect=einstellen) as es:
+        await st.jetzt_lesen()
+        assert hass.states.get(sw).state == "off"
+        await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+        assert es.call_args.args == ("ausweichen_bevorzugt", True) and hass.states.get(sw).state == "on"
+        await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
+        assert hass.states.get(sw).state == "off"

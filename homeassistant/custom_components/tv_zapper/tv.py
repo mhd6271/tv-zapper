@@ -29,6 +29,7 @@ GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 # Schnittstelle der TV-App ab 0.3.0: Sender und Sendungen aus TvContract, Umschalten ohne Tasten
 ABFRAGEN_ACTION = "io.github.mhd6271.tvzapper.ABFRAGEN"
 UMSCHALTEN_ACTION = "io.github.mhd6271.tvzapper.UMSCHALTEN"
+EINSTELLEN_ACTION = "io.github.mhd6271.tvzapper.EINSTELLEN"
 ABFRAGE_EMPFAENGER = "io.github.mhd6271.tvzapper/.AbfrageEmpfaenger"
 
 
@@ -290,6 +291,14 @@ class Fernseher:
             f"am broadcast -a {UMSCHALTEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es nr {int(nr)}{zusatz}"))
         if not antwort or not antwort.get("ok"):
             raise RuntimeError(f"TV-App hat nicht umgeschaltet: {antwort}")
+        return antwort
+
+    async def app_einstellen(self, name: str, wert: bool) -> dict:
+        """Eine Einstellung der TV-App setzen (z. B. ausweichen_bevorzugt)."""
+        antwort = broadcast_daten(await self.sh(
+            f"am broadcast -a {EINSTELLEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es {name} {'true' if wert else 'false'}"))
+        if not antwort or not antwort.get("ok"):
+            raise RuntimeError(f"TV-App hat {name} nicht gesetzt: {antwort}")
         return antwort
 
     async def jetzt(self, cfg) -> dict:

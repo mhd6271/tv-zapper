@@ -204,3 +204,16 @@ async def test_jetzt():
     f.app_abfragen = AsyncMock(return_value=None)
     f.focus_app = AsyncMock(return_value=tv.TV_APP)
     assert (await f.jetzt(CFG)) == {"quelle": "adb", "fernsehbild_vorn": True, "vorn": tv.TV_APP, "jetzt": None}
+
+
+async def test_app_einstellen():
+    f = tv.Fernseher("x", 1, None)
+    f.sh = AsyncMock(return_value='Broadcast completed: result=0, data="{"ok":true,"ausweichen_bevorzugt":true}"')
+    assert (await f.app_einstellen("ausweichen_bevorzugt", True))["ausweichen_bevorzugt"] is True
+    assert "--es ausweichen_bevorzugt true" in f.sh.call_args.args[0] and tv.EINSTELLEN_ACTION in f.sh.call_args.args[0]
+    f.sh = AsyncMock(return_value='Broadcast completed: result=1, data="{"fehler":"unbekannt"}"')
+    try:
+        await f.app_einstellen("ausweichen_bevorzugt", False)
+        assert False
+    except RuntimeError:
+        pass
