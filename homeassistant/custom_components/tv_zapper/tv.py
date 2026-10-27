@@ -125,7 +125,8 @@ class Fernseher:
                 await asyncio.sleep(1.5)
                 await self.key("KEYCODE_DPAD_RIGHT")
                 await asyncio.sleep(1)
-                return True
+                # nachpruefen, dass wirklich die Favoritenliste gewaehlt ist
+                return self.guide(await self.dump())[2] == self.fav_tab
             await self.key("KEYCODE_DPAD_DOWN")
             await asyncio.sleep(0.6)
         return False
@@ -138,7 +139,8 @@ class Fernseher:
             raise RuntimeError("Programmzeitschrift liess sich nicht lesen")
         current = rows[0][0]
         if not await self.ensure_fav_tab(nodes):
-            _LOGGER.warning("%s nicht gefunden - lese die aktuelle Liste", self.fav_tab)
+            # nie in "Alle" blaettern: dort sind Hunderte Sender (Vorgabe Max)
+            raise RuntimeError(f"Reiter {self.fav_tab} liess sich nicht waehlen - Abbruch")
         chans, infos = {}, {}
 
         def take(nodes):
