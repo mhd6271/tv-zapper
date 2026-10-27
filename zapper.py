@@ -80,7 +80,10 @@ def parse_guide(nodes):
     """-> (rows, header). rows: Liste (nummer, sender, sendung) in Bildschirm-Reihenfolge,
     header: dict title/genre/info der gerade markierten Sendung."""
     texts = [(n.get("text", ""), n.get("content-desc", "")) for n in nodes]
-    rows, i = [], 0
+    # Senderzeilen erst nach dem Kopf der markierten Sendung suchen: dort stehen Zahlen wie die
+    # Altersangabe ("12"), die sonst als Sender 12 durchgingen.
+    start = next((k + 1 for k, (t, _) in enumerate(texts) if t.startswith("Drücken Sie")), 0)
+    rows, i = [], start
     while i < len(texts):
         t = texts[i][0]
         if re.fullmatch(r"\d{1,4}", t):
