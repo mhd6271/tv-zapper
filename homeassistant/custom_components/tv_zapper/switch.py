@@ -61,4 +61,4 @@ def AusweichenSchalter(st):  # noqa: N802
 
 def GrundSchalter(st):  # noqa: N802
     """Zum Nachvollziehen: bei jeder Umschaltung den Grund mit Punkten im Fernsehbild einblenden (Standard aus)."""
-    return AppEinstellungSchalter(st, "grund_einblenden", "Umschaltgrund einblenden", "mdi:message-text-outline")
+    return AppEinstellungSchalter(st, "umschaltgrund_einblenden", "Umschaltgrund einblenden", "mdi:message-text-outline")

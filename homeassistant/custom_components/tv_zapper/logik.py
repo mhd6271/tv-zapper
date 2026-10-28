@@ -152,6 +152,21 @@ def gruende(x, cfg) -> list[str]:
     return out
 
 
+def grund_zeilen(x, cfg) -> list[str]:
+    """Kurze Zeilen fuer die Einblendung der TV-App: `Hip-Hop +5 („hip hop“ im Titel)`, `★ bevorzugter Sender +1`,
+    `= 6 Punkte`."""
+    zeilen = ["Zapper-Runde (HA)"]
+    for g in gruende(x, cfg):
+        name, _, rest = g.partition(": ")
+        if name == "bevorzugter Sender":
+            zeilen.append(f"★ bevorzugter Sender +{rest.split()[0]}")
+            continue
+        p, _, wo = rest.partition(", ")
+        zeilen.append(f"{name} +{p.split()[0]}" + (f" ({wo})" if wo else ""))
+    zeilen.append(f"= {punkte_text(x.get('punkte') or 0)}")
+    return zeilen
+
+
 def _sender(x) -> str:
     s = f"{x.get('nr')} {x.get('sender') or ''}".strip()
     return s + (f" („{x['sendung']}“)" if x.get("sendung") else "")
@@ -184,6 +199,8 @@ def app_umschalt_text(u) -> str:
         text = f"doch keine Werbung (Fehlalarm), zurück auf {ziel}"
     else:
         text = f"hat auf {ziel} umgeschaltet" + (f", vorher {von}" if von else "")
+        if von and (u["von"].get("punkte") is not None):
+            text += f" mit {punkte_text(u['von']['punkte'], dativ=True)}"
     g = [f"{k.get('name')}: {punkte_text(k.get('punkte') or 0)}" for k in u.get("kategorien") or []]
     if u.get("bevorzugt_bonus"):
         g.append(f"bevorzugter Sender: {punkte_text(u['bevorzugt_bonus'])} extra")

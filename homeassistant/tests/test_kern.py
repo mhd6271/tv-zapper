@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 from custom_components.tv_zapper import const, tv
 from custom_components.tv_zapper.logik import (
-    app_umschalt_text, bewerte_sendung, bonus_zu_text, punkte_text, text_zu_bonus, umschalt_text)
+    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, text_zu_bonus, umschalt_text)
 
 CFG = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS,
        "sender_nie": ["sixx HD"], "sender_bevorzugt": const.STANDARD_SENDER_BEVORZUGT}
@@ -210,6 +210,7 @@ async def test_durchgang_ueber_app():
         e = await f.durchgang(CFG)
     assert e["quelle"] == "app" and e["aktion"] == "umgeschaltet" and e["neu"]["nr"] == 167
     assert e["passt_nach_umschalten"] is True and f.app_umschalten.call_args.args == (167,)
+    assert f.app_umschalten.call_args.kwargs["grund"].startswith("Zapper-Runde (HA) | ")
     f.collect.assert_not_called()   # keine Programmzeitschrift, keine Tasten
 
     # Zappt die TV-App selbst, schaltet HA nicht dazwischen
@@ -256,6 +257,8 @@ def test_umschalt_text():
         "hat auf 141 N24 DOKU („Hip Hop“) umgeschaltet, vorher 23 ProSieben HD („Navy CIS“) mit 0 Punkten. "
         "Grund: Hip-Hop: 5 Punkte, „hip hop“ im Titel; Doku: 2 Punkte, „doku*“ im Titel; "
         "bevorzugter Sender: 1 Punkt extra. Zusammen 8 Punkte.")
+    assert grund_zeilen(neu, cfg) == ["Zapper-Runde (HA)", "Hip-Hop +5 („hip hop“ im Titel)",
+                                      "Doku +2 („doku*“ im Titel)", "★ bevorzugter Sender +1", "= 8 Punkte"]
 
 
 def test_app_umschalt_text():
@@ -270,6 +273,9 @@ def test_app_umschalt_text():
         "Der Fernseher hat den Wechsel nicht bestätigt.")
     assert app_umschalt_text({"id": 5, "grund": "zurueck_fehlalarm", "nr": 75, "sender": "Comedy Central HD"}) == (
         "doch keine Werbung (Fehlalarm), zurück auf 75 Comedy Central HD.")
+    assert app_umschalt_text({"id": 6, "grund": "interesse", "nr": 141, "sender": "N24 DOKU",
+                              "von": {"nr": 23, "sender": "ProSieben HD", "punkte": 0}}) == (
+        "hat auf 141 N24 DOKU umgeschaltet, vorher 23 ProSieben HD mit 0 Punkten.")
     assert app_umschalt_text({"id": 3, "grund": "interesse", "nr": 141, "sender": "N24 DOKU", "punkte": 3,
                               "kategorien": [{"name": "Doku", "punkte": 2}], "bevorzugt_bonus": 1}) == (
         "hat auf 141 N24 DOKU umgeschaltet. Grund: Doku: 2 Punkte; bevorzugter Sender: 1 Punkt extra. Zusammen 3 Punkte.")

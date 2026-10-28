@@ -17,7 +17,7 @@ from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 
-from .logik import bewerte, bewerte_sendung, parse_guide, parse_xml, soll_umschalten
+from .logik import bewerte, bewerte_sendung, grund_zeilen, parse_guide, parse_xml, soll_umschalten
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -329,8 +329,9 @@ class Fernseher:
         zusatz = " --es was liste" if liste else ""
         return broadcast_daten(await self.sh(f"am broadcast -a {ABFRAGEN_ACTION} -n {ABFRAGE_EMPFAENGER}{zusatz}"))
 
-    async def app_umschalten(self, nr: int, text: str = "") -> dict:
-        zusatz = f" --es text {shlex.quote(text)}" if text else ""
+    async def app_umschalten(self, nr: int, text: str = "", grund: str = "") -> dict:
+        """`grund`: Zeilen mit „|“ getrennt; zeigt die App bei ihrer Option „Umschaltgrund einblenden“ (ab 0.4.0)."""
+        zusatz = (f" --es text {shlex.quote(text)}" if text else "") + (f" --es grund {shlex.quote(grund)}" if grund else "")
         antwort = broadcast_daten(await self.sh(
             f"am broadcast -a {UMSCHALTEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es nr {int(nr)}{zusatz}"))
         if not antwort or not antwort.get("ok"):
@@ -357,7 +358,7 @@ class Fernseher:
                 "zapper_app": daten.get("zapper_laeuft"),
                 # Einstellungen der TV-App (ab dem Stand nach 0.3.0), nur zur Anzeige
                 "werbung_umgehen": daten.get("werbung_umgehen"), "ausweichen_bevorzugt": daten.get("ausweichen_bevorzugt"),
-                "grund_einblenden": daten.get("grund_einblenden"),
+                "umschaltgrund_einblenden": daten.get("umschaltgrund_einblenden"),
                 "umschaltungen": daten.get("umschaltungen") or [],   # ab der App-Version mit Umschaltgruenden
                 "jetzt": app_sendung(x, cfg) | {"folge": x.get("folge"), "beschreibung": x.get("beschreibung")}
                 if x else None}
@@ -371,7 +372,7 @@ class Fernseher:
         best = max(scored, key=lambda x: (x["punkte"], x["nr"] == current), default=None)
         aktion, neu, nachgelesen = "bleibt", None, None
         if soll_umschalten(cur, best) and not nur_lesen:
-            await self.app_umschalten(best["nr"])
+            await self.app_umschalten(best["nr"], grund=" | ".join(grund_zeilen(best, cfg)))
             aktion, neu = "umgeschaltet", best
             await asyncio.sleep(1)
             danach = await self.app_abfragen()

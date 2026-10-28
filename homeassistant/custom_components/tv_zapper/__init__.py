@@ -148,9 +148,9 @@ class Steuerung:
     def _restzeit_s(self) -> float:
         return self.start + self.opt(CONF_LAUFZEIT) * 60 - time.monotonic()
 
-    async def einblenden(self, text: str, ms: int = 6000, immer: bool = False):
-        """Meldung im Fernsehbild (Option "Einblendung", `immer` auch ohne); Fehler stoeren das Zappen nicht."""
-        if not (immer or self.opt(CONF_EINBLENDUNG)):
+    async def einblenden(self, text: str, ms: int = 6000):
+        """Meldung im Fernsehbild (Option "Einblendung"); Fehler dabei stoeren das Zappen nicht."""
+        if not self.opt(CONF_EINBLENDUNG):
             return
         async with self._lock:
             try:
@@ -242,10 +242,8 @@ class Steuerung:
             while True:
                 ergebnis = await self.durchgang(self.opt(CONF_NUR_LESEN))
                 if ergebnis["aktion"] == "umgeschaltet" and ergebnis.get("neu"):
-                    if (self.jetzt or {}).get("grund_einblenden"):   # Einstellung der TV-App, zum Nachvollziehen
-                        await self.einblenden("TV-Zapper " + umschalt_text(ergebnis["neu"], ergebnis.get("vorher"),
-                                                                           self.cfg()), ms=15000, immer=True)
-                    else:
+                    # Ist "Umschaltgrund einblenden" der TV-App an, zeigt die App den Grund (aus UMSCHALTEN grund)
+                    if not (self.jetzt or {}).get("umschaltgrund_einblenden"):
                         await self.einblenden(meldung_umgeschaltet(ergebnis["neu"]))
                 fails = fails + 1 if ergebnis["aktion"] == "fehler" else 0
                 if fails >= 3:
