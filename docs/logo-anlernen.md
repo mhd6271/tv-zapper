@@ -25,7 +25,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 25 | RTL HD | gelernt | Lauf 28.10. 18:28 nach 6 min |
 | [x] | 27 | SPORT 1 HD | gelernt | Lauf 28.10. 18:34 nach 6 min |
 | [x] | 28 | VOX HD | gelernt | Lauf 28.10. 18:41 nach 6 min |
-| [ ] | 81 | Deluxe Music HD | offen | |
+| [x] | 81 | Deluxe Music HD | gelernt | Lauf 28.10. 18:47 nach 6 min |
 | [ ] | 86 | DMAX HD | offen | |
 | [ ] | 88 | DOKUSAT | offen | |
 | [ ] | 95 | EURONEWS GERMAN SD | offen | |
