@@ -21,6 +21,7 @@ class ZapperEntity(Entity):
             identifiers={(DOMAIN, st.entry.entry_id)},
             name="TV-Zapper",
             manufacturer="tv-zapper",
+            # KOMPAT: Nur eine Beschriftung, kein Einfluss auf die Funktion; bei anderen Geraeten steht trotzdem TCL da.
             model=f"TCL-Fernseher {st.tv.host}",
         )
 

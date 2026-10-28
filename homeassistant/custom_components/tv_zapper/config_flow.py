@@ -41,6 +41,7 @@ _PORT = vol.All(vol.Coerce(int), vol.Range(min=1, max=65535))
 
 def _adresse_ok(host: str) -> bool:
     """IPv4, IPv6 oder Rechnername - nur die dafuer noetigen Zeichen, hoechstens 253."""
+    # KOMPAT: IPv6 mit Zonenangabe (fe80::1%eth0) wird abgelehnt, ebenso Namen mit Unterstrich.
     return 0 < len(host) <= 253 and re.fullmatch(r"[A-Za-z0-9.:\-\[\]]+", host) is not None
 
 
@@ -89,12 +90,17 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
         vorgabe = user_input or {}
         schema = vol.Schema({
             vol.Required(CONF_HOST, default=vorgabe.get(CONF_HOST, "")): str,
+            # KOMPAT: 5555 ist der uebliche Port fuer ADB ueber TCP. Kabelloses Debugging (Android 11+) nutzt einen
+            # wechselnden Port und Koppeln; den braucht man dann jedes Mal neu. Vorgabe Favorit1 = deutscher Name beim TCL.
             vol.Required(CONF_PORT, default=vorgabe.get(CONF_PORT, 5555)): _PORT,
             vol.Required(CONF_FAVORIT, default=vorgabe.get(CONF_FAVORIT, "Favorit1")): str,
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors,
                                     description_placeholders=platzhalter)
 
+    # KOMPAT: _get_reconfigure_entry, async_update_reload_and_abort(data_updates=...) und OptionsFlow ohne
+    # config_entry im Konstruktor gibt es erst in neueren HA-Fassungen (aus dem Gedaechtnis etwa ab 2024.11/12,
+    # nicht nachgeschaut; geprueft nur mit 2026.10.4).
     async def async_step_reconfigure(self, user_input=None) -> ConfigFlowResult:
         """Adresse oder Port spaeter aendern (z. B. neue IP vom Router), ohne neu einzurichten."""
         entry = self._get_reconfigure_entry()

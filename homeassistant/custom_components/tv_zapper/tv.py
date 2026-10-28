@@ -13,6 +13,11 @@ import re
 import shlex
 import socket
 
+# KOMPAT: adb-shell[async]==0.4.4 ist im manifest.json fest gepinnt (dieselbe Fassung wie die eingebaute
+# Integration androidtv in HA 2026.10). Pinnt HA core spaeter eine andere Fassung, kann die Installation
+# scheitern. Reines Python plus rsa/pyasn1, laeuft daher auf ARM und x86. Ob adb-shell das Koppeln per
+# "Kabelloses Debugging" (Android 11+, TLS mit Kopplungscode) kann, ist nicht geprueft (vermutlich nicht).
+# Geraete ohne klassisches ADB ueber TCP (adb tcpip/Netzwerk-Debugging) sind dann nicht erreichbar.
 from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
@@ -21,10 +26,16 @@ from .logik import bewerte, bewerte_sendung, grund_zeilen, parse_guide, parse_xm
 
 _LOGGER = logging.getLogger(__name__)
 
+# KOMPAT: Paket und Activity des Fernsehbilds gibt es nur bei TCL (Android 14, Google TV). Sony, Philips,
+# Hisense oder ein Google TV Streamer haben eine andere Live-TV-App, oft gar keinen Tuner. Dann gilt das
+# Fernsehbild nie als "vorn": Der Durchgang ohne TV-App wird immer uebersprungen, und fernsehbild_holen()
+# startet eine Activity, die es nicht gibt (am start meldet einen Fehler).
 TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
 # Einblendung ueber die TV-App aus android/ (Overlay wie deren eigene Meldung nach dem Umschalten)
 EINBLENDEN_ACTION = "io.github.mhd6271.tvzapper.EINBLENDEN"
 EINBLENDEN_EMPFAENGER = "io.github.mhd6271.tvzapper/.EinblendungEmpfaenger"
+# KOMPAT: Programmzeitschrift des TCL (Paket com.tcl.tv). Andere Hersteller haben eine andere Activity,
+# dann klappt nur der Weg ueber die TV-App.
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 # Schnittstelle der TV-App ab 0.3.0: Sender und Sendungen aus TvContract, Umschalten ohne Tasten
 ABFRAGEN_ACTION = "io.github.mhd6271.tvzapper.ABFRAGEN"
@@ -41,6 +52,10 @@ def speicher_lesen(ausgabe: str) -> dict:
     """Ausgabe von SPEICHER_BEFEHL -> Arbeitsspeicher des Fernsehers, Speicher der TV-App und wann Android
     die TV-App beendet hat (alles in MB; Zeiten in Ortszeit des Fernsehers, ohne Zeitzone)."""
     teile = (ausgabe.split("@@") + ["", ""])[:3]
+    # KOMPAT: /proc/meminfo ist auf jedem Linux gleich. Der Text von `dumpsys meminfo -s` und
+    # `dumpsys activity exit-info` ist nicht festgelegt. exit-info gibt es erst ab Android 11 (ApplicationExitInfo),
+    # Format und Gruende (LOW_MEMORY ...) wie unter Android 14 am TCL gesehen. Passt das Format nicht, bleiben
+    # die Speicher-Sensoren leer (None), es gibt keinen Fehler. Die Zeiten sind Ortszeit des Fernsehers ohne Zeitzone.
     kb = {k: int(v) for k, v in re.findall(r"^(\w+):\s+(\d+) kB", teile[0], re.M)}
     mb = lambda k: round(kb[k] / 1024) if k in kb else None  # noqa: E731
     pss = re.search(r"TOTAL PSS:\s+(\d+)", teile[1])
@@ -100,6 +115,8 @@ def broadcast_daten(ausgabe: str) -> dict | None:
 
 
 def app_sendung(x: dict, cfg) -> dict:
+    # KOMPAT: Die Felder kommen aus TvContract ueber die TV-App. Was der Hersteller dort eintraegt (Genre als
+    # DVB-Code beim TCL, Folge, Beschreibung), ist unterschiedlich. Fehlt die Beschreibung, gibt es weniger Treffer.
     """Ein Sender aus der TV-App wie eine Zeile der Programmzeitschrift bewerten. genre ist bei TCL ein
     DVB-Zahlencode und wird nicht mitbewertet; Folge und Beschreibung zaehlen wie die Info im Kopf."""
     info = " ".join(t for t in (x.get("folge"), x.get("beschreibung")) if t)
@@ -125,6 +142,8 @@ def lade_signer(pfad: str) -> PythonRSASigner:
     return PythonRSASigner(pub, priv)
 
 
+# KOMPAT: Wake-on-LAN muss der Fernseher koennen und erlauben (bei vielen Geraeten nur ueber LAN-Kabel oder
+# mit einer Option wie "Netzwerk-Standby"/"Per WLAN einschalten"). Am TCL klappt es (geweckt in etwa 2 s).
 def magic_packet(mac: str) -> bytes:
     """Wake-on-LAN-Paket: 6x FF, dann 16x die MAC. Wirft ValueError bei ungueltiger MAC."""
     ziffern = re.sub(r"[:\-. ]", "", mac.strip())
@@ -138,6 +157,9 @@ def sende_wol(mac: str, host: str):
     paket = magic_packet(mac)
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # KOMPAT: Broadcast an 255.255.255.255 erreicht nur dasselbe Netz. HA in Docker ohne host-Netz, ein anderes
+        # VLAN/Subnetz oder ein WLAN, das Broadcasts filtert, laesst das Paket nicht durch. Dann hilft nur das Paket
+        # direkt an die IP, und das kommt bei einem schlafenden Geraet meist nicht an (kein ARP-Eintrag).
         for ziel in ("255.255.255.255", host):
             try:
                 s.sendto(paket, (ziel, 9))
@@ -154,6 +176,10 @@ class Fernseher:
     async def verbinden(self, auth_timeout: float = 10.0, timeout: float | None = None):
         if self.dev and self.dev.available:
             return
+        # KOMPAT: Netzwerk-ADB (Standard-Port 5555) muss in den Entwickleroptionen eingeschaltet sein. Manche Geraete
+        # vergessen das nach einem Neustart oder Update, oder sie bieten nur Kabelloses Debugging mit wechselndem
+        # Port. Die Abfrage "USB-Debugging zulassen?" erscheint je nach Hersteller anders oder gar nicht.
+        # 30 s Zeitlimit wegen uiautomator am TCL; schwaechere Geraete brauchen eventuell laenger.
         self.dev = AdbDeviceTcpAsync(self.host, self.port, default_transport_timeout_s=30.0)  # uiautomator dump braucht manchmal >9 s
         # auth_timeout: so lange wird auf "USB-Debugging zulassen?" am Fernseher gewartet
         await self.dev.connect(rsa_keys=[self.signer], transport_timeout_s=timeout, auth_timeout_s=auth_timeout)
@@ -176,6 +202,9 @@ class Fernseher:
 
     # --- Wecken ---------------------------------------------------------------------------
     async def wach(self) -> bool:
+        # KOMPAT: mWakefulness steht in AOSP-dumpsys (Awake/Asleep/Dreaming/Dozing). Bei Bildschirmschoner (Dreaming)
+        # gilt der Fernseher als nicht wach und bekommt WAKEUP, das ist gewollt. Andere Firmware kann das Feld
+        # anders nennen; dann wird bei jedem Start WAKEUP gesendet (meist harmlos).
         return "mWakefulness=Awake" in await self.sh("dumpsys power | grep mWakefulness=")
 
     async def wecken(self, mac: str = "", warten: float = 90) -> str:
@@ -202,6 +231,8 @@ class Fernseher:
                         raise RuntimeError(f"Fernseher antwortet {warten:.0f} s nach Wake-on-LAN nicht") from None
             weg = "wol"
         if not await self.wach():
+            # KOMPAT: KEYCODE_WAKEUP gibt es ab Android 5. Manche Fernseher schalten damit nur den Bildschirm an,
+            # nicht das Fernsehbild/den Tuner. Die Wartezeit von 8 s darunter ist am TCL gemessen.
             await self.key("KEYCODE_WAKEUP")
             weg = "geweckt" if weg == "wach" else weg
         if weg != "wach":
@@ -217,11 +248,15 @@ class Fernseher:
         if await self.focus_app() in (TV_APP, GUIDE_APP):
             return False
         await self.sh(f"am start -n {TV_APP}")
+        # KOMPAT: 5 s sind am TCL ausprobiert; langsamere Geraete brauchen eventuell laenger.
         await asyncio.sleep(5)   # Tuner und Senderliste brauchen nach dem Start ein paar Sekunden
         return True
 
     # --- Bausteine wie in zapper.py -------------------------------------------------------
     async def key(self, *names):
+        # KOMPAT: Mehrere Tasten in einem `input keyevent` gehen erst ab neueren Android-Fassungen (am TCL mit
+        # Android 14 geprueft). Aeltere Fassungen druecken vermutlich nur die erste Taste, Blaettern wuerde dann
+        # sehr langsam.
         await self.sh("input keyevent " + " ".join(names))
 
     async def close_guide(self):
@@ -230,6 +265,8 @@ class Fernseher:
         for _ in range(2):
             if await self.focus_app() != GUIDE_APP:
                 return
+            # KOMPAT: Das Verhalten von BACK ist herstellerabhaengig. Am TCL springt es im Fernsehbild auf den vorigen
+            # Sender, deshalb nur, wenn die Programmzeitschrift vorn ist.
             await self.key("KEYCODE_BACK")
             await asyncio.sleep(1.2)
 
@@ -240,6 +277,9 @@ class Fernseher:
             raise RuntimeError(f"Programmzeitschrift nicht vorn ({app or 'nichts'}) - {was} abgebrochen")
 
     async def focus_app(self) -> str:
+        # KOMPAT: Format `mCurrentFocus=Window{hash u0 paket/activity}` wie unter Android 14. Andere Fassungen
+        # schreiben teils `mCurrentFocus=null` oder haben mehrere Displays (dann die erste Zeile). Passt das Format
+        # nicht, kommt "" zurueck und alles gilt als "nicht vorn" (sicher, aber der Zapper tut nichts).
         out = await self.sh("dumpsys window | grep mCurrentFocus")
         m = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", out)
         return m.group(1).strip() if m else ""
@@ -247,6 +287,9 @@ class Fernseher:
     async def dump(self, press=None, wait=0.4):
         """Optional eine Taste druecken, dann die Oberflaeche lesen - alles in einem Aufruf."""
         pre = f"input keyevent {press}; sleep {wait}; " if press else ""
+        # KOMPAT: uiautomator dump braucht ein beschreibbares /sdcard fuer den shell-Benutzer. Bei Videos oder
+        # Animationen scheitert es manchmal ("could not get idle state"). Auf schwachen Geraeten dauert es mehrere
+        # Sekunden. Dann kommt eine leere Liste zurueck, und der Durchgang meldet einen Fehler.
         xml = await self.sh(pre + "uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1; cat /sdcard/tvz.xml")
         return parse_xml(xml)
 
@@ -255,6 +298,8 @@ class Fernseher:
 
     async def open_guide(self):
         if await self.focus_app() != GUIDE_APP:
+            # KOMPAT: KEYCODE_GUIDE oeffnet am TCL die Programmzeitschrift. Andere Live-TV-Apps reagieren nicht oder
+            # oeffnen eine andere Ansicht.
             await self.key("KEYCODE_GUIDE")
         for _ in range(12):
             await asyncio.sleep(1)
@@ -270,6 +315,8 @@ class Fernseher:
         if tab == self.fav_tab:
             return True
         await self.nur_in_guide("Reiterwahl")
+        # KOMPAT: Aufbau der TCL-Programmzeitschrift: Reiter links (Alle, Favorit1 ...), mit LINKS erreichbar,
+        # per content-desc erkannt. Bei anderem Layout findet die Schleife den Reiter nicht und bricht ab.
         await self.key("KEYCODE_DPAD_LEFT")
         await asyncio.sleep(0.8)
         for _ in range(8):
@@ -317,6 +364,9 @@ class Fernseher:
         # Programmzeitschrift noch vorn ist: im Fernsehbild schaltet jedes Hoch einen Sender weiter.
         for _ in range(6):
             await self.nur_in_guide("Blaettern")
+            # KOMPAT: 6 x 20 Schritte nach oben genuegen fuer Favoritenlisten bis etwa 120 Sender. Bei laengeren Listen
+            # beginnt das Lesen nicht ganz oben. Die Grenzen (200 Schritte, 15 ohne neuen Sender, 0,35 s je Schritt)
+            # sind am TCL eingestellt; langsamere Geraete brauchen mehr Zeit je Schritt.
             await self.key(*["KEYCODE_DPAD_UP"] * 20)
             await asyncio.sleep(0.5)
         await asyncio.sleep(1)
@@ -336,6 +386,8 @@ class Fernseher:
         await self.close_guide()
         if (app := await self.focus_app()) != TV_APP:
             raise RuntimeError(f"Fernsehbild nicht vorn ({app}) - schalte nicht um")
+        # KOMPAT: Umschalten per Zifferntasten und OK mit 0,8 s Abstand, so wie es der TCL braucht. Andere Fernseher
+        # schalten ohne OK nach einer Pause um, oder OK oeffnet eine Info- bzw. Senderliste.
         for d in str(num):                      # Ziffern einzeln, sonst wird die erste verschluckt
             await self.key(f"KEYCODE_{d}")
             await asyncio.sleep(0.8)
@@ -419,6 +471,9 @@ class Fernseher:
         """Text im Fernsehbild zeigen. Ueber die TV-App, wenn sie den Auftrag annimmt, sonst als
         Android-Benachrichtigung (ob Google TV die sichtbar einblendet, ist geraeteabhaengig).
         -> "app" / "benachrichtigung"."""
+        # KOMPAT: `cmd package query-receivers` und `cmd notification post` gibt es nicht auf jeder Android-Fassung
+        # (seit wann, ist nicht nachgeschaut; unter Android 14 vorhanden). Google TV zeigt solche Benachrichtigungen
+        # meist nicht im Bild. Ohne die TV-App aus android/ gibt es also oft keine sichtbare Einblendung.
         app = await self.sh(f"cmd package query-receivers --brief -a {EINBLENDEN_ACTION}")
         if "EinblendungEmpfaenger" in app:
             await self.sh(f"am broadcast -a {EINBLENDEN_ACTION} -n {EINBLENDEN_EMPFAENGER} "

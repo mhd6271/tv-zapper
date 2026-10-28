@@ -33,12 +33,16 @@ def _tv_adresse():
 
 
 TV = _tv_adresse()
+# KOMPAT: Activity-Namen nur beim TCL (Android 14, Google TV); siehe die gleichen Stellen in
+# homeassistant/custom_components/tv_zapper/tv.py. Andere Geraete: Fernsehbild gilt nie als vorn.
 TV_APP = "com.tcl.tv/com.tcl.player.TVActivity"
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
 LOG = HERE / "protokoll.jsonl"
+# KOMPAT: "Favorit1" = deutscher Name beim TCL, bei anderer Sprache per TVZ_FAV anpassen.
 FAV_TAB = os.environ.get("TVZ_FAV", "Favorit1")   # Senderliste im TV-Guide, z. B. Favorit2
 
 
+# KOMPAT: Ortszeit des Rechners, auf dem zapper.py laeuft (nicht die des Fernsehers).
 def now():
     return datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -47,6 +51,8 @@ def say(msg):
     print(f"[{now()}] {msg}", flush=True)
 
 
+# KOMPAT: Braucht das Programm adb im PATH (Android Platform Tools; macOS, Linux, Windows) und einen
+# laufenden adb-Server, der mit dem Fernseher verbunden ist (`adb connect`).
 def adb(*args, timeout=30):
     r = subprocess.run(["adb", "-s", TV, *args], capture_output=True, text=True, timeout=timeout)
     return r.stdout
@@ -67,6 +73,7 @@ def close_guide():
 
 
 def focus_app():
+    # KOMPAT: Ausgabeformat von dumpsys window wie unter Android 14, siehe tv.py focus_app.
     m = re.search(r"mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}", adb("shell", "dumpsys", "window"))
     return m.group(1).strip() if m else ""
 
@@ -74,6 +81,7 @@ def focus_app():
 def dump(press=None, wait=0.4):
     """Optional eine Taste druecken, dann die Oberflaeche lesen - alles in einem adb-Aufruf."""
     pre = f"input keyevent {press}; sleep {wait}; " if press else ""
+    # KOMPAT: uiautomator dump braucht ein beschreibbares /sdcard und ist auf schwachen Geraeten langsam.
     xml = adb("shell", pre + "uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1; cat /sdcard/tvz.xml")
     i = xml.find("<?xml")
     if i < 0:
@@ -91,6 +99,9 @@ def parse_guide(nodes):
     texts = [(n.get("text", ""), n.get("content-desc", "")) for n in nodes]
     # Senderzeilen erst nach dem Kopf der markierten Sendung suchen: dort stehen Zahlen wie die
     # Altersangabe ("12"), die sonst als Sender 12 durchgingen.
+    # KOMPAT: Erkennung ueber deutsche Texte und das Layout der TCL-Programmzeitschrift ("Drücken Sie",
+    # "drücken Sie OK", "Programmzeitschrift", Reiternamen, "·" als Genre-Trenner). Andere Sprache oder
+    # anderer Hersteller: Es werden keine Sender gefunden.
     start = next((k + 1 for k, (t, _) in enumerate(texts) if t.startswith("Drücken Sie")), 0)
     rows, i = [], start
     while i < len(texts):
@@ -203,6 +214,8 @@ def collect():
     for _ in range(6):
         if focus_app() != GUIDE_APP:
             raise RuntimeError(f"Programmzeitschrift nicht mehr vorn ({focus_app()}) - Abbruch")
+        # KOMPAT: Mehrere Tasten in einem input keyevent und die Wartezeiten sind am TCL (Android 14) erprobt,
+        # siehe tv.py.
         key(*["KEYCODE_DPAD_UP"] * 20)
         time.sleep(0.5)
     time.sleep(1)
@@ -224,6 +237,7 @@ def load_interests():
     return json.loads((HERE / "interessen.json").read_text(encoding="utf-8"))
 
 
+# KOMPAT: Wortgrenzen nur fuer a-z und äöüß, siehe logik.py.
 def word_rx(w):
     w = w.lower()
     pre = w.endswith("*")
@@ -248,6 +262,7 @@ def tune(num):
     close_guide()
     if focus_app() != TV_APP:
         raise RuntimeError(f"Fernsehbild nicht vorn ({focus_app()}) - schalte nicht um")
+    # KOMPAT: Umschalten per Ziffern und OK wie beim TCL; andere Fernseher verhalten sich anders, siehe tv.py.
     for d in str(num):
         key(f"KEYCODE_{d}")
         time.sleep(0.8)

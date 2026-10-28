@@ -7,6 +7,8 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 
+# KOMPAT: Reiternamen der TCL-Programmzeitschrift mit deutscher Oberflaeche. In anderer Sprache oder bei
+# anderem Hersteller wird kein Reiter erkannt; ensure_fav_tab bricht dann ab (nie in "Alle" blaettern).
 TABS = ("Alle", "Streamen", "Digital", "Radio", "Kostenlos", "Daten/Andere")
 
 
@@ -22,6 +24,8 @@ def parse_xml(xml: str) -> list[dict]:
     return [n.attrib for n in root.iter("node")]
 
 
+# KOMPAT: "Favorit1" ist der Name der ersten Favoritenliste beim TCL auf Deutsch (englisch vermutlich
+# "Favorite1" oder aehnlich, nicht nachgeschaut). Einstellbar in den Optionen (Feld Favoritenliste).
 def parse_guide(nodes, fav_tab="Favorit1"):
     """-> (rows, header, tab). rows: Liste (nummer, sender, sendung) in Bildschirm-Reihenfolge,
     header: dict title/genre/info der gerade markierten Sendung, tab: gewaehlter Reiter."""
@@ -30,6 +34,10 @@ def parse_guide(nodes, fav_tab="Favorit1"):
     # als eigene Zahl und wurde sonst als Sendernummer gelesen (Befund am Geraet 27.10.2026).
     start = 0
     for k, (t, _) in enumerate(texts):
+        # KOMPAT: Erkennung ueber deutsche Texte der TCL-Oberflaeche: "Programmzeitschrift", "Drücken Sie ..."
+        # (Kopf), "drücken Sie OK" (content-desc einer Sendung). Bei anderer Systemsprache oder anderer Firmware
+        # werden keine Sendungen und kein Kopf gefunden. Die Sendernummern sind hoechstens vierstellig (\d{1,4}),
+        # Sendernamen ohne ":".
         if t == "Programmzeitschrift":
             start = next((m + 1 for m in range(k + 1, len(texts)) if texts[m][0].startswith("Drücken Sie")), k + 1)
             break
@@ -71,12 +79,17 @@ def parse_guide(nodes, fav_tab="Favorit1"):
         if h:
             header["title"] = h[0]
             header["genre"] = next((x for x in h[1:] if "·" in x), "")
+            # KOMPAT: "·" als Trenner beim Genre und die herausgefilterten Merkmale sind wie beim TCL (Deutsch).
+            # Anderswo landen solche Woerter mit in der Info und koennen mitbewertet werden.
             header["info"] = " ".join(x for x in h[1:] if x and x not in ("Keine", "Stereo", "FHD", "TTX", "Dolby Audio"))
     tab = next((n.get("content-desc") for n in nodes if n.get("selected") == "true"
                 and n.get("content-desc") in (*TABS, fav_tab)), None)
     return rows, header, tab
 
 
+# KOMPAT: Als Buchstaben fuer Wortgrenzen zaehlen nur a-z und äöüß. In anderen Sprachen (é, ñ, ø ...)
+# gilt ein Akzentbuchstabe als Grenze. Dann trifft "cafe" auch "café", und Woerter mit Akzent werden
+# eventuell mitten im Wort gefunden.
 def word_rx(w):
     w = w.lower()
     pre = w.endswith("*")
@@ -98,6 +111,8 @@ def score(text, cfg):
     return total, hits
 
 
+# KOMPAT: Gleichsetzungen fuer deutsche Sender (Kabel/DVB-C bei Max, FRITZ!Box). In anderen Laendern
+# oder bei anderen Anbietern heissen Sender anders; die Liste muss mit FritzTv.norm der TV-App gleich bleiben.
 _SENDER_ALIAS = {"nitro": "rtlnitro", "swr bw": "swr fernsehen bw", "swr rp": "swr fernsehen rp",
                  "sonlife broadcasting network": "sonlife"}
 _SENDER_ERSETZEN = (("prosieben maxx", "pro7 maxx"), ("rtl television", "rtl"),
@@ -113,6 +128,9 @@ def sender_schluessel(name) -> str:
     s = _SENDER_ALIAS.get(s, s)
     for alt, neu in _SENDER_ERSETZEN:
         s = s.replace(alt, neu)
+    # KOMPAT: Nur a-z, 0-9 und äöüß bleiben uebrig. Sendernamen in anderen Schriften (kyrillisch, griechisch,
+    # arabisch) oder mit Akzenten werden leer bzw. verlieren Buchstaben. Ein leerer Schluessel passt nie
+    # (siehe sender_nie/sender_bonus); verschiedene Sender koennen aber zusammenfallen.
     return re.sub(r"[^a-z0-9äöüß]", "", s)
 
 

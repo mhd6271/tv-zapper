@@ -26,6 +26,8 @@ from .tv import Fernseher, lade_signer
 _LOGGER = logging.getLogger(__name__)
 MAX_TEXT_LOGBUCH = 1000   # Zeichen je Text im Logbuch-Ereignis
 
+# KOMPAT: `type X = ...` braucht Python 3.12, `asyncio.current_task().cancelling()` 3.11. HA 2026.10
+# verlangt Python 3.14.2 (const.REQUIRED_PYTHON_VER), alte HA-Fassungen laden die Integration nicht.
 type ZapperEntry = ConfigEntry[Steuerung]
 
 
@@ -133,6 +135,8 @@ class Steuerung:
         if self.laeuft:
             return
         self.start = time.monotonic()
+        # KOMPAT: Zeiten in der Zeitzone von HA. Die Einblendung "laeuft bis HH:MM" zeigt HA-Zeit; hat der
+        # Fernseher eine andere Zeitzone, passt sie nicht zur Uhr am Fernseher.
         self.ende = dt_util.now() + datetime.timedelta(minutes=self.opt(CONF_LAUFZEIT))
         self.task = self.entry.async_create_background_task(self.hass, self._schleife(), "tv_zapper_schleife")
         self.benachrichtigen()
@@ -184,6 +188,9 @@ class Steuerung:
         """Ereignis fuers Logbuch, verknuepft mit dem Geraet "TV-Zapper" und dem Sensor "Laeuft jetzt" - so steht es
         auch im Logbuch der Geraeteseite und im Fenster der Kachel, nicht nur auf der Logbuch-Seite."""
         entity_id = er.async_get(self.hass).async_get_entity_id("sensor", DOMAIN, f"{self.entry.entry_id}_jetzt")
+        # KOMPAT: async_get_device_by_identifier gibt es in HA 2026.10.4. Seit welcher Fassung, ist nicht
+        # nachgeschaut; in aelteren HA fehlt sie, dann scheitert das Logbuch-Ereignis mit AttributeError
+        # (in jetzt_lesen gilt der Fernseher dann als aus). Das alte async_get_device faellt laut HA 2027.8 weg.
         geraet = dr.async_get(self.hass).async_get_device_by_identifier((DOMAIN, self.entry.entry_id), self.entry.entry_id)
         # Texte begrenzen: Namen und Sendungen kommen vom Fernseher bzw. aus den Optionen, das Ereignis landet in der DB
         daten = {k: (v[:MAX_TEXT_LOGBUCH] if isinstance(v, str) else v) for k, v in daten.items()}

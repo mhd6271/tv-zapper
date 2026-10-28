@@ -144,6 +144,8 @@ def _ortszeit(text: str | None) -> datetime.datetime | None:
     if not text:
         return None
     try:
+        # KOMPAT: Annahme: Fernseher und HA haben dieselbe Zeitzone (exit-info liefert Ortszeit ohne Zone).
+        # Sonst ist der Sensor um den Unterschied verschoben.
         return datetime.datetime.fromisoformat(text).replace(tzinfo=dt_util.get_default_time_zone())
     except ValueError:
         return None

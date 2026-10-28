@@ -6,6 +6,8 @@ DOMAIN = "tv_zapper"
 PLATFORMS = ["switch", "sensor", "number", "button"]
 EVENT_DURCHGANG = "tv_zapper_durchgang"
 EVENT_UMGESCHALTET = "tv_zapper_umgeschaltet"   # erscheint im Logbuch (logbook.py)
+# KOMPAT: Der Schluessel liegt im HA-Konfigordner. Bei einem Backup ohne .storage oder einer neuen Installation
+# entsteht ein neuer Schluessel, dann fragt der Fernseher erneut "USB-Debugging zulassen?".
 SCHLUESSEL_DATEI = ".storage/tv_zapper_adbkey"
 
 CONF_FAVORIT = "favorit"
@@ -23,6 +25,8 @@ CONF_TAKT = "takt_s"
 CONF_SPEICHER_TAKT = "speicher_min"
 
 # Grundeinstellung = Kopie von interessen.json im Repo (beim Aendern dort neu kopieren, ein Test prueft das)
+# KOMPAT: Die Vorlage (Interessen, Ausschluesse, Sendernamen) ist auf Deutsch und auf deutsche Sender
+# zugeschnitten. In anderen Sprachen oder Laendern trifft sie kaum etwas und muss angepasst werden.
 _VORLAGE = json.loads((pathlib.Path(__file__).parent / "vorlage.json").read_text(encoding="utf-8"))
 STANDARD_INTERESSEN = _VORLAGE["interessen"]
 STANDARD_AUS = _VORLAGE.get("aus", [])
@@ -30,6 +34,7 @@ STANDARD_SENDER_NIE = _VORLAGE.get("sender_nie", [])
 STANDARD_SENDER_BEVORZUGT = _VORLAGE.get("sender_bevorzugt", {})
 
 STANDARD_OPTIONEN = {
+    # KOMPAT: Name der Favoritenliste beim TCL mit deutscher Oberflaeche.
     CONF_FAVORIT: "Favorit1",
     CONF_LAUFZEIT: 60,
     CONF_VERWEILEN: _VORLAGE.get("verweilen_min", 5),
