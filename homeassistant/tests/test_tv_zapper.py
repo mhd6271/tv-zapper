@@ -247,6 +247,15 @@ async def test_sicherheit_formulare(hass: HomeAssistant):
         "interessen": "Doku | 2 | doku*", "aus": "teleshopping, *", "laufzeit_min": 30, "verweilen_min": 3,
         "favorit": "Favorit1", "nur_lesen": True})
     assert r2["errors"] == {"aus": "woerter_ungueltig"}
+    # 400 Sender bei "nie" sind erlaubt, 501 nicht
+    basis = {"interessen": "Doku | 2 | doku*", "aus": "", "laufzeit_min": 30, "verweilen_min": 3,
+             "favorit": "Favorit1", "nur_lesen": True}
+    r2 = await hass.config_entries.options.async_configure(r2["flow_id"], {
+        **basis, "sender_nie": ", ".join(f"Sender {i}" for i in range(501))})
+    assert r2["errors"] == {"sender_nie": "woerter_ungueltig"}
+    r3 = await hass.config_entries.options.async_configure(r2["flow_id"], {
+        **basis, "sender_nie": ", ".join(f"Sender {i}" for i in range(400))})
+    assert r3["type"] is FlowResultType.CREATE_ENTRY and len(entry.options["sender_nie"]) == 400
 
 
 # Ausgabe von tv.SPEICHER_BEFEHL am TCL (28.10.2026 06:15)

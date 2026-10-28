@@ -311,7 +311,12 @@ def test_sicherheit_eingaben():
         with pytest.raises(ValueError):
             text_zu_interessen(kaputt)
     assert text_zu_interessen("Musik | 3 | dj, r&b, rap*")[0]["woerter"] == ["dj", "r&b", "rap*"]
-    for kaputt in ("N24 DOKU | 1000", "X" * 61 + " | 1", "\n".join(f"S{i} | 1" for i in range(201))):
+    # Senderlisten: bis 500 Sender (am TCL stehen 377), Suchwoerter weiter hoechstens 200
+    assert len(text_zu_bonus("\n".join(f"Sender Nummer {i:03} HD | 1" for i in range(500)))) == 500
+    assert len(pruefe_woerter([f"Sender {i}" for i in range(500)], "Sendername", 500)) == 500
+    with pytest.raises(ValueError):
+        pruefe_woerter([f"wort{i}" for i in range(201)])
+    for kaputt in ("N24 DOKU | 1000", "X" * 61 + " | 1", "\n".join(f"S{i} | 1" for i in range(501))):
         with pytest.raises(ValueError):
             text_zu_bonus(kaputt)
     assert text_zu_bonus("N24 DOKU | 1\nZDFinfo HD") == {"N24 DOKU": 1, "ZDFinfo HD": 1}

@@ -16,7 +16,7 @@ from .const import (
     DOMAIN, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .logik import (
-    MAX_WORT, bonus_zu_text, interessen_zu_text, pruefe_woerter, text_zu_bonus, text_zu_interessen, woerter_zu_liste)
+    MAX_SENDER, MAX_WOERTER, MAX_WORT, bonus_zu_text, interessen_zu_text, pruefe_woerter, text_zu_bonus, text_zu_interessen, woerter_zu_liste)
 from .tv import Fernseher, lade_signer, magic_packet
 
 _LOGGER = logging.getLogger(__name__)
@@ -139,9 +139,10 @@ class TvZapperOptionsFlow(OptionsFlow):
                 platzhalter["fehler"] = str(e)
             aus = woerter_zu_liste(user_input.get(CONF_AUS, ""))
             nie = woerter_zu_liste(user_input.get(CONF_SENDER_NIE, ""))
-            for feld, liste, was in ((CONF_AUS, aus, "Wort"), (CONF_SENDER_NIE, nie, "Sendername")):
+            for feld, liste, was, hoechstens in ((CONF_AUS, aus, "Wort", MAX_WOERTER),
+                                                 (CONF_SENDER_NIE, nie, "Sendername", MAX_SENDER)):
                 try:
-                    pruefe_woerter(liste, was)
+                    pruefe_woerter(liste, was, hoechstens)
                 except ValueError as e:
                     errors[feld] = "woerter_ungueltig"
                     platzhalter["fehler"] = str(e)

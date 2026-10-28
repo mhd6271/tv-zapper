@@ -253,11 +253,13 @@ def soll_umschalten(cur, best):
 # Grenzen fuer Eingaben aus "Konfigurieren": schuetzen vor versehentlich riesigen Listen (jede Sendung wird gegen
 # jedes Wort geprueft) und vor Woertern, die auf alles passen (`*`, `a*`).
 MAX_KATEGORIEN = 50
-MAX_WOERTER = 200          # je Kategorie bzw. je Liste ("aus", "nie")
+MAX_WOERTER = 200          # Suchwoerter je Kategorie bzw. in "aus"
+MAX_SENDER = 500           # Sendernamen in "nie" und "bevorzugt" (am TCL stehen 377 Tuner-Sender)
 MAX_WORT = 60              # Zeichen je Wort / Sendername
 MAX_NAME = 60              # Zeichen je Kategoriename
 MAX_GEWICHT = 100          # Gewicht und Bonuspunkte: -100 ... 100
 MAX_TEXT = 20000           # Zeichen je Eingabefeld
+MAX_TEXT_SENDER = 40000    # Zeichen fuer die Senderlisten (500 Namen mit bis zu 60 Zeichen)
 
 
 def _zahl(text, nr, was):
@@ -270,11 +272,11 @@ def _zahl(text, nr, was):
     return z
 
 
-def pruefe_woerter(liste, was="Wort"):
+def pruefe_woerter(liste, was="Wort", hoechstens=MAX_WOERTER):
     """Suchwoerter bzw. Sendernamen pruefen: Anzahl, Laenge, und kein Wort, das auf fast alles passt
     (`*` allein oder ein Buchstabe mit `*`). Wirft ValueError mit verstaendlicher Meldung."""
-    if len(liste) > MAX_WOERTER:
-        raise ValueError(f"Höchstens {MAX_WOERTER} Einträge je Liste (jetzt {len(liste)})")
+    if len(liste) > hoechstens:
+        raise ValueError(f"Höchstens {hoechstens} Einträge je Liste (jetzt {len(liste)})")
     for w in liste:
         if len(w) > MAX_WORT:
             raise ValueError(f"{was} „{w[:20]}…“ ist zu lang (höchstens {MAX_WORT} Zeichen)")
@@ -329,8 +331,8 @@ def bonus_zu_text(bonus):
 
 
 def text_zu_bonus(text):
-    if len(text) > MAX_TEXT:
-        raise ValueError(f"Zu viel Text (höchstens {MAX_TEXT} Zeichen)")
+    if len(text) > MAX_TEXT_SENDER:
+        raise ValueError(f"Zu viel Text (höchstens {MAX_TEXT_SENDER} Zeichen)")
     out = {}
     for nr, zeile in enumerate(text.splitlines(), 1):
         zeile = zeile.strip()
@@ -343,7 +345,7 @@ def text_zu_bonus(text):
             out[name] = _zahl(punkte, nr, "Bonuspunkte")
         except ValueError as e:
             raise ValueError(f"Zeile {nr}: bitte `Sendername | Bonuspunkte` schreiben ({e})") from e
-        if len(name) > MAX_WORT or len(out) > MAX_WOERTER:
+        if len(name) > MAX_WORT or len(out) > MAX_SENDER:
             raise ValueError(f"Zeile {nr}: Sendername zu lang oder zu viele Sender "
-                             f"(höchstens {MAX_WORT} Zeichen, {MAX_WOERTER} Sender)")
+                             f"(höchstens {MAX_WORT} Zeichen, {MAX_SENDER} Sender)")
     return out
