@@ -7,7 +7,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Werbung umgehen: beobachtet den eigentlich gewaehlten Sender ("Hauptsender") ueber die FRITZ!Box.
  *  Verschwindet sein Logo (Werbung), schaltet der Fernseher auf den besten werbefreien Ausweichsender;
@@ -44,7 +47,7 @@ final class WerbeWaechter implements Sensor.Frames {
     private long lastFrame, lastReport, watchStart;
     private boolean gotFrame, paused;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
-    private final java.util.Map<String, Long> noSignal = new java.util.HashMap<>();
+    private final Map<String, Long> noSignal = new java.util.HashMap<>();
     private int framesSinceReport;
 
     WerbeWaechter(ZapperService svc) {
@@ -65,24 +68,29 @@ final class WerbeWaechter implements Sensor.Frames {
         return away;
     }
 
-    /** Logo-Stand ueber alle eingeschalteten, nicht werbefreien Sender, die die FRITZ!Box liefert (sonst nie lernbar). */
+    /** Logo-Stand ueber alle eingeschalteten, nicht werbefreien Sender, die die FRITZ!Box liefert (sonst nie lernbar).
+     *  Gezaehlt wird je Logo, nicht je Sender: "RTL HD" und "RTL UHD" teilen sich ein Logo (gleicher Schluessel). */
     static JSONObject logoCount(Context c) throws Exception {
         Config cfg = Config.load(c);
         WerbeWaechter w = ZapperService.waechter;
         FritzTv f = w == null ? null : w.fritz;
-        int known = 0, all = 0;
-        JSONArray open = new JSONArray(), noFritz = new JSONArray();
+        Map<String, List<String>> byKey = new LinkedHashMap<>();
+        JSONArray noFritz = new JSONArray();
         for (Epg.Channel ch : Epg.channels(c)) {
             if (Config.AUS.equals(cfg.state(ch)) || cfg.adFree.contains(ch.name)) continue;
             if (f != null && f.urlFor(ch.name) == null) {
                 noFritz.put(ch.name);
                 continue;
             }
-            all++;
-            if (Logo.known(c, FritzTv.norm(ch.name))) known++;
-            else open.put(ch.name);
+            byKey.computeIfAbsent(FritzTv.norm(ch.name), k -> new ArrayList<>()).add(ch.name);
         }
-        return new JSONObject().put("gelernt", known).put("beobachtet", all).put("ohne_logo", open)
+        int known = 0;
+        JSONArray open = new JSONArray();
+        for (Map.Entry<String, List<String>> e : byKey.entrySet()) {
+            if (Logo.known(c, e.getKey())) known++;
+            else open.put(String.join(" / ", e.getValue()));
+        }
+        return new JSONObject().put("gelernt", known).put("beobachtet", byKey.size()).put("ohne_logo", open)
                 .put("ohne_fritzbox", f == null ? JSONObject.NULL : noFritz);
     }
 
@@ -341,7 +349,7 @@ final class WerbeWaechter implements Sensor.Frames {
     private long returnedAt;
 
     /** Sender, auf denen gerade Werbung erkannt wurde -> bis wann der Zapper sie meidet. */
-    static final java.util.Map<String, Long> adUntil = new java.util.concurrent.ConcurrentHashMap<>();
+    static final Map<String, Long> adUntil = new java.util.concurrent.ConcurrentHashMap<>();
 
     static boolean inAd(String channel) {
         Long t = adUntil.get(channel);

@@ -591,7 +591,7 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 
 `ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
 `werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `logos` (ab 0.4.6: `gelernt`, `beobachtet`, `ohne_logo`,
-`ohne_fritzbox`; gezählt werden eingeschaltete, nicht werbefreie Sender, die die FRITZ!Box liefert), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
+`ohne_fritzbox`; gezählt wird je Logo über eingeschaltete, nicht werbefreie Sender, die die FRITZ!Box liefert; RTL HD und RTL UHD teilen sich ein Logo und zählen einmal), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
 `id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
 alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
