@@ -5,6 +5,7 @@ import pathlib
 DOMAIN = "tv_zapper"
 PLATFORMS = ["switch", "sensor", "number", "button"]
 EVENT_DURCHGANG = "tv_zapper_durchgang"
+EVENT_UMGESCHALTET = "tv_zapper_umgeschaltet"   # erscheint im Logbuch (logbook.py)
 SCHLUESSEL_DATEI = ".storage/tv_zapper_adbkey"
 
 CONF_FAVORIT = "favorit"

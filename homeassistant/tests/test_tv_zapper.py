@@ -216,3 +216,43 @@ SwapFree:         386284 kB
           process=io.github.mhd6271.tvzapper reason=3 (LOW_MEMORY) subreason=0 (UNKNOWN) status=0
           importance=125 pss=38MB rss=92MB description=null state=empty trace=null
 """
+
+
+async def test_logbuch(hass: HomeAssistant):
+    from homeassistant.core import callback
+    from custom_components.tv_zapper import logbook as tvz_logbook
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    ereignisse = []
+    hass.bus.async_listen("tv_zapper_umgeschaltet", callback(lambda e: ereignisse.append(e)))
+
+    # HA-Zapper schaltet um -> ein Eintrag mit ausgeschriebenem Grund
+    neu = {"nr": 141, "sender": "N24 DOKU", "sendung": "Doku über Rap", "punkte": 7, "treffer": ["Hip-Hop/Rap"],
+           "genre": "", "info": ""}
+    erg = {**ERGEBNIS, "aktion": "umgeschaltet", "neu": neu}
+    with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", AsyncMock(return_value=erg)), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
+        await st.durchgang(False)
+    await hass.async_block_till_done()
+    assert len(ereignisse) == 1 and ereignisse[0].data["wer"] == "TV-Zapper (HA)"
+    assert ereignisse[0].data["text"].startswith("hat auf 141 N24 DOKU („Doku über Rap“) umgeschaltet")
+    assert "Punkte" in ereignisse[0].data["text"]
+
+    # Logbuch beschreibt das Ereignis
+    beschreiber = {}
+    tvz_logbook.async_describe_events(hass, lambda dom, ev, fn: beschreiber.setdefault(ev, fn))
+    b = beschreiber["tv_zapper_umgeschaltet"](ereignisse[0])
+    assert b["name"] == "TV-Zapper (HA)" and b["message"] == ereignisse[0].data["text"]
+
+    # TV-App: erstes Lesen nur merken, danach jede neue Umschaltung einmal
+    alt = [{"id": 100, "grund": "werbung", "nr": 1, "sender": "Das Erste"}]
+    st._app_umschaltungen_melden(alt)
+    await hass.async_block_till_done()
+    assert len(ereignisse) == 1
+    st._app_umschaltungen_melden(alt + [{"id": 101, "grund": "zurueck", "nr": 75, "sender": "Comedy Central HD"}])
+    st._app_umschaltungen_melden(alt + [{"id": 101, "grund": "zurueck", "nr": 75, "sender": "Comedy Central HD"}])
+    await hass.async_block_till_done()
+    assert len(ereignisse) == 2 and ereignisse[1].data["wer"] == "TV-Zapper (TV-App)"
+    assert ereignisse[1].data["text"] == "Werbung vorbei, zurück auf 75 Comedy Central HD."
+    st._app_umschaltungen_melden([])   # aeltere App ohne das Feld: nichts
+    assert len(ereignisse) == 2

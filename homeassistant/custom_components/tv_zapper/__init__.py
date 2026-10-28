@@ -17,8 +17,9 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
     CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_SPEICHER_TAKT, CONF_TAKT, CONF_VERWEILEN,
-    DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
+    DOMAIN, EVENT_DURCHGANG, EVENT_UMGESCHALTET, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
+from .logik import app_umschalt_text, umschalt_text
 from .tv import Fernseher, lade_signer
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class Steuerung:
         self.letztes: dict | None = None          # Ergebnis des letzten Durchgangs
         self.jetzt: dict | None = None            # was gerade laeuft (Sensor "Laeuft jetzt")
         self.speicher: dict | None = None         # Arbeitsspeicher von Fernseher und TV-App
+        self._app_letzte_id = None                # hoechste schon gesehene Umschaltung der TV-App
         self.beschaeftigt = False
         self._lock = asyncio.Lock()
         self._zuhoerer: list[Callable[[], None]] = []
@@ -166,6 +168,7 @@ class Steuerung:
             try:
                 await self.tv.verbinden(timeout=5)
                 self.jetzt = await self.tv.jetzt(self.cfg())
+                self._app_umschaltungen_melden(self.jetzt.get("umschaltungen") or [])
             except Exception as e:  # noqa: BLE001 - aus oder nicht erreichbar
                 _LOGGER.debug("Fernseher nicht erreichbar: %s", e)
                 self.jetzt = {"aus": True}
@@ -173,6 +176,22 @@ class Steuerung:
             if not self.laeuft:
                 await self.tv.trennen()
         self.benachrichtigen()
+
+    @callback
+    def _app_umschaltungen_melden(self, liste):
+        """Neue Umschaltungen der TV-App ins Logbuch. Beim ersten Lesen nach dem Start nur merken, wo die Liste
+        steht (keine alten Eintraege nachtragen)."""
+        ids = [u["id"] for u in liste if isinstance(u, dict) and u.get("id") is not None]
+        if not ids:
+            return
+        if self._app_letzte_id is None:
+            self._app_letzte_id = max(ids)
+            return
+        for u in sorted((u for u in liste if (u.get("id") or 0) > self._app_letzte_id), key=lambda u: u["id"]):
+            self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
+                "wer": "TV-Zapper (TV-App)", "nr": u.get("nr"), "sender": u.get("sender"), "sendung": u.get("sendung"),
+                "punkte": u.get("punkte"), "grund": u.get("grund"), "text": app_umschalt_text(u)})
+        self._app_letzte_id = max(self._app_letzte_id, *ids)
 
     async def speicher_lesen(self, _now=None):
         """Im Speicher-Takt: Arbeitsspeicher des Fernsehers und der TV-App (zum Beobachten von Engpaessen)."""
@@ -259,5 +278,10 @@ class Steuerung:
             self.letztes = ergebnis
             _LOGGER.info("Durchgang: %s", {k: ergebnis.get(k) for k in ("aktion", "vorher", "neu", "fehler")})
             self.hass.bus.async_fire(EVENT_DURCHGANG, ergebnis)
+            if ergebnis.get("aktion") == "umgeschaltet" and ergebnis.get("neu"):
+                neu = ergebnis["neu"]
+                self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
+                    "wer": "TV-Zapper (HA)", "nr": neu.get("nr"), "sender": neu.get("sender"), "sendung": neu.get("sendung"),
+                    "punkte": neu.get("punkte"), "text": umschalt_text(neu, ergebnis.get("vorher"), self.cfg())})
             self.benachrichtigen()
             return ergebnis

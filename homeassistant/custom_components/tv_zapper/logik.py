@@ -120,6 +120,77 @@ def bewerte(current, chans, infos, cfg):
     return scored, cur, best
 
 
+def punkte_text(n, dativ=False) -> str:
+    """`1 Punkt`, `3 Punkte`; nach "mit" (dativ): `3 Punkten`."""
+    return "1 Punkt" if n == 1 else f"{n} Punkte{'n' if dativ else ''}"
+
+
+def gruende(x, cfg) -> list[str]:
+    """Warum eine bewertete Sendung (aus bewerte_sendung) Punkte hat, ausgeschrieben:
+    `Doku: 2 Punkte, „doku*“ in der Beschreibung`, `bevorzugter Sender: 1 Punkt extra`."""
+    titel = " ".join(t for t in (x.get("sender"), x.get("sendung")) if t).lower()
+    rest = " ".join(t for t in (x.get("genre"), x.get("info")) if t).lower()
+    out = []
+    for name in x.get("treffer") or []:
+        if name == "bevorzugter Sender":
+            bonus = cfg.get("sender_bevorzugt", {}).get(x.get("sender"), 0)
+            out.append(f"bevorzugter Sender: {punkte_text(bonus)} extra")
+            continue
+        cat = next((c for c in cfg.get("interessen", []) if c["name"] == name), None)
+        if not cat:
+            out.append(name)
+            continue
+        wo = ""
+        for w in cat["woerter"]:
+            if word_rx(w).search(titel):
+                wo = f", „{w}“ im Titel"
+                break
+            if word_rx(w).search(rest):
+                wo = f", „{w}“ in der Beschreibung"
+                break
+        out.append(f"{name}: {punkte_text(cat['gewicht'])}{wo}")
+    return out
+
+
+def _sender(x) -> str:
+    s = f"{x.get('nr')} {x.get('sender') or ''}".strip()
+    return s + (f" („{x['sendung']}“)" if x.get("sendung") else "")
+
+
+def umschalt_text(neu, vorher, cfg) -> str:
+    """Logbuch-Eintrag fuer eine Umschaltung des HA-Zappers, ganz ausgeschrieben."""
+    text = f"hat auf {_sender(neu)} umgeschaltet"
+    if vorher and vorher.get("nr") is not None:
+        p = vorher.get("punkte") or 0
+        text += f", vorher {_sender(vorher)} " + (f"mit {punkte_text(p, dativ=True)}" if p >= 0 else "(ausgeschlossen)")
+    g = gruende(neu, cfg)
+    if g:
+        text += ". Grund: " + "; ".join(g)
+    return text + f". Zusammen {punkte_text(neu.get('punkte') or 0)}."
+
+
+def app_umschalt_text(u) -> str:
+    """Logbuch-Eintrag fuer eine Umschaltung des Zappers der TV-App (Feld `umschaltungen` aus ABFRAGEN)."""
+    ziel, von = _sender(u), _sender(u["von"]) if u.get("von") else None
+    grund = u.get("grund")
+    if grund == "werbung":
+        text = f"Werbung auf {von or 'dem Sender'}, ausgewichen auf {ziel}"
+    elif grund == "zurueck":
+        text = f"Werbung vorbei, zurück auf {ziel}"
+    else:
+        text = f"hat auf {ziel} umgeschaltet" + (f", vorher {von}" if von else "")
+    g = [f"{k.get('name')}: {punkte_text(k.get('punkte') or 0)}" for k in u.get("kategorien") or []]
+    if u.get("bevorzugt_bonus"):
+        g.append(f"bevorzugter Sender: {punkte_text(u['bevorzugt_bonus'])} extra")
+    if g:
+        text += ". Grund: " + "; ".join(g)
+    elif grund not in ("werbung", "zurueck") and u.get("text"):
+        text += f". {u['text']}"
+    if u.get("punkte") is not None:
+        text += f". Zusammen {punkte_text(u['punkte'])}"
+    return text + "."
+
+
 def soll_umschalten(cur, best):
     return bool(best and best["punkte"] > 0 and best["punkte"] > cur.get("punkte", 0))
 

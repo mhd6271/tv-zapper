@@ -3,7 +3,8 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 from custom_components.tv_zapper import const, tv
-from custom_components.tv_zapper.logik import bewerte_sendung, text_zu_bonus, bonus_zu_text
+from custom_components.tv_zapper.logik import (
+    app_umschalt_text, bewerte_sendung, bonus_zu_text, punkte_text, text_zu_bonus, umschalt_text)
 
 CFG = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS,
        "sender_nie": ["sixx HD"], "sender_bevorzugt": const.STANDARD_SENDER_BEVORZUGT}
@@ -242,3 +243,27 @@ async def test_app_einstellen():
         assert False
     except RuntimeError:
         pass
+
+
+def test_umschalt_text():
+    cfg = {"interessen": [{"name": "Hip-Hop", "gewicht": 5, "woerter": ["rap", "hip hop"]},
+                          {"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}],
+           "aus": [], "sender_nie": [], "sender_bevorzugt": {"N24 DOKU": 1}}
+    neu = bewerte_sendung(141, "N24 DOKU", "Hip Hop", {"info": "Dokumentation über New York"}, cfg)
+    vorher = bewerte_sendung(23, "ProSieben HD", "Navy CIS", {}, cfg)
+    assert neu["punkte"] == 8 and punkte_text(1) == "1 Punkt" and punkte_text(0) == "0 Punkte"
+    assert umschalt_text(neu, vorher, cfg) == (
+        "hat auf 141 N24 DOKU („Hip Hop“) umgeschaltet, vorher 23 ProSieben HD („Navy CIS“) mit 0 Punkten. "
+        "Grund: Hip-Hop: 5 Punkte, „hip hop“ im Titel; Doku: 2 Punkte, „doku*“ im Titel; "
+        "bevorzugter Sender: 1 Punkt extra. Zusammen 8 Punkte.")
+
+
+def test_app_umschalt_text():
+    assert app_umschalt_text({"id": 1, "grund": "werbung", "nr": 141, "sender": "N24 DOKU", "sendung": "Hip Hop",
+                              "von": {"nr": 75, "sender": "Comedy Central HD"}}) == (
+        "Werbung auf 75 Comedy Central HD, ausgewichen auf 141 N24 DOKU („Hip Hop“).")
+    assert app_umschalt_text({"id": 2, "grund": "zurueck", "nr": 75, "sender": "Comedy Central HD"}) == (
+        "Werbung vorbei, zurück auf 75 Comedy Central HD.")
+    assert app_umschalt_text({"id": 3, "grund": "interesse", "nr": 141, "sender": "N24 DOKU", "punkte": 3,
+                              "kategorien": [{"name": "Doku", "punkte": 2}], "bevorzugt_bonus": 1}) == (
+        "hat auf 141 N24 DOKU umgeschaltet. Grund: Doku: 2 Punkte; bevorzugter Sender: 1 Punkt extra. Zusammen 3 Punkte.")

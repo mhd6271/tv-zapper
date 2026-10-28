@@ -178,6 +178,16 @@ HA bewertet mit seinen eigenen Interessen.
   (`android/res/drawable/icon.xml`). HA 2026.10 liest den Ordner `brand/` einer eigenen Integration erst nach
   einem Neustart; bis dahin zeigt HA „icon not available“.
 
+**Logbuch:** Jede Umschaltung durch einen TV-Zapper steht mit Grund im HA-Logbuch, Punkte ausgeschrieben, z. B.
+„TV-Zapper (HA) hat auf 141 N24 DOKU („Hip Hop“) umgeschaltet, vorher 23 ProSieben HD („Navy CIS“) mit 0 Punkten.
+Grund: Hip-Hop: 5 Punkte, „hip hop“ im Titel; Doku: 2 Punkte, „doku*“ im Titel; bevorzugter Sender: 1 Punkt extra.
+Zusammen 8 Punkte.“ Umschaltungen des Zappers der **TV-App** (Werbung ausgewichen, zurück nach der Werbung, Interesse)
+erscheinen als „TV-Zapper (TV-App) …“, sobald die App sie über `ABFRAGEN` im Feld `umschaltungen` meldet; HA liest
+das im Abfragetakt mit und trägt jede Umschaltung einmal ein (nach einem HA-Neustart nur neue, nichts nachgetragen).
+Ältere App-Versionen ohne dieses Feld liefern keine Einträge. Das Ereignis heißt `tv_zapper_umgeschaltet` und taugt
+auch für Automationen (Felder `wer`, `nr`, `sender`, `sendung`, `punkte`, `text`, bei der App `grund`).
+Senderwechsel mit der Fernbedienung zeigt weiterhin nur der Verlauf von „Läuft jetzt“.
+
 **Wecken:** Beim Einschalten des Zappers prüft die Integration zuerst den Fernseher. Antwortet ADB, aber das Bild
 ist aus (`mWakefulness` nicht `Awake`), drückt sie die Taste WAKEUP. Antwortet ADB nicht und ist unter „Konfigurieren“
 eine MAC-Adresse eingetragen, schickt sie Wake-on-LAN (Broadcast, Port 9) und wartet bis zu 90 Sekunden auf ADB.
