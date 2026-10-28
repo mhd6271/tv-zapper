@@ -65,24 +65,31 @@ final class WerbeWaechter implements Sensor.Frames {
         return away;
     }
 
-    /** Logo-Stand ueber alle eingeschalteten, nicht werbefreien Sender: erkannt, beobachtet, Namen ohne Logo. */
+    /** Logo-Stand ueber alle eingeschalteten, nicht werbefreien Sender, die die FRITZ!Box liefert (sonst nie lernbar). */
     static JSONObject logoCount(Context c) throws Exception {
         Config cfg = Config.load(c);
+        WerbeWaechter w = ZapperService.waechter;
+        FritzTv f = w == null ? null : w.fritz;
         int known = 0, all = 0;
-        JSONArray open = new JSONArray();
+        JSONArray open = new JSONArray(), noFritz = new JSONArray();
         for (Epg.Channel ch : Epg.channels(c)) {
             if (Config.AUS.equals(cfg.state(ch)) || cfg.adFree.contains(ch.name)) continue;
+            if (f != null && f.urlFor(ch.name) == null) {
+                noFritz.put(ch.name);
+                continue;
+            }
             all++;
             if (Logo.known(c, FritzTv.norm(ch.name))) known++;
             else open.put(ch.name);
         }
-        return new JSONObject().put("erkannt", known).put("beobachtet", all).put("ohne_logo", open);
+        return new JSONObject().put("gelernt", known).put("beobachtet", all).put("ohne_logo", open)
+                .put("ohne_fritzbox", f == null ? JSONObject.NULL : noFritz);
     }
 
     private String countText() {
         try {
             JSONObject n = logoCount(c);
-            return " – " + n.getInt("erkannt") + " von " + n.getInt("beobachtet") + " Sendern erkannt";
+            return " – " + n.getInt("gelernt") + " von " + n.getInt("beobachtet") + " Sendern erkannt";
         } catch (Exception e) {
             return "";
         }
