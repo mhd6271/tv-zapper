@@ -37,6 +37,7 @@ final class WerbeWaechter implements Sensor.Frames {
     private int secN;
     private long secStart;
     private int learnShown = -1, failedShown;
+    private String noFritzShown;
     private long lastFrame, lastReport, watchStart;
     private boolean gotFrame, paused;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
@@ -158,6 +159,10 @@ final class WerbeWaechter implements Sensor.Frames {
         String url = fritz.urlFor(home.name);
         if (url == null) {
             Log.add(c, "Werbe-Sensor: " + home.name + " gibt es nicht bei der FRITZ!Box");
+            if (!home.name.equals(noFritzShown)) {   // Neuversuch alle 60 s, Einblendung nur einmal je Sender
+                noFritzShown = home.name;
+                Banner.show(c, home.name + ": keine Werbeerkennung – Sender gibt es nicht bei der FRITZ!Box", 8000);
+            }
             retryAt = System.currentTimeMillis() + 60_000;
             return;
         }
@@ -210,6 +215,7 @@ final class WerbeWaechter implements Sensor.Frames {
         if (!wasReady) {
             logo.save(c, homeKey);
             Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
+            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv", 8000);
         }
         long now = System.currentTimeMillis();
         // Waehrend "Werbung" nach einer neuen Logo-Variante suchen (ab 20 s, dann ~2 min Bilder sammeln)
