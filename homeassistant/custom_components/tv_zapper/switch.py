@@ -22,7 +22,9 @@ class ZapperSchalter(ZapperEntity, SwitchEntity):
     @property
     def extra_state_attributes(self):
         return {"laeuft_bis": self.st.ende.isoformat(timespec="minutes") if self.st.ende else None,
-                "liest_gerade": self.st.beschaeftigt}
+                "liest_gerade": self.st.beschaeftigt,
+                # Fuer die Zusatzzeile im Dashboard (Kachel mit state_content: logos), z. B. "Logos 10/28"
+                "logos": f"Logos {self.st.logos['gelernt']}/{self.st.logos['beobachtet']}" if self.st.logos else None}
 
     async def async_turn_on(self, **kwargs):
         await self.st.starten()

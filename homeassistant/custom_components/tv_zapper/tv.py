@@ -102,6 +102,14 @@ def gueltige_sender(liste) -> list[dict]:
     return out
 
 
+def logo_zaehler(x) -> dict | None:
+    """Logo-Zaehler der TV-App nur uebernehmen, wenn beide Zahlen ganze Zahlen sind."""
+    if isinstance(x, dict) and all(isinstance(x.get(k), int) and not isinstance(x.get(k), bool)
+                                   for k in ("gelernt", "beobachtet")):
+        return {"gelernt": x["gelernt"], "beobachtet": x["beobachtet"]}
+    return None
+
+
 def broadcast_daten(ausgabe: str) -> dict | None:
     """`Broadcast completed: result=0, data="{...}"` -> dict; None, wenn kein Empfaenger geantwortet hat."""
     m = re.search(r'Broadcast completed: result=(-?\d+), data="(.*)"\s*$', ausgabe, re.S)
@@ -440,6 +448,8 @@ class Fernseher:
                 # Einstellungen der TV-App (ab dem Stand nach 0.3.0), nur zur Anzeige
                 "werbung_umgehen": daten.get("werbung_umgehen"), "ausweichen_bevorzugt": daten.get("ausweichen_bevorzugt"),
                 "umschaltgrund_einblenden": daten.get("umschaltgrund_einblenden"),
+                # ab der App-Version mit Logo-Zaehler: {"gelernt": n, "beobachtet": m}, sonst None
+                "logos": logo_zaehler(daten.get("logos")),
                 # ab der App-Version mit Umschaltgruenden; nur die letzten 50 (Daten vom Fernseher)
                 "umschaltungen": [u for u in umschaltungen[-50:] if isinstance(u, dict)]
                 if isinstance(umschaltungen, list) else [],

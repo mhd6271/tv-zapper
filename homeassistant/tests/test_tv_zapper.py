@@ -120,6 +120,7 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
     entry = await _einrichten(hass)
     st = entry.runtime_data
     jetzt = {"quelle": "app", "fernsehbild_vorn": True, "bildschirm_an": True, "vorn": "com.tcl.tv",
+             "logos": {"gelernt": 10, "beobachtet": 28},
              "jetzt": {"nr": 167, "sender": "ProSieben MAXX HD", "sendung": "Futurama", "punkte": 4,
                        "treffer": ["Erwachsenen-Cartoons"]}}
     with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
@@ -132,6 +133,8 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
         await st.jetzt_lesen()
     assert hass.states.get("sensor.tv_zapper_lauft_jetzt").state == "Fernseher aus"
+    # Logo-Zaehler bleibt stehen, auch wenn der Fernseher aus ist
+    assert hass.states.get("switch.tv_zapper_zapper").attributes["logos"] == "Logos 10/28"
 
     # Abfragetakt: Standard 15 s, nach Aendern der Option sofort neu geplant
     assert st._takte["jetzt"][0] == 15 and st._takte["speicher"][0] == 300

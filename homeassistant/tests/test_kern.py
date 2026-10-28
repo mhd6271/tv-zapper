@@ -229,6 +229,10 @@ async def test_jetzt():
     j = await f.jetzt(CFG)
     assert j["jetzt"]["sender"] == "ProSieben HD" and j["jetzt"]["beschreibung"].startswith("Folge")
     assert j["ausweichen_bevorzugt"] is None   # aeltere App ohne das Feld
+    assert j["logos"] is None   # aeltere App ohne Logo-Zaehler
+    assert tv.logo_zaehler({"gelernt": 10, "beobachtet": 28}) == {"gelernt": 10, "beobachtet": 28}
+    assert tv.logo_zaehler({"gelernt": "10", "beobachtet": 28}) is None
+    assert tv.logo_zaehler({"gelernt": True, "beobachtet": 28}) is None
     f.app_abfragen = AsyncMock(return_value=None)
     f.focus_app = AsyncMock(return_value=tv.TV_APP)
     assert (await f.jetzt(CFG)) == {"quelle": "adb", "fernsehbild_vorn": True, "vorn": tv.TV_APP, "jetzt": None}

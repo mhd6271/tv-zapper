@@ -77,6 +77,7 @@ class Steuerung:
         self.letztes: dict | None = None          # Ergebnis des letzten Durchgangs
         self.jetzt: dict | None = None            # was gerade laeuft (Sensor "Laeuft jetzt")
         self.speicher: dict | None = None         # Arbeitsspeicher von Fernseher und TV-App
+        self.logos: dict | None = None            # Logo-Zaehler der TV-App, bleibt stehen, wenn der Fernseher aus ist
         self._app_letzte_id = None                # hoechste schon gesehene Umschaltung der TV-App
         self.beschaeftigt = False
         self._lock = asyncio.Lock()
@@ -177,6 +178,8 @@ class Steuerung:
                 await self.tv.verbinden(timeout=5)
                 self.jetzt = await self.tv.jetzt(self.cfg())
                 self._app_umschaltungen_melden(self.jetzt.get("umschaltungen") or [])
+                if self.jetzt.get("logos"):
+                    self.logos = self.jetzt["logos"]
             except Exception as e:  # noqa: BLE001 - aus oder nicht erreichbar
                 _LOGGER.debug("Fernseher nicht erreichbar: %s", e)
                 self.jetzt = {"aus": True}
