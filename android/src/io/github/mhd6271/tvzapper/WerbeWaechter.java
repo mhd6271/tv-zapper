@@ -149,6 +149,9 @@ final class WerbeWaechter implements Sensor.Frames {
             } else if (!gotFrame) {
                 Log.add(c, "Werbe-Sensor: FRITZ!Box liefert für " + home.name + " kein Bild – keine Werbeerkennung, "
                         + "neuer Versuch in 30 min");
+                // Kurzer Hinweis auf Wunsch von Max (28.10.2026), kann spaeter wieder raus
+                Banner.show(c, home.name + ": kein Bild vom FRITZ!Box-Tuner – Sender ist nicht TV-Zapper-kompatibel, "
+                        + "keine Werbeerkennung", 8000);
                 noSignal.put(homeKey, System.currentTimeMillis() + 30 * 60_000L);
                 fritz.reset(home.name);
                 stopSensor();
