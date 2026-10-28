@@ -15,9 +15,9 @@ import socket
 
 # KOMPAT: adb-shell[async]==0.4.4 ist im manifest.json fest gepinnt (dieselbe Fassung wie die eingebaute
 # Integration androidtv in HA 2026.10). Pinnt HA core spaeter eine andere Fassung, kann die Installation
-# scheitern. Reines Python plus rsa/pyasn1, laeuft daher auf ARM und x86. Ob adb-shell das Koppeln per
-# "Kabelloses Debugging" (Android 11+, TLS mit Kopplungscode) kann, ist nicht geprueft (vermutlich nicht).
-# Geraete ohne klassisches ADB ueber TCP (adb tcpip/Netzwerk-Debugging) sind dann nicht erreichbar.
+# scheitern. Braucht rsa, pyasn1, cryptography (bringt HA mit), daher ARM und x86. adb-shell kann das Koppeln per
+# "Kabelloses Debugging" (Android 11+, TLS mit Kopplungscode) nicht (Issue JeffLIrion/adb_shell#206, offen
+# seit 2022; letzte Fassung 0.4.4 von 2023). Geraete ohne klassisches ADB ueber TCP sind nicht erreichbar.
 from adb_shell.adb_device_async import AdbDeviceTcpAsync
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
@@ -254,9 +254,8 @@ class Fernseher:
 
     # --- Bausteine wie in zapper.py -------------------------------------------------------
     async def key(self, *names):
-        # KOMPAT: Mehrere Tasten in einem `input keyevent` gehen erst ab neueren Android-Fassungen (am TCL mit
-        # Android 14 geprueft). Aeltere Fassungen druecken vermutlich nur die erste Taste, Blaettern wuerde dann
-        # sehr langsam.
+        # KOMPAT: Mehrere Tasten in einem `input keyevent` kann Android laut AOSP-Quelltext seit 4.4 (am TCL mit
+        # Android 14 geprueft). Ob jeder Hersteller sie schnell genug verarbeitet, ist offen.
         await self.sh("input keyevent " + " ".join(names))
 
     async def close_guide(self):

@@ -32,6 +32,8 @@ type ZapperEntry = ConfigEntry[Steuerung]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ZapperEntry) -> bool:
+    # KOMPAT: hass.config.path() zeigt bei jeder Installationsart (OS, Container, Core) auf den Konfigordner, der
+    # Ordner muss nicht /config heissen. Mit Container braucht Wake-on-LAN network_mode: host (Broadcast).
     signer = await hass.async_add_executor_job(lade_signer, hass.config.path(SCHLUESSEL_DATEI))
     entry.runtime_data = Steuerung(hass, entry, signer)
     entry.async_on_unload(entry.add_update_listener(_optionen_geaendert))

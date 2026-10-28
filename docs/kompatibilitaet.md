@@ -38,8 +38,8 @@ Der zweite Weg ist fast vollständig an den TCL gebunden.
 | `tv.py` `focus_app`; `zapper.py` `focus_app` | Format `mCurrentFocus=Window{… paket/activity}` aus `dumpsys window` (Android 14) | Anderes Format: Ergebnis ist leer, alles gilt als „nicht vorn“. Das ist sicher, aber der Zapper tut dann nichts |
 | `tv.py` `wach` | `mWakefulness=Awake` aus `dumpsys power` (AOSP) | Heißt das Feld anders, wird bei jedem Start WAKEUP gesendet, meist harmlos |
 | `tv.py` `wecken` | `KEYCODE_WAKEUP` (ab Android 5) | Manche Geräte schalten damit nur den Bildschirm ein, nicht den Tuner |
-| `tv.py` `key`; `zapper.py` | Mehrere Tasten in einem `input keyevent` | Ältere Android-Fassungen drücken vermutlich nur die erste Taste, das Blättern wird dann sehr langsam (nicht geprüft) |
-| `tv.py` `dump`; `zapper.py` `dump` | `uiautomator dump` nach `/sdcard` | Braucht ein beschreibbares `/sdcard`; scheitert manchmal bei Video und Animation; auf schwachen Geräten langsam |
+| `tv.py` `key`; `zapper.py` | Mehrere Tasten in einem `input keyevent` | Belegt: laut AOSP-Quelltext ab Android 4.4 möglich [R7]. Offen ist, ob jedes Gerät die Tasten schnell genug verarbeitet |
+| `tv.py` `dump`; `zapper.py` `dump` | `uiautomator dump` nach `/sdcard` | Braucht ein beschreibbares `/sdcard` und ist auf schwachen Geräten langsam. Bei Animation oder laufendem Video kommt „could not get idle state“, ein Fenster ohne Elemente liefert „null root node“ (Forenbericht [R5]) |
 | `tv.py` `speicher_lesen` | `dumpsys meminfo -s`, `dumpsys activity exit-info` (ab Android 11) | Passt das Format nicht, bleiben die Speicher-Sensoren leer, es gibt keinen Fehler |
 | `tv.py` `einblenden` | `cmd package query-receivers`, `cmd notification post` | Seit welcher Android-Fassung es sie gibt, ist nicht nachgeschaut. Google TV zeigt Benachrichtigungen meist nicht im Bild, ohne TV-App gibt es also oft keine sichtbare Einblendung |
 
@@ -53,17 +53,18 @@ Der zweite Weg ist fast vollständig an den TCL gebunden.
 | `logik.py` `word_rx`; `zapper.py` | Wortgrenzen nur für a–z und äöüß | In anderen Sprachen zählt ein Akzentbuchstabe als Grenze, das ergibt ungenaue Treffer |
 | `logik.py` `sender_schluessel`, `_SENDER_ALIAS` | Gleichsetzungen für deutsche Sender; nur a–z, 0–9 und äöüß bleiben übrig | Namen in anderer Schrift werden leer (passen nie) oder fallen zusammen. Muss gleich bleiben mit `FritzTv.norm` der App |
 | `const.py` `_VORLAGE` (`vorlage.json`) | Interessen und Sendernamen auf Deutsch | Trifft in anderen Ländern kaum etwas, muss angepasst werden |
-| `translations/` | Nur `de.json` und `en.json` | In anderen Sprachen zeigt HA den englischen Text |
-| `dashboard-beispiel.yaml` | Entitäts-IDs aus den deutschen Namen, z. B. `sensor.tv_zapper_lauft_jetzt` | Stimmen nur, wenn nichts umbenannt wurde. Bei mehreren Fernsehern bekommen die IDs Zusätze |
+| `translations/`, `strings.json` | `en.json` ist eine Kopie von `strings.json` und **auch deutsch** (mit `diff` geprüft). Es gibt nur `de.json` und `en.json` | Einrichtung und Optionen erscheinen in jeder HA-Sprache auf Deutsch |
+| `entity.py` `_attr_name` | Feste deutsche Entitätsnamen ohne `translation_key` | Namen sind in jeder Sprache deutsch. Dafür sind die Entitäts-IDs überall gleich, und das Dashboard-Beispiel passt |
+| `dashboard-beispiel.yaml` | Entitäts-IDs aus den deutschen Namen, z. B. `sensor.tv_zapper_lauft_jetzt` | Stimmen nur, wenn nichts umbenannt wurde. Bei mehreren Fernsehern bekommen die IDs Zusätze (`_2`). Abschnitte-Ansicht und `tile` mit `grid_options` gibt es erst in neueren HA-Fassungen (aus dem Gedächtnis 2024.x, nicht nachgeschaut) |
 
 ### Netzwerk, ADB und Wake-on-LAN
 
 | Stelle | Abhängigkeit | Folge |
 |---|---|---|
-| `tv.py` `verbinden`; `config_flow.py` (Port 5555) | Klassisches ADB über TCP, in den Entwickleroptionen eingeschaltet | Manche Geräte vergessen das nach Neustart oder Update. Bietet ein Gerät nur „Kabelloses Debugging“ (Android 11+, Koppeln, wechselnder Port), kann die Integration es vermutlich nicht erreichen (adb-shell und Kopplung sind nicht geprüft) |
+| `tv.py` `verbinden`; `config_flow.py` (Port 5555) | Klassisches ADB über TCP, in den Entwickleroptionen eingeschaltet | Manche Geräte vergessen das nach Neustart oder Update. Bietet ein Gerät nur „Kabelloses Debugging“ (Android 11+, Koppeln, wechselnder Port), kommt die Integration nicht hinein. **Belegt:** adb-shell kann kein Koppeln, das Issue dazu ist seit 2022 offen [R1]. Laut Forenberichten ist Port 5555 beim Chromecast mit Google TV ab Android 14 nach jedem Neustart wieder zu [R2]. Beim Google TV Streamer geht 5555 nur über Ethernet, über WLAN braucht er Koppeln [R3]. Laut HA-Doku ist nur eine ADB-Verbindung gleichzeitig möglich [R4] (am TCL gingen zwei, Befund 27.10.) |
 | `tv.py` `verbinden` | Abfrage „USB-Debugging zulassen?“ mit „Immer zulassen“ | Bei manchen Herstellern sieht sie anders aus oder fehlt |
 | `const.py` `SCHLUESSEL_DATEI` | Schlüssel in `/config/.storage` | Nach einer Neuinstallation ohne `.storage` kommt die Abfrage am Fernseher erneut |
-| `tv.py` `magic_packet`, `sende_wol` | Wake-on-LAN an Broadcast 255.255.255.255:9 und an die IP | Geht nur im selben Netz. Ein Docker-Netz ohne host-Modus, ein anderes VLAN oder ein WLAN, das Broadcasts filtert, blockiert es. Viele Fernseher wecken nur über LAN oder mit einer Option wie „Netzwerk-Standby“ |
+| `tv.py` `magic_packet`, `sende_wol` | Wake-on-LAN an Broadcast 255.255.255.255:9 und an die IP | Geht nur im selben Netz. Ein Docker-Netz ohne host-Modus, ein anderes VLAN oder ein WLAN, das Broadcasts filtert, blockiert es. Viele Fernseher wecken nur über LAN oder mit einer Option wie „Netzwerk-Standby“. **Belegt (HA-Doku zu Android TV Remote [R6]):** TCL ist nach dem Ausschalten nur mit „Screenless service“ erreichbar; Xiaomi lässt sich darüber nicht einschalten; bei der Shield muss „Simplified wake buttons“ aus sein. Sony braucht „Remote start“ [R8]. Laut Forenbericht ist WoL über WLAN unzuverlässig [R9]. Im Docker-Bridge-Netz kommen Broadcasts nicht hinaus (Forenbericht [R10]) |
 | `config_flow.py` `_adresse_ok` | Nur `A–Z a–z 0–9 . : - [ ]` | IPv6 mit Zone (`fe80::1%eth0`) und Namen mit Unterstrich werden abgelehnt |
 | `zapper.py` `adb` | Programm `adb` im PATH und ein laufender adb-Server | Nur auf einem Rechner mit Android Platform Tools |
 
@@ -71,8 +72,9 @@ Der zweite Weg ist fast vollständig an den TCL gebunden.
 
 | Stelle | Abhängigkeit | Folge |
 |---|---|---|
-| `manifest.json` (JSON, kein Kommentar möglich) | `adb-shell[async]==0.4.4` fest gepinnt, wie `androidtv` in HA 2026.10 | Pinnt HA core später eine andere Fassung, kann die Installation scheitern. adb-shell ist reines Python (rsa/pyasn1), läuft also auf ARM und x86 |
-| `manifest.json` / Repo | Keine `hacs.json` mit Mindestversion von HA | HACS warnt bei zu alter HA-Fassung nicht |
+| `manifest.json` (JSON, kein Kommentar möglich) | `adb-shell[async]==0.4.4` fest gepinnt, wie `androidtv` in HA 2026.10 | Pinnt HA core später eine andere Fassung, kann die Installation scheitern. Abhängigkeiten siehe „Installationsarten“, läuft auf ARM und x86 |
+| `manifest.json` (Versionen) | Es gibt keine Mindestversion von HA (die steht bei HACS in `hacs.json`). Python legt HA selbst fest | Nur mit HA 2026.10.4 und Python 3.14 geprüft. Die eingebaute `androidtv` pinnt in 2026.10.4 ebenfalls `adb-shell[async]==0.4.4` (im installierten HA nachgesehen). Das ist die letzte Fassung von 2023 [R1] |
+| Deprecation-Warnungen | Im HA-Log (`system_log/list`, 28.10. seit dem Neustart 09:52) gibt es keinen Eintrag zu `tv_zapper` oder `adb_shell`. Die Tests mit `-W default` zeigen keine Warnung | Bekannt ist nur: `async_get_device` fällt mit 2027.8 weg. Die Integration nutzt schon den Nachfolger |
 | `__init__.py` | `type X = …` (Python 3.12), `Task.cancelling()` (3.11) | HA 2026.10 verlangt Python 3.14.2, alte HA-Fassungen laden die Integration nicht |
 | `__init__.py` `_umgeschaltet_melden` | `async_get_device_by_identifier` (in 2026.10.4 vorhanden, seit wann nicht nachgeschaut) | Ältere HA: AttributeError, das Logbuch-Ereignis scheitert. Das alte `async_get_device` fällt laut HA mit 2027.8 weg |
 | `config_flow.py` | `_get_reconfigure_entry`, `async_update_reload_and_abort(data_updates=)`, OptionsFlow ohne `config_entry` | Erst in neueren HA-Fassungen, aus dem Gedächtnis etwa ab 2024.11/12 (nicht nachgeschaut) |
@@ -84,6 +86,52 @@ Der zweite Weg ist fast vollständig an den TCL gebunden.
 | `sensor.py` `_ortszeit` | exit-info liefert Ortszeit des Fernsehers ohne Zone, sie wird als HA-Zeitzone gelesen | Hat der Fernseher eine andere Zeitzone, ist der Sensor um den Unterschied verschoben |
 | `__init__.py` `starten` | Die Einblendung „läuft bis HH:MM“ steht in HA-Zeit | Passt dann nicht zur Uhr am Fernseher |
 | `zapper.py` `now` | Ortszeit des Rechners | Nur für Protokoll und Ausgabe |
+
+### Installationsarten von Home Assistant
+
+| Punkt | Befund | Folge |
+|---|---|---|
+| Pfade | Die Integration nutzt nur `hass.config.path(".storage/tv_zapper_adbkey")` und Dateien neben sich, keinen festen Pfad `/config` (im Code geprüft). `/config` steht nur in der Doku und in den Kopierbefehlen des README | Läuft bei OS, Container und Core gleich. Bei Core liegt der Ordner meist unter `~/.homeassistant` (aus dem Gedächtnis) |
+| Container | Wake-on-LAN braucht `network_mode: host`. Die HA-Doku nutzt das in ihren Beispielen [R11], ohne Host-Netz kommt der Broadcast nicht hinaus [R10] | Ohne Host-Netz geht nur der Weg über ADB, ein Fernseher im Tiefschlaf wird nicht geweckt |
+| Core und Supervised | **Belegt:** seit Mai 2025 abgekündigt, Support endete mit 2025.12. Unterstützt werden nur noch HA OS und Container auf 64 Bit [R12] | Muss nicht berücksichtigt werden. 32-Bit-ARM gibt es nicht mehr |
+| ARM/x86 | adb-shell braucht laut Paketdaten `cryptography`, `pyasn1`, `rsa`, `aiofiles` und `async_timeout`. Bis auf `cryptography` ist alles reines Python, und `cryptography` bringt HA selbst mit (Binärpakete für ARM64 und x86-64) | Kein eigener Build nötig, auf HA Green (ARM64) geprüft |
+
+### Tauglichkeit für HACS (nur Bestandsaufnahme, nichts gebaut)
+
+Belegt nach der HACS-Doku [R13], [R14]. Im Repo nachgesehen:
+
+| Anforderung | Stand im Repo | Fehlt für HACS |
+|---|---|---|
+| Integration unter `custom_components/<domain>/` in der **Repo-Wurzel** (oder `content_in_root`) | Liegt unter `homeassistant/custom_components/tv_zapper/` | **Ja.** HACS findet sie so nicht. Abhilfe wäre ein eigenes Repo oder ein Umzug nach `custom_components/` in die Wurzel |
+| Nur eine Integration je Repo | Eine Integration, daneben App und Skripte | Nein (die anderen Ordner stören laut Doku nicht, nicht ausprobiert) |
+| `hacs.json` mit `name` (Pflicht), optional `homeassistant` (Mindestversion) | Fehlt | **Ja** |
+| `manifest.json` mit `domain`, `documentation`, `issue_tracker`, `codeowners`, `name`, `version` | Alle vorhanden, `version` 0.1.0 | Nein. Der Link `documentation` zeigt auf einen Anker im README, der nicht geprüft ist |
+| Brand-Bilder (`brand/icon.png`) | `brand/icon.png` und `icon@2x.png` im Integrationsordner. Lokale Brand-Bilder zeigt HA ab 2026.3 an [R15] | Nein. Ältere HA-Fassungen zeigen kein Symbol |
+| GitHub-Releases | Bisher nur für die TV-App (Tags v0.x mit APK) | Nicht Pflicht. Ohne eigene Releases nimmt HACS den Hauptzweig, und die App-Tags würden als Versionen der Integration erscheinen (Vermutung) |
+
+### Quellen der Online-Recherche (28.10.2026)
+
+[R1], [R12], [R13], [R14] und [R15] habe ich selbst aufgerufen und gegengelesen. Die übrigen Quellen hat ein Recherche-Agent gefunden, sie sind nicht einzeln nachgeprüft. Getestet ist davon nichts an einem Gerät.
+
+- [R1] belegt: adb-shell, Issue „Implement the pair command for Android 11+ devices“, offen seit 29.07.2022. Grund: CPython fehlt die nötige OpenSSL-Funktion. https://github.com/JeffLIrion/adb_shell/issues/206, Fassungen: https://pypi.org/project/adb-shell/
+- [R2] Forenbericht: Chromecast mit Google TV ab Android 14, Port 5555 nach Neustart wieder zu. https://community.getchannels.com/t/adbtuner-a-channel-tuning-application-for-networked-google-tv-android-tv-devices/36822?page=95
+- [R3] Forenbericht (Blog): ADB beim Google TV Streamer. https://allaboutchromecast.com/using-adb-on-google-tv-streamer/amp/
+- [R4] belegt: HA-Doku zur Integration Android Debug Bridge. Nur eine ADB-Verbindung gleichzeitig; Philips nimmt die erste Verbindung nur über WLAN an; bei neueren Geräten Probleme mit der Python-ADB möglich. https://www.home-assistant.io/integrations/androidtv/
+- [R5] Forenbericht: `uiautomator dump`-Fehler „could not get idle state“ und „null root node“. https://testerhome.com/topics/1887, https://github.com/appium/appium/issues/9147
+- [R6] belegt: HA-Doku Android TV Remote (Einschalten je Hersteller). https://www.home-assistant.io/integrations/androidtv_remote/
+- [R7] belegt: AOSP `Input.java` in Android 4.4 nimmt mehrere Tastencodes. https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-4.4_r1/cmds/input/src/com/android/commands/input/Input.java
+- [R8] belegt (Herstellerseite, nur im Suchergebnis gesehen): Sony „Remote start“. https://www.sony.ca/en/electronics/support/televisions-projectors-lcd-tvs-android-/k-85xr30m2/articles/00264082
+- [R9] Forenbericht: WoL bei Android-TVs über WLAN unzuverlässig, Tiefschlaf. https://community.home-assistant.io/t/android-tv-wol/407231
+- [R10] Forenbericht: UDP-Broadcast aus Docker ohne Host-Netz. https://forums.docker.com/t/how-to-udp-broadcast-to-external-network-without-host-mode/86526
+- [R11] belegt: HA-Installation als Container mit `network_mode: host`. https://www.home-assistant.io/installation/linux
+- [R12] belegt: Abkündigung von Core und Supervised sowie 32 Bit. https://www.home-assistant.io/blog/2025/05/22/deprecating-core-and-supervised-installation-methods-and-32-bit-systems/
+- [R13] belegt: HACS, Anforderungen an Integrationen. https://hacs.xyz/docs/publish/integration/
+- [R14] belegt: HACS, allgemeine Anforderungen und `hacs.json`. https://hacs.xyz/docs/publish/start/
+- [R15] belegt: Brand-Bilder im Integrationsordner ab HA 2026.3. https://contributors.home-assistant.io/blog/2026/02/24/brands-proxy-api
+- Belegt, ergänzend: `ApplicationExitInfo` (Grundlage von exit-info) ab API 30. https://developer.android.com/reference/kotlin/android/app/ApplicationExitInfo
+- Forenbericht: Nvidia Shield ab Android 11 springt kurz auf „standby“. https://github.com/thijsputman/home-assistant-config/blob/main/extras/androidtv/README.md
+
+Weiterhin offen: Ob Port 5555 bei Sony, Philips, Hisense, Xiaomi und Shield einen Neustart übersteht, ab welcher Android-Fassung es `cmd notification post` gibt und ob geschützte Inhalte (FLAG_SECURE/DRM) den Dump verhindern.
 
 Gefährdet ist in Max' Aufbau nichts davon (TCL, Deutsch, HA 2026.10.4, gleiches Netz, gleiche Zeitzone).
 

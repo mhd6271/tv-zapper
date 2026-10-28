@@ -15,6 +15,9 @@ class ZapperEntity(Entity):
     def __init__(self, st: Steuerung, schluessel: str, name: str, icon: str):
         self.st = st
         self._attr_unique_id = f"{st.entry.entry_id}_{schluessel}"
+        # KOMPAT: Feste deutsche Namen statt translation_key: In jeder HA-Sprache heissen die Entitaeten deutsch,
+        # und die Entitaets-IDs entstehen aus diesen Namen (z. B. sensor.tv_zapper_lauft_jetzt). Mit translation_key
+        # waeren Namen und IDs bei anderer Sprache verschieden (dann passt das Dashboard-Beispiel nicht mehr).
         self._attr_name = name
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(

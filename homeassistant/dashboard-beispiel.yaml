@@ -1,6 +1,9 @@
 # Abschnitt "TV-Zapper" fuer ein Dashboard (Abschnitte-Ansicht): Dashboard bearbeiten ->
 # Abschnitt hinzufuegen -> Drei-Punkte-Menue des Abschnitts -> "In YAML bearbeiten", das hier einfuegen.
 # Die Entitaetsnamen passen, solange die Integration einmal eingerichtet ist und nichts umbenannt wurde.
+# KOMPAT: Die Entitaets-IDs stammen aus den deutschen Namen (entity.py). Wurde etwas umbenannt oder gibt
+# es mehrere Fernseher (dann _2 usw.), muessen sie angepasst werden. Die Abschnitte-Ansicht und die Kachel
+# "tile" mit grid_options gibt es erst in neueren HA-Fassungen (aus dem Gedaechtnis 2024.x, nicht nachgeschaut), geprueft nur mit 2026.10.
 type: grid
 cards:
   - type: heading

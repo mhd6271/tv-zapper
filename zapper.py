@@ -214,8 +214,8 @@ def collect():
     for _ in range(6):
         if focus_app() != GUIDE_APP:
             raise RuntimeError(f"Programmzeitschrift nicht mehr vorn ({focus_app()}) - Abbruch")
-        # KOMPAT: Mehrere Tasten in einem input keyevent und die Wartezeiten sind am TCL (Android 14) erprobt,
-        # siehe tv.py.
+        # KOMPAT: Mehrere Tasten in einem input keyevent gehen laut AOSP seit Android 4.4; die Wartezeiten sind am
+        # TCL (Android 14) erprobt, siehe tv.py.
         key(*["KEYCODE_DPAD_UP"] * 20)
         time.sleep(0.5)
     time.sleep(1)
