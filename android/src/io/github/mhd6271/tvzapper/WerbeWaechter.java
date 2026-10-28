@@ -3,6 +3,9 @@ package io.github.mhd6271.tvzapper;
 import android.content.Context;
 import android.os.PowerManager;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayDeque;
 import java.util.List;
 
@@ -60,6 +63,29 @@ final class WerbeWaechter implements Sensor.Frames {
 
     boolean isAway() {
         return away;
+    }
+
+    /** Logo-Stand ueber alle eingeschalteten, nicht werbefreien Sender: erkannt, beobachtet, Namen ohne Logo. */
+    static JSONObject logoCount(Context c) throws Exception {
+        Config cfg = Config.load(c);
+        int known = 0, all = 0;
+        JSONArray open = new JSONArray();
+        for (Epg.Channel ch : Epg.channels(c)) {
+            if (Config.AUS.equals(cfg.state(ch)) || cfg.adFree.contains(ch.name)) continue;
+            all++;
+            if (Logo.known(c, FritzTv.norm(ch.name))) known++;
+            else open.put(ch.name);
+        }
+        return new JSONObject().put("erkannt", known).put("beobachtet", all).put("ohne_logo", open);
+    }
+
+    private String countText() {
+        try {
+            JSONObject n = logoCount(c);
+            return " – " + n.getInt("erkannt") + " von " + n.getInt("beobachtet") + " Sendern erkannt";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     String status() {
@@ -215,7 +241,7 @@ final class WerbeWaechter implements Sensor.Frames {
         if (!wasReady) {
             logo.save(c, homeKey);
             Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
-            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv", 8000);
+            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv" + countText(), 8000);
         }
         long now = System.currentTimeMillis();
         // Waehrend "Werbung" nach einer neuen Logo-Variante suchen (ab 20 s, dann ~2 min Bilder sammeln)

@@ -85,6 +85,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         WerbeWaechter w = ZapperService.waechter;
         out.put("werbe_sensor", w == null ? JSONObject.NULL : w.status());
         out.put("werbung", w == null || !w.knowsPause() ? JSONObject.NULL : w.isPause());
+        out.put("logos", WerbeWaechter.logoCount(c));
         long cur = Epg.currentChannelId(c);
         JSONObject jetzt = null;
         JSONArray liste = new JSONArray();

@@ -235,6 +235,16 @@ final class Logo {
         }
     }
 
+    /** Gibt es fuer den Sender schon ein Logo (gelernt oder mitgeliefert)? */
+    static boolean known(Context c, String key) {
+        if (file(c, key).exists()) return true;
+        try (InputStream in = c.getAssets().open("logos/" + key + ".txt")) {
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Gespeichertes Logo laden, sonst das mitgelieferte (assets/logos), sonst leer (wird gelernt). */
     static Logo load(Context c, String key) {
         Logo l = new Logo();
