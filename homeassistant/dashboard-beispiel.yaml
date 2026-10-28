@@ -38,7 +38,7 @@ cards:
       target:
         entity_id: button.tv_zapper_jetzt_prufen_nur_lesen
       confirmation:
-        text: Jetzt einmal die Programmzeitschrift lesen (ca. 5 Minuten, schaltet nicht um)?
+        text: Jetzt einmal alle Sender bewerten, ohne umzuschalten? Mit der TV-App dauert das etwa eine Sekunde, ohne sie liest HA die Programmzeitschrift (ca. 5 Minuten).
     grid_options:
       columns: 12
       rows: 2
