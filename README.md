@@ -201,6 +201,11 @@ fünf Minuten im Programmführer gleich und wechselte erst beim Umschalten.
 Über die TV-App (0.3.0) am 27.10.2026 19:53 geprüft: von 1 Das Erste aus 36 Sender gelesen, per `UMSCHALTEN` auf
 75 Comedy Central HD (Bob's Burgers) geschaltet, Nachfrage passt – ganzer Durchgang etwa 4 Sekunden, ohne Tastendruck.
 Der Sensor „Läuft jetzt“ läuft seit dem HA-Neustart um 19:39 mit Daten der TV-App.
+Am 28.10.2026 um 02:40 geprüft: Der Fernseher war über Nacht ganz aus (kein Ping, ADB-Port zu). Das Wake-on-LAN-Paket
+der Integration (`sende_wol`, vom Mac aus geschickt) weckte ihn: nach 2 Sekunden Ping und ADB-Port offen,
+`mWakefulness=Awake`, Fernsehbild vorn. Der Schalter „Bei Werbung zuerst bevorzugte Sender“ setzte in HA
+`ausweichen_bevorzugt` der TV-App auf `false` und wieder auf `true`, jeweils nach `ABFRAGEN` bestätigt. Nicht geprüft ist das
+Wecken aus HA heraus beim Einschalten des Zappers.
 
 ### Ohne Home Assistant ausprobieren
 
