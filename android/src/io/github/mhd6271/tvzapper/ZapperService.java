@@ -224,12 +224,14 @@ public class ZapperService extends Service {
 
     private void tune(Scored s) {
         String what = s.res.hits.isEmpty() ? "" : String.join(", ", s.res.hits) + ", ";
-        if (tuneTo(s.ch, s.ch.name + (s.prog == null ? "" : " – " + s.prog.title) + "  (" + what + s.points + " P.)"))
+        if (tuneTo(s.ch, s.ch.name + (s.prog == null ? "" : " – " + s.prog.title) + "  (" + what + s.points
+                + (s.points == 1 ? " Punkt)" : " Punkte)"), Umschaltungen.INTERESSE))
             updateNotification(s.ch.number + " " + s.ch.name + (s.prog == null ? "" : ": " + s.prog.title));
     }
 
     /** Auf einen Sender schalten, pruefen, ob der Fernseher ihn meldet, Einblendung zeigen. */
-    synchronized boolean tuneTo(Epg.Channel ch, String banner) {
+    synchronized boolean tuneTo(Epg.Channel ch, String banner, String reason) {
+        Epg.Channel from = Umschaltungen.channel(this, Epg.currentChannelId(this));
         Intent i = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(ch.id));
         String tvApp = Epg.tvPackage(this);
         if (tvApp != null) i.setPackage(tvApp);
@@ -252,6 +254,7 @@ public class ZapperService extends Service {
         Log.add(this, (ok ? "→ umgeschaltet auf " : "→ Umschalten auf ") + ch.number + " " + ch.name
                 + (ok ? "" : " nicht bestätigt (Fernseher meldet " + Epg.currentChannelId(this) + ")"));
         if (ok) Banner.show(this, banner, 6000);
+        Umschaltungen.add(this, reason, from, ch, banner, ok);
         return ok;
     }
 

@@ -43,6 +43,8 @@ final class Config {
     boolean avoidAds = true;
     /** Bei Werbung zuerst auf den besten bevorzugten Sender (★) ausweichen, erst dann auf werbefreie. */
     boolean dodgePreferred = false;
+    /** Debug: bei jeder Umschaltung Grund und Punkte einblenden. */
+    boolean showReason = false;
     String fritz = "fritz.box";
     /** Leer = automatisch erkennen. */
     String tvInput = "", tvApp = "";
@@ -107,6 +109,7 @@ final class Config {
         cfg.newChannels = o.optString("neue_sender", AUS);
         cfg.avoidAds = o.optBoolean("werbung_umgehen", true);
         cfg.dodgePreferred = o.optBoolean("ausweichen_bevorzugt", false);
+        cfg.showReason = o.optBoolean("umschaltgrund_einblenden", false);
         cfg.fritz = o.optString("fritzbox", "fritz.box");
         cfg.tvInput = o.optString("tv_eingang", "");
         cfg.tvApp = o.optString("tv_app", "");
@@ -143,6 +146,7 @@ final class Config {
         o.put("neue_sender", newChannels);
         o.put("werbung_umgehen", avoidAds);
         o.put("ausweichen_bevorzugt", dodgePreferred);
+        o.put("umschaltgrund_einblenden", showReason);
         o.put("fritzbox", fritz);
         o.put("tv_eingang", tvInput);
         o.put("tv_app", tvApp);

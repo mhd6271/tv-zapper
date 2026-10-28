@@ -264,6 +264,12 @@ def test_app_umschalt_text():
         "Werbung auf 75 Comedy Central HD, ausgewichen auf 141 N24 DOKU („Hip Hop“).")
     assert app_umschalt_text({"id": 2, "grund": "zurueck", "nr": 75, "sender": "Comedy Central HD"}) == (
         "Werbung vorbei, zurück auf 75 Comedy Central HD.")
+    assert app_umschalt_text({"id": 4, "grund": "werbung", "bevorzugt": True, "bestaetigt": False, "nr": 141,
+                              "sender": "N24 DOKU", "von": None}) == (
+        "Werbung auf dem Sender, ausgewichen auf den bevorzugten Sender 141 N24 DOKU. "
+        "Der Fernseher hat den Wechsel nicht bestätigt.")
+    assert app_umschalt_text({"id": 5, "grund": "zurueck_fehlalarm", "nr": 75, "sender": "Comedy Central HD"}) == (
+        "doch keine Werbung (Fehlalarm), zurück auf 75 Comedy Central HD.")
     assert app_umschalt_text({"id": 3, "grund": "interesse", "nr": 141, "sender": "N24 DOKU", "punkte": 3,
                               "kategorien": [{"name": "Doku", "punkte": 2}], "bevorzugt_bonus": 1}) == (
         "hat auf 141 N24 DOKU umgeschaltet. Grund: Doku: 2 Punkte; bevorzugter Sender: 1 Punkt extra. Zusammen 3 Punkte.")

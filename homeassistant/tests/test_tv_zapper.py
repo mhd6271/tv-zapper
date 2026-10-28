@@ -254,5 +254,8 @@ async def test_logbuch(hass: HomeAssistant):
     await hass.async_block_till_done()
     assert len(ereignisse) == 2 and ereignisse[1].data["wer"] == "TV-Zapper (TV-App)"
     assert ereignisse[1].data["text"] == "Werbung vorbei, zurück auf 75 Comedy Central HD."
+    st._app_umschaltungen_melden([{"id": 102, "grund": "von_aussen", "nr": 1, "sender": "Das Erste"}])
+    await hass.async_block_till_done()
+    assert len(ereignisse) == 2   # UMSCHALTEN von HA nicht doppelt
     st._app_umschaltungen_melden([])   # aeltere App ohne das Feld: nichts
     assert len(ereignisse) == 2

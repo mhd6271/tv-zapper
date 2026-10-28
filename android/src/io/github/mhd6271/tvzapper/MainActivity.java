@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats, apiInfo;
-    private Button adToggle, setupButton, startButton, prefToggle;
+    private Button adToggle, setupButton, startButton, prefToggle, reasonToggle;
     private TextView status, perms, log;
     private boolean showAllChannels;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -294,6 +294,16 @@ public class MainActivity extends Activity {
         apiInfo.setTypeface(android.graphics.Typeface.MONOSPACE);
         root.addView(apiInfo);
 
+        section("Fehlersuche");
+        root.addView(text("Zeigt bei jeder Umschaltung etwa 12 s lang, warum: Werbung umgangen, Zapper-Runde oder "
+                + "Rückkehr nach der Werbung, dazu die Punkte einzeln (Interessen, ★ bevorzugter Sender) mit Summe.", 14, false));
+        reasonToggle = button("", v -> {
+            cfg.showReason = !cfg.showReason;
+            reasonToggle.setText("Umschaltgrund einblenden: " + (cfg.showReason ? "an" : "aus"));
+            cfg.save(this);
+        });
+        reasonToggle.setText("Umschaltgrund einblenden: " + (cfg.showReason ? "an" : "aus"));
+        root.addView(reasonToggle);
         section("Protokoll");
         log = text("", 13, false);
         log.setTypeface(android.graphics.Typeface.MONOSPACE);

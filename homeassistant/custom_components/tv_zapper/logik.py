@@ -174,9 +174,14 @@ def app_umschalt_text(u) -> str:
     ziel, von = _sender(u), _sender(u["von"]) if u.get("von") else None
     grund = u.get("grund")
     if grund == "werbung":
-        text = f"Werbung auf {von or 'dem Sender'}, ausgewichen auf {ziel}"
+        text = (f"Werbung auf {von or 'dem Sender'}, ausgewichen auf "
+                + ("den bevorzugten Sender " if u.get("bevorzugt") else "") + ziel)
     elif grund == "zurueck":
         text = f"Werbung vorbei, zurück auf {ziel}"
+    elif grund == "zurueck_zeitgrenze":
+        text = f"Zeitgrenze fürs Ausweichen erreicht, zurück auf {ziel}"
+    elif grund == "zurueck_fehlalarm":
+        text = f"doch keine Werbung (Fehlalarm), zurück auf {ziel}"
     else:
         text = f"hat auf {ziel} umgeschaltet" + (f", vorher {von}" if von else "")
     g = [f"{k.get('name')}: {punkte_text(k.get('punkte') or 0)}" for k in u.get("kategorien") or []]
@@ -188,6 +193,8 @@ def app_umschalt_text(u) -> str:
         text += f". {u['text']}"
     if u.get("punkte") is not None:
         text += f". Zusammen {punkte_text(u['punkte'])}"
+    if u.get("bestaetigt") is False:
+        text += ". Der Fernseher hat den Wechsel nicht bestätigt"
     return text + "."
 
 

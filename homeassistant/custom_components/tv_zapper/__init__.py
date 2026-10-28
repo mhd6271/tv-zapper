@@ -187,7 +187,9 @@ class Steuerung:
         if self._app_letzte_id is None:
             self._app_letzte_id = max(ids)
             return
-        for u in sorted((u for u in liste if (u.get("id") or 0) > self._app_letzte_id), key=lambda u: u["id"]):
+        neue = (u for u in liste if (u.get("id") or 0) > self._app_letzte_id
+                and u.get("grund") != "von_aussen")   # von_aussen = UMSCHALTEN von HA, steht schon im Logbuch
+        for u in sorted(neue, key=lambda u: u["id"]):
             self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
                 "wer": "TV-Zapper (TV-App)", "nr": u.get("nr"), "sender": u.get("sender"), "sendung": u.get("sendung"),
                 "punkte": u.get("punkte"), "grund": u.get("grund"), "text": app_umschalt_text(u)})

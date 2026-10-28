@@ -109,7 +109,7 @@ final class WerbeWaechter implements Sensor.Frames {
             Log.add(c, "Werbepause auf " + home.name + " läuft schon " + (System.currentTimeMillis() - pauseSince) / 60_000
                     + " min – zurück (Zeitgrenze)");
             away = false;
-            if (svc.tuneTo(home, "Zurück zu " + home.name)) returnedAt = System.currentTimeMillis();
+            if (svc.tuneTo(home, "Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE)) returnedAt = System.currentTimeMillis();
             return;
         }
         if (pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
@@ -213,7 +213,7 @@ final class WerbeWaechter implements Sensor.Frames {
             seconds.clear();
             if (away) {
                 away = false;
-                if (svc.tuneTo(home, "Doch keine Werbung – zurück zu " + home.name)) returnedAt = now;
+                if (svc.tuneTo(home, "Doch keine Werbung – zurück zu " + home.name, Umschaltungen.ZURUECK_FEHLALARM)) returnedAt = now;
             }
         }
         if (secStart == 0) secStart = now;
@@ -322,7 +322,7 @@ final class WerbeWaechter implements Sensor.Frames {
             dump("vorbei_" + homeKey);
             if (away) {
                 away = false;
-                if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name)) {
+                if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name, Umschaltungen.ZURUECK)) {
                     awayChannel = -1;
                     returnedAt = System.currentTimeMillis();
                 }
@@ -383,7 +383,7 @@ final class WerbeWaechter implements Sensor.Frames {
             return;
         }
         Epg.Program p = Epg.current(c, best.id);
-        if (svc.tuneTo(best, "Werbung auf " + home.name + " – solange " + best.name + (p == null ? "" : ": " + p.title))) {
+        if (svc.tuneTo(best, "Werbung auf " + home.name + " – solange " + best.name + (p == null ? "" : ": " + p.title), Umschaltungen.WERBUNG)) {
             away = true;
             awayChannel = best.id;
         }

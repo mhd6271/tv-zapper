@@ -26,7 +26,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
     static final String ABFRAGEN = "io.github.mhd6271.tvzapper.ABFRAGEN";
     static final String UMSCHALTEN = "io.github.mhd6271.tvzapper.UMSCHALTEN";
     /** --es sender "ProSieben MAXX HD" [--el von <ms>] [--el bis <ms>] [--ez alt true] – siehe PauseStats.delete */
-    /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] */
+    /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] [--es umschaltgrund_einblenden true|false] */
     static final String EINSTELLEN = "io.github.mhd6271.tvzapper.EINSTELLEN";
     static final String PAUSEN_LOESCHEN = "io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN";
 
@@ -37,15 +37,19 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             if (UMSCHALTEN.equals(i.getAction())) umschalten(c, i, out);
             else if (EINSTELLEN.equals(i.getAction())) {
                 Config cfg = Config.load(c);
-                String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen");
-                if (ab == null && wu == null) throw new IllegalArgumentException("nichts zu setzen");
+                String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen"),
+                        ug = i.getStringExtra("umschaltgrund_einblenden");
+                if (ab == null && wu == null && ug == null) throw new IllegalArgumentException("nichts zu setzen");
                 if (ab != null) cfg.dodgePreferred = parseBool(ab);
                 if (wu != null) cfg.avoidAds = parseBool(wu);
+                if (ug != null) cfg.showReason = parseBool(ug);
                 cfg.save(c);
                 out.put("ok", true);
                 out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
                 out.put("werbung_umgehen", cfg.avoidAds);
-                Log.add(c, "Einstellung von außen: ausweichen_bevorzugt=" + cfg.dodgePreferred + ", werbung_umgehen=" + cfg.avoidAds);
+                out.put("umschaltgrund_einblenden", cfg.showReason);
+                Log.add(c, "Einstellung von außen: ausweichen_bevorzugt=" + cfg.dodgePreferred + ", werbung_umgehen=" + cfg.avoidAds
+                        + ", umschaltgrund_einblenden=" + cfg.showReason);
             } else if (PAUSEN_LOESCHEN.equals(i.getAction())) {
                 String ch = i.getStringExtra("sender");
                 if (ch == null) throw new IllegalArgumentException("sender fehlt");
@@ -77,6 +81,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("zapper_laeuft", ZapperService.endAt > System.currentTimeMillis());
         out.put("werbung_umgehen", cfg.avoidAds);
         out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
+        out.put("umschaltgrund_einblenden", cfg.showReason);
         WerbeWaechter w = ZapperService.waechter;
         out.put("werbe_sensor", w == null ? JSONObject.NULL : w.status());
         out.put("werbung", w == null || !w.knowsPause() ? JSONObject.NULL : w.isPause());
@@ -95,6 +100,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("jetzt", jetzt == null ? JSONObject.NULL : jetzt);
         if (all) out.put("liste", liste);
         if ("pausen".equals(was)) out.put("pausen", PauseStats.toJson(c));
+        out.put("umschaltungen", Umschaltungen.read(c));
     }
 
     private static JSONObject channelJson(Context c, Config cfg, Epg.Channel ch, String state) throws Exception {
@@ -132,6 +138,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             out.put("fehler", "Sender nicht gefunden: " + (nr != null ? nr : name));
             return;
         }
+        Epg.Channel from = Umschaltungen.channel(c, Epg.currentChannelId(c));
         Intent v = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(target.id));
         String pkg = Epg.tvPackage(c);
         if (pkg != null) v.setPackage(pkg);
@@ -145,6 +152,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         }
         String text = i.getStringExtra("text");
         if (ok && text != null && !text.trim().isEmpty()) Banner.show(c, text.trim(), 6000);
+        Umschaltungen.add(c, Umschaltungen.VON_AUSSEN, from, target, text == null || text.trim().isEmpty()
+                ? "Von außen umgeschaltet auf " + target.name : text.trim(), ok);
         Log.add(c, "Von außen umgeschaltet auf " + target.number + " " + target.name + (ok ? "" : " (nicht bestätigt)"));
         out.put("ok", ok);
         out.put("nr", target.number);
