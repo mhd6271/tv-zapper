@@ -5,6 +5,10 @@ Stand 28.10.2026, 17:58, nach der App selbst (ABFRAGEN `logos`, Fassung 0.4.6). 
 **Zahlen:** 377 Sender am Fernseher, 36 eingeschaltet. Davon beobachtet der Werbe-Sensor **29**,
 **7** haben ein Logo, **22** sind offen.
 
+**Zählweise:** Die Tabelle zählt Sender, die App zählt Logos. RTL HD und RTL UHD teilen sich ein Logo, ebenso NITRO HD
+und RTLNITRO. Aus 29 Sendern werden so 27 Logos. Bis 18:50 zählte die App je Sender, RTL also doppelt. Ab der
+berichtigten Fassung 0.4.7 meldet sie „x von 27“.
+
 **Wichtig:** Bis 0.4.5 hat die App ein frisch gelerntes Logo nicht gespeichert (das letzte Lernbild sprang am Speichern vorbei).
 Nach jedem Neustart der App war es wieder weg; erhalten blieben nur mitgelieferte Logos und gelernte Varianten.
 SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und müssen neu gelernt werden. Seit 0.4.6 behoben.
@@ -26,7 +30,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 27 | SPORT 1 HD | gelernt | Lauf 28.10. 18:34 nach 6 min |
 | [x] | 28 | VOX HD | gelernt | Lauf 28.10. 18:41 nach 6 min |
 | [x] | 81 | Deluxe Music HD | gelernt | Lauf 28.10. 18:47 nach 6 min |
-| [ ] | 86 | DMAX HD | offen | |
+| [x] | 86 | DMAX HD | gelernt | Lauf 28.10. 18:53 nach 6 min |
 | [ ] | 88 | DOKUSAT | offen | |
 | [ ] | 95 | EURONEWS GERMAN SD | offen | |
 | [ ] | 97 | Eurosport 1 HD | offen | |
