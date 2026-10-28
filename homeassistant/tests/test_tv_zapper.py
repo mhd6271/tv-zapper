@@ -3,6 +3,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import custom_components.tv_zapper.tv  # noqa: F401  (fuer patch)
+from custom_components.tv_zapper import tv
+from homeassistant.util import dt as dt_util
+import datetime
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -62,6 +65,7 @@ async def test_alles(hass: HomeAssistant):
     assert entry.options["interessen"][1] == {"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}
     assert entry.options["mac"] == "AA:BB:CC:DD:EE:FF"
     assert entry.options["takt_s"] == 15   # Standard, wenn das Feld nicht ausgefuellt wird
+    assert entry.options["speicher_min"] == 5
     assert hass.states.get("number.tv_zapper_verweilzeit").state == "3"
 
     # Zahl aendern
@@ -130,10 +134,26 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
     assert hass.states.get("sensor.tv_zapper_lauft_jetzt").state == "Fernseher aus"
 
     # Abfragetakt: Standard 15 s, nach Aendern der Option sofort neu geplant
-    assert st._takt_s == 15 and st._takt is not None
-    hass.config_entries.async_update_entry(entry, options={**entry.options, "takt_s": 30})
+    assert st._takte["jetzt"][0] == 15 and st._takte["speicher"][0] == 300
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "takt_s": 30, "speicher_min": 0})
     await hass.async_block_till_done()
-    assert st._takt_s == 30
+    assert st._takte["jetzt"][0] == 30 and "speicher" not in st._takte   # 0 = aus
+
+    # Arbeitsspeicher
+    sp = tv.speicher_lesen(SPEICHER_AUSGABE)
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.speicher", AsyncMock(return_value=sp)):
+        await st.speicher_lesen()
+    assert hass.states.get("sensor.tv_zapper_arbeitsspeicher_verfugbar").state == "840"
+    assert hass.states.get("sensor.tv_zapper_speicher_tv_app").state == "37"
+    b = hass.states.get("sensor.tv_zapper_tv_app_vom_system_beendet")
+    erwartet = datetime.datetime(2026, 10, 28, 5, 24, 44, tzinfo=dt_util.get_default_time_zone())
+    assert datetime.datetime.fromisoformat(b.state) == erwartet and b.attributes["wichtigkeit"] == 125
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock(side_effect=OSError("aus"))), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
+        await st.speicher_lesen()
+    assert hass.states.get("sensor.tv_zapper_arbeitsspeicher_verfugbar").state == "unknown"
 
 
 async def test_adresse_aendern(hass: HomeAssistant):
@@ -176,3 +196,23 @@ async def test_ausweichen_bevorzugt(hass: HomeAssistant):
         assert es.call_args.args == ("ausweichen_bevorzugt", True) and hass.states.get(sw).state == "on"
         await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
         assert hass.states.get(sw).state == "off"
+
+
+# Ausgabe von tv.SPEICHER_BEFEHL am TCL (28.10.2026 06:15)
+SPEICHER_AUSGABE = """MemTotal:        2451272 kB
+MemAvailable:     860320 kB
+SwapTotal:        917500 kB
+SwapFree:         386284 kB
+@@
+           TOTAL PSS:    38258            TOTAL RSS:   107644       TOTAL SWAP PSS:     6456
+@@
+          timestamp=2026-10-28 06:04:32.889 pid=30978 realUid=10139 packageUid=10139 definingUid=10139 user=0
+          process=io.github.mhd6271.tvzapper reason=3 (LOW_MEMORY) subreason=0 (UNKNOWN) status=0
+          importance=400 pss=13MB rss=65MB description=null state=empty trace=null
+          timestamp=2026-10-28 05:36:11.250 pid=29353 realUid=10139 packageUid=10139 definingUid=10139 user=0
+          process=io.github.mhd6271.tvzapper reason=3 (LOW_MEMORY) subreason=0 (UNKNOWN) status=0
+          importance=400 pss=12MB rss=59MB description=null state=empty trace=null
+          timestamp=2026-10-28 05:24:44.789 pid=19806 realUid=10139 packageUid=10139 definingUid=10139 user=0
+          process=io.github.mhd6271.tvzapper reason=3 (LOW_MEMORY) subreason=0 (UNKNOWN) status=0
+          importance=125 pss=38MB rss=92MB description=null state=empty trace=null
+"""

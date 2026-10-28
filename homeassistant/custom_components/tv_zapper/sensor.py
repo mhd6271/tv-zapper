@@ -1,13 +1,20 @@
-"""Sensor "Aktueller Treffer": was nach dem letzten Durchgang laeuft, mit Punkten und Kategorien."""
+"""Sensoren: "Aktueller Treffer" (letzter Durchgang), "Laeuft jetzt" (TV-Protokoll) und der Arbeitsspeicher
+von Fernseher und TV-App (Diagnose)."""
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity
+import datetime
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.const import EntityCategory, UnitOfInformation
+from homeassistant.util import dt as dt_util
 
 from .entity import ZapperEntity
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([TrefferSensor(entry.runtime_data), JetztSensor(entry.runtime_data)])
+    st = entry.runtime_data
+    async_add_entities([TrefferSensor(st), JetztSensor(st), SpeicherFreiSensor(st), AppSpeicherSensor(st),
+                        AppBeendetSensor(st)])
 
 
 def _kurz(x):
@@ -82,4 +89,77 @@ class JetztSensor(ZapperEntity, SensorEntity):
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "werbung": j.get("werbung"),
             "zapper_der_tv_app": j.get("zapper_app"), "werbung_umgehen": j.get("werbung_umgehen"),
             "ausweichen_bevorzugt": j.get("ausweichen_bevorzugt"), "vorn": j.get("vorn"), "quelle": j.get("quelle"),
+        }
+
+
+class _SpeicherSensor(ZapperEntity, SensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def _sp(self) -> dict:
+        return self.st.speicher or {}
+
+
+class SpeicherFreiSensor(_SpeicherSensor):
+    """Verfuegbarer Arbeitsspeicher des Fernsehers (MemAvailable). Faellt er stark, beendet Android Apps."""
+    _attr_device_class = SensorDeviceClass.DATA_SIZE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfInformation.MEGABYTES
+
+    def __init__(self, st):
+        super().__init__(st, "speicher_frei", "Arbeitsspeicher verfügbar", "mdi:memory")
+
+    @property
+    def native_value(self):
+        return self._sp.get("verfuegbar_mb")
+
+    @property
+    def extra_state_attributes(self):
+        return {k: self._sp.get(k) for k in ("gesamt_mb", "swap_gesamt_mb", "swap_belegt_mb")}
+
+
+class AppSpeicherSensor(_SpeicherSensor):
+    """Speicher der TV-App (PSS). Waechst er ueber Tage, deutet das auf ein Leck."""
+    _attr_device_class = SensorDeviceClass.DATA_SIZE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfInformation.MEGABYTES
+
+    def __init__(self, st):
+        super().__init__(st, "speicher_app", "Speicher TV-App", "mdi:application-cog")
+
+    @property
+    def native_value(self):
+        return self._sp.get("app_mb")   # None (unbekannt), wenn die TV-App gerade nicht laeuft
+
+
+def _ortszeit(text: str | None) -> datetime.datetime | None:
+    """`2026-10-28 05:24:44.789` (Ortszeit des Fernsehers) -> datetime mit der Zeitzone von HA."""
+    if not text:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(text).replace(tzinfo=dt_util.get_default_time_zone())
+    except ValueError:
+        return None
+
+
+class AppBeendetSensor(_SpeicherSensor):
+    """Wann Android die TV-App zuletzt wegen Speichermangel beendet hat, waehrend sie etwas tat (Zapper,
+    Werbe-Sensor). Das Ende eines nur zwischengespeicherten Prozesses zaehlt nicht."""
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, st):
+        super().__init__(st, "app_beendet", "TV-App vom System beendet", "mdi:skull-crossbones-outline")
+
+    @property
+    def native_value(self):
+        return _ortszeit((self._sp.get("app_beendet") or {}).get("zeit"))
+
+    @property
+    def extra_state_attributes(self):
+        e = self._sp.get("app_beendet") or {}
+        z = self._sp.get("app_beendet_irgendwie") or {}
+        return {
+            "speicher_mb_beim_beenden": e.get("speicher_mb"), "wichtigkeit": e.get("wichtigkeit"),
+            "zuletzt_beendet": z.get("zeit"), "zuletzt_grund": z.get("grund"),
+            "wegen_speicher_beendet_anzahl": self._sp.get("app_beendet_speicher_anzahl"),
         }

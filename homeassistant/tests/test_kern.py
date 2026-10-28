@@ -162,6 +162,18 @@ async def test_wecken():
         pass
 
 
+def test_speicher_lesen():
+    from tests.test_tv_zapper import SPEICHER_AUSGABE
+    sp = tv.speicher_lesen(SPEICHER_AUSGABE)
+    assert (sp["gesamt_mb"], sp["verfuegbar_mb"], sp["swap_belegt_mb"], sp["app_mb"]) == (2394, 840, 519, 37)
+    # Zaehlt nur ein Ende, waehrend die App etwas tat (Wichtigkeit 125), nicht das eines zwischengespeicherten Prozesses
+    assert sp["app_beendet"]["zeit"] == "2026-10-28 05:24:44.789" and sp["app_beendet"]["speicher_mb"] == 38
+    assert sp["app_beendet_irgendwie"]["zeit"] == "2026-10-28 06:04:32.889" and sp["app_beendet_speicher_anzahl"] == 3
+    # TV-App laeuft nicht, keine Eintraege
+    leer = tv.speicher_lesen("MemTotal:  1024 kB\n@@\n@@\n")
+    assert leer["app_mb"] is None and leer["app_beendet"] is None and leer["verfuegbar_mb"] is None
+
+
 async def test_fernsehbild_holen():
     for vorn, gestartet in ((tv.TV_APP, False), (tv.GUIDE_APP, False),
                             ("com.google.android.apps.tv.launcherx/.home.HomeActivity", True), ("", True)):

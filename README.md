@@ -123,6 +123,7 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
 | TV-Protokoll | regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
 | Abfragetakt | wie oft das TV-Protokoll nachfragt, 5–600 Sekunden; Standard 15 |
+| Speicher-Takt | alle wie viele Minuten der Arbeitsspeicher von Fernseher und TV-App gelesen wird, 0 = aus; Standard 5 |
 | MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 Mehr muss man nicht kennen: Alles oben steht in HA (Einrichten, „Konfigurieren“, „Neu konfigurieren“), nichts in
@@ -146,6 +147,15 @@ HA bewertet mit seinen eigenen Interessen.
   umgeht nur die App, HA nicht). Der Verlauf des Sensors in HA (Verlauf, Logbuch) zeigt, was wann lief. Sender und Sendung kennt HA nur
   über die TV-App; ohne sie zeigt der Sensor bloß „Fernsehbild“ bzw. die App im Vordergrund. Liest nicht, solange
   ein Durchgang den Fernseher bedient.
+- **Arbeitsspeicher** (Diagnose, im Speicher-Takt, Standard alle 5 min; Verlauf und Statistik in HA zeigen den Trend):
+  - `sensor.tv_zapper_arbeitsspeicher_verfugbar` – verfügbarer Arbeitsspeicher des Fernsehers in MB (`MemAvailable`);
+    Attribute Gesamt, Swap gesamt und belegt. Der TCL hat 2,4 GB und ist oft knapp: Android beendet dann Apps.
+  - `sensor.tv_zapper_speicher_tv_app` – Speicher der TV-App in MB (PSS); unbekannt, wenn sie nicht läuft.
+    Wächst er über Tage stetig, deutet das auf ein Leck.
+  - `sensor.tv_zapper_tv_app_vom_system_beendet` – wann Android die TV-App zuletzt **wegen Speichermangel** beendet hat,
+    während sie etwas tat (Wichtigkeit bis 200: Zapper oder Werbe-Sensor liefen); Attribute Speicher beim Beenden,
+    das zuletzt überhaupt gemeldete Ende mit Grund und die Zahl der Speicher-Beendigungen in Androids Liste
+    (`dumpsys activity exit-info`, reicht nur einige Einträge zurück).
 - `number.tv_zapper_laufzeit`, `number.tv_zapper_verweilzeit` – lassen sich auch im Dashboard oder per
   Automation ändern und wirken sofort, auch auf einen laufenden Zapper.
 - `switch.tv_zapper_bei_werbung_zuerst_bevorzugte_sender` – setzt die Einstellung `ausweichen_bevorzugt` der

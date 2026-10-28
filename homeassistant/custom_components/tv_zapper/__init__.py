@@ -16,7 +16,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
-    CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_TAKT, CONF_VERWEILEN,
+    CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_SPEICHER_TAKT, CONF_TAKT, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .tv import Fernseher, lade_signer
@@ -32,6 +32,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZapperEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_optionen_geaendert))
     entry.runtime_data.takt_starten()
     entry.async_on_unload(entry.runtime_data.takt_stoppen)
+    if entry.runtime_data.opt(CONF_SPEICHER_TAKT):   # gleich einmal, nicht erst nach dem ersten Takt
+        entry.async_create_background_task(hass, entry.runtime_data.speicher_lesen(), "tv_zapper_speicher_start")
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -67,11 +69,11 @@ class Steuerung:
         self.ende = None                          # datetime, nur zur Anzeige
         self.letztes: dict | None = None          # Ergebnis des letzten Durchgangs
         self.jetzt: dict | None = None            # was gerade laeuft (Sensor "Laeuft jetzt")
+        self.speicher: dict | None = None         # Arbeitsspeicher von Fernseher und TV-App
         self.beschaeftigt = False
         self._lock = asyncio.Lock()
         self._zuhoerer: list[Callable[[], None]] = []
-        self._takt: Callable[[], None] | None = None
-        self._takt_s: int | None = None
+        self._takte: dict[str, tuple[int, Callable[[], None]]] = {}   # name -> (Sekunden, Abmelden)
 
     # --- Optionen und Benachrichtigung ----------------------------------------------------
     def opt(self, name):
@@ -96,20 +98,27 @@ class Steuerung:
 
     @callback
     def takt_starten(self):
-        """Nachfrage "Was laeuft?" im eingestellten Takt (neu nur, wenn sich der Takt geaendert hat)."""
-        takt = int(self.opt(CONF_TAKT))
-        if takt == self._takt_s:
+        """Nachfragen "Was laeuft?" und "Wie viel Speicher?" im eingestellten Takt (neu nur bei geaendertem Takt)."""
+        self._takt_setzen("jetzt", int(self.opt(CONF_TAKT)), self.jetzt_lesen)
+        self._takt_setzen("speicher", int(self.opt(CONF_SPEICHER_TAKT)) * 60, self.speicher_lesen)
+
+    @callback
+    def _takt_setzen(self, name, sekunden, fn):
+        alt = self._takte.get(name)
+        if alt and alt[0] == sekunden:
             return
-        self.takt_stoppen()
-        self._takt_s = takt
-        self._takt = async_track_time_interval(
-            self.hass, self.jetzt_lesen, datetime.timedelta(seconds=takt), name="tv_zapper_jetzt")
+        if alt:
+            alt[1]()
+            del self._takte[name]
+        if sekunden > 0:
+            self._takte[name] = (sekunden, async_track_time_interval(
+                self.hass, fn, datetime.timedelta(seconds=sekunden), name=f"tv_zapper_{name}"))
 
     @callback
     def takt_stoppen(self):
-        if self._takt:
-            self._takt()
-        self._takt, self._takt_s = None, None
+        for _, abmelden in self._takte.values():
+            abmelden()
+        self._takte = {}
 
     @property
     def laeuft(self) -> bool:
@@ -160,6 +169,22 @@ class Steuerung:
             except Exception as e:  # noqa: BLE001 - aus oder nicht erreichbar
                 _LOGGER.debug("Fernseher nicht erreichbar: %s", e)
                 self.jetzt = {"aus": True}
+                await self.tv.trennen()
+            if not self.laeuft:
+                await self.tv.trennen()
+        self.benachrichtigen()
+
+    async def speicher_lesen(self, _now=None):
+        """Im Speicher-Takt: Arbeitsspeicher des Fernsehers und der TV-App (zum Beobachten von Engpaessen)."""
+        if self._lock.locked():
+            return
+        async with self._lock:
+            try:
+                await self.tv.verbinden(timeout=5)
+                self.speicher = await self.tv.speicher()
+            except Exception as e:  # noqa: BLE001 - aus oder nicht erreichbar
+                _LOGGER.debug("Speicher nicht lesbar: %s", e)
+                self.speicher = None
                 await self.tv.trennen()
             if not self.laeuft:
                 await self.tv.trennen()

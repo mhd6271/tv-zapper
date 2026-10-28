@@ -19,6 +19,7 @@ CONF_EINBLENDUNG = "einblendung"
 CONF_MAC = "mac"
 CONF_PROTOKOLL = "protokoll"
 CONF_TAKT = "takt_s"
+CONF_SPEICHER_TAKT = "speicher_min"
 
 # Grundeinstellung = Kopie von interessen.json im Repo (beim Aendern dort neu kopieren, ein Test prueft das)
 _VORLAGE = json.loads((pathlib.Path(__file__).parent / "vorlage.json").read_text(encoding="utf-8"))
@@ -40,4 +41,5 @@ STANDARD_OPTIONEN = {
     CONF_MAC: "",
     CONF_PROTOKOLL: True,
     CONF_TAKT: 15,   # Sekunden zwischen zwei Nachfragen "Was laeuft?"
+    CONF_SPEICHER_TAKT: 5,   # Minuten zwischen zwei Blicken auf den Arbeitsspeicher, 0 = aus
 }

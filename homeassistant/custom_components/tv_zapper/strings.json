@@ -44,6 +44,7 @@
           "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)",
           "protokoll": "TV-Protokoll: regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“, auch ohne Zapper)",
           "takt_s": "Abfragetakt des TV-Protokolls in Sekunden (wie oft „Läuft jetzt“ nachfragt)",
+          "speicher_min": "Arbeitsspeicher von Fernseher und TV-App alle … Minuten lesen (0 = aus)",
           "mac": "MAC-Adresse des Fernsehers für Wake-on-LAN (leer = nicht wecken, z. B. aa:bb:cc:dd:ee:ff)"
         }
       }

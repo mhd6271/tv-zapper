@@ -31,6 +31,38 @@ ABFRAGEN_ACTION = "io.github.mhd6271.tvzapper.ABFRAGEN"
 UMSCHALTEN_ACTION = "io.github.mhd6271.tvzapper.UMSCHALTEN"
 EINSTELLEN_ACTION = "io.github.mhd6271.tvzapper.EINSTELLEN"
 ABFRAGE_EMPFAENGER = "io.github.mhd6271.tvzapper/.AbfrageEmpfaenger"
+APP_PAKET = "io.github.mhd6271.tvzapper"
+# Wichtigkeit eines Prozesses bei Android: bis 200 laeuft etwas Sichtbares oder ein Vordergrunddienst (der Zapper
+# der TV-App), 300 ein Dienst, ab 400 nur noch ein zwischengespeicherter Prozess - dessen Ende ist harmlos.
+WICHTIG_BIS = 200
+
+
+def speicher_lesen(ausgabe: str) -> dict:
+    """Ausgabe von SPEICHER_BEFEHL -> Arbeitsspeicher des Fernsehers, Speicher der TV-App und wann Android
+    die TV-App beendet hat (alles in MB; Zeiten in Ortszeit des Fernsehers, ohne Zeitzone)."""
+    teile = (ausgabe.split("@@") + ["", ""])[:3]
+    kb = {k: int(v) for k, v in re.findall(r"^(\w+):\s+(\d+) kB", teile[0], re.M)}
+    mb = lambda k: round(kb[k] / 1024) if k in kb else None  # noqa: E731
+    pss = re.search(r"TOTAL PSS:\s+(\d+)", teile[1])
+    enden = [{"zeit": z, "grund": g, "wichtigkeit": int(w), "speicher_mb": int(p)}
+             for z, g, w, p in re.findall(
+                 r"timestamp=(\S+ \S+) .*?reason=\d+ \((\w+)\).*?importance=(\d+) pss=([\d]+)", teile[2], re.S)]
+    knapp = [e for e in enden if e["grund"] == "LOW_MEMORY"]
+    return {
+        "gesamt_mb": mb("MemTotal"), "verfuegbar_mb": mb("MemAvailable"),
+        "swap_gesamt_mb": mb("SwapTotal"),
+        "swap_belegt_mb": mb("SwapTotal") - mb("SwapFree") if "SwapFree" in kb and "SwapTotal" in kb else None,
+        "app_mb": round(int(pss.group(1)) / 1024) if pss else None,
+        "app_beendet": next((e for e in knapp if e["wichtigkeit"] <= WICHTIG_BIS), None),
+        "app_beendet_irgendwie": enden[0] if enden else None,
+        "app_beendet_speicher_anzahl": len(knapp),
+    }
+
+
+SPEICHER_BEFEHL = (
+    'grep -E "^(MemTotal|MemAvailable|SwapTotal|SwapFree):" /proc/meminfo; echo @@; '
+    f'dumpsys meminfo -s {APP_PAKET} | grep "TOTAL PSS"; echo @@; '
+    f'dumpsys activity exit-info {APP_PAKET} | grep -E "timestamp=|reason=|importance="')
 
 
 def broadcast_daten(ausgabe: str) -> dict | None:
@@ -149,6 +181,9 @@ class Fernseher:
         if weg != "wach":
             await asyncio.sleep(8)   # Fernsehbild und Tuner brauchen nach dem Aufwachen ein paar Sekunden
         return weg
+
+    async def speicher(self) -> dict:
+        return speicher_lesen(await self.sh(SPEICHER_BEFEHL))
 
     async def fernsehbild_holen(self) -> bool:
         """Beim Einschalten des Zappers: ist eine andere App vorn (Startbildschirm, Netflix ...), das Fernsehbild
