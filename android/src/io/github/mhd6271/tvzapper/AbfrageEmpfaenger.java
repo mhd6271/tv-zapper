@@ -29,12 +29,22 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
     /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] [--es umschaltgrund_einblenden true|false] */
     static final String EINSTELLEN = "io.github.mhd6271.tvzapper.EINSTELLEN";
     static final String PAUSEN_LOESCHEN = "io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN";
+    /** [--ez nur_lesen true] – Zapper-Dienst starten wie mit „Start“ in der App, z. B. nach einem Update */
+    static final String STARTEN = "io.github.mhd6271.tvzapper.STARTEN";
 
     @Override
     public void onReceive(Context c, Intent i) {
         JSONObject out = new JSONObject();
         try {
             if (UMSCHALTEN.equals(i.getAction())) umschalten(c, i, out);
+            else if (STARTEN.equals(i.getAction())) {
+                boolean ro = i.getBooleanExtra("nur_lesen", false);
+                c.startForegroundService(new Intent(c, ZapperService.class).setAction(ZapperService.ACTION_START)
+                        .putExtra(ZapperService.EXTRA_READ_ONLY, ro));
+                Log.add(c, "Zapper von außen gestartet" + (ro ? " (nur lesen)" : ""));
+                out.put("ok", true);
+                out.put("nur_lesen", ro);
+            }
             else if (EINSTELLEN.equals(i.getAction())) {
                 Config cfg = Config.load(c);
                 String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen"),

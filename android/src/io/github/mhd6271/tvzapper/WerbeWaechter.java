@@ -209,6 +209,7 @@ final class WerbeWaechter implements Sensor.Frames {
         gotFrame = false;
         Log.add(c, "Werbe-Sensor beobachtet " + home.name + " (FRITZ!Box: " + fritz.fritzName(home.name) + ")"
                 + (logo.ready() ? "" : " – Logo wird gelernt, etwa 5 min"));
+        if (!logo.ready()) Banner.show(c, "Logo von " + home.name + " wird gelernt, etwa 5 min" + countText(), 8000);
         sensor = new Sensor(url, this);
         sensor.start();
     }
@@ -233,10 +234,17 @@ final class WerbeWaechter implements Sensor.Frames {
         framesSinceReport++;
         boolean wasReady = logo.ready();
         float v = logo.feed(top, bottom, w);
+        // Das letzte Lernbild liefert noch -1 – deshalb hier speichern, nicht erst beim naechsten Bild
+        if (!wasReady && logo.ready()) {
+            logo.save(c, homeKey);
+            Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
+            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv" + countText(), 8000);
+        }
         if (v < 0) {
             if (logo.failedRounds > failedShown) {
                 failedShown = logo.failedRounds;
                 Log.add(c, "Logo von " + home.name + ": kein eindeutiges Logo gefunden – lerne noch einmal");
+                Banner.show(c, "Logo von " + home.name + ": noch nicht eindeutig – lerne noch einmal", 6000);
             }
             int pct = logo.learnPercent() / 25 * 25;
             if (pct != learnShown) {
@@ -244,11 +252,6 @@ final class WerbeWaechter implements Sensor.Frames {
                 if (pct > 0) Log.add(c, "Logo von " + home.name + ": " + pct + " % gelernt");
             }
             return;
-        }
-        if (!wasReady) {
-            logo.save(c, homeKey);
-            Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
-            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv" + countText(), 8000);
         }
         long now = System.currentTimeMillis();
         // Waehrend "Werbung" nach einer neuen Logo-Variante suchen (ab 20 s, dann ~2 min Bilder sammeln)
