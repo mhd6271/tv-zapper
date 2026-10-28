@@ -36,7 +36,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 97 | Eurosport 1 HD | gelernt | Lauf 28.10. 19:13 nach 6 min |
 | [x] | 111 | HGTV | gelernt | Lauf 28.10. 19:30 nach 17 min |
 | [x] | 139 | MTV HD | gelernt | Lauf 28.10. 19:43 nach 12 min |
-| [ ] | 141 | N24 DOKU ★ | offen | |
+| [x] | 141 | N24 DOKU ★ | gelernt | Lauf 28.10. 19:55 nach 11 min |
 | [ ] | 155 | NITRO HD | offen | |
 | [ ] | 157 | ntv HD | offen | |
 | [ ] | 183 | RTL UHD | offen | |
