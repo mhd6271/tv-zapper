@@ -18,6 +18,7 @@ CONF_SENDER_BEVORZUGT = "sender_bevorzugt"
 CONF_EINBLENDUNG = "einblendung"
 CONF_MAC = "mac"
 CONF_PROTOKOLL = "protokoll"
+CONF_TAKT = "takt_s"
 
 # Grundeinstellung = Kopie von interessen.json im Repo (beim Aendern dort neu kopieren, ein Test prueft das)
 _VORLAGE = json.loads((pathlib.Path(__file__).parent / "vorlage.json").read_text(encoding="utf-8"))
@@ -38,4 +39,5 @@ STANDARD_OPTIONEN = {
     CONF_EINBLENDUNG: True,
     CONF_MAC: "",
     CONF_PROTOKOLL: True,
+    CONF_TAKT: 15,   # Sekunden zwischen zwei Nachfragen "Was laeuft?"
 }

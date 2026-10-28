@@ -61,6 +61,7 @@ async def test_alles(hass: HomeAssistant):
     await hass.async_block_till_done()
     assert entry.options["interessen"][1] == {"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}
     assert entry.options["mac"] == "AA:BB:CC:DD:EE:FF"
+    assert entry.options["takt_s"] == 15   # Standard, wenn das Feld nicht ausgefuellt wird
     assert hass.states.get("number.tv_zapper_verweilzeit").state == "3"
 
     # Zahl aendern
@@ -125,6 +126,12 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
         await st.jetzt_lesen()
     assert hass.states.get("sensor.tv_zapper_lauft_jetzt").state == "Fernseher aus"
+
+    # Abfragetakt: Standard 15 s, nach Aendern der Option sofort neu geplant
+    assert st._takt_s == 15 and st._takt is not None
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "takt_s": 30})
+    await hass.async_block_till_done()
+    assert st._takt_s == 30
 
 
 async def test_adresse_aendern(hass: HomeAssistant):

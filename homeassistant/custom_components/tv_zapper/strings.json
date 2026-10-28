@@ -42,7 +42,8 @@
           "sender_nie": "Sender nie nehmen (Sendernamen wie in der Programmzeitschrift, mit Komma getrennt)",
           "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)",
           "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)",
-          "protokoll": "TV-Protokoll: jede Minute nachsehen, was läuft (Sensor „Läuft jetzt“, auch ohne Zapper)",
+          "protokoll": "TV-Protokoll: regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“, auch ohne Zapper)",
+          "takt_s": "Abfragetakt des TV-Protokolls in Sekunden (wie oft „Läuft jetzt“ nachfragt)",
           "mac": "MAC-Adresse des Fernsehers für Wake-on-LAN (leer = nicht wecken, z. B. aa:bb:cc:dd:ee:ff)"
         }
       }

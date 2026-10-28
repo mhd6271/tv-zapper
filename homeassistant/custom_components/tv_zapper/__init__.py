@@ -16,13 +16,12 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_AUS, CONF_FAVORIT, CONF_INTERESSEN, CONF_LAUFZEIT, CONF_NUR_LESEN, CONF_SENDER_BEVORZUGT,
-    CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_VERWEILEN,
+    CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_TAKT, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
 from .tv import Fernseher, lade_signer
 
 _LOGGER = logging.getLogger(__name__)
-JETZT_TAKT_S = 60
 
 type ZapperEntry = ConfigEntry[Steuerung]
 
@@ -31,8 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ZapperEntry) -> bool:
     signer = await hass.async_add_executor_job(lade_signer, hass.config.path(SCHLUESSEL_DATEI))
     entry.runtime_data = Steuerung(hass, entry, signer)
     entry.async_on_unload(entry.add_update_listener(_optionen_geaendert))
-    entry.async_on_unload(async_track_time_interval(
-        hass, entry.runtime_data.jetzt_lesen, datetime.timedelta(seconds=JETZT_TAKT_S), name="tv_zapper_jetzt"))
+    entry.runtime_data.takt_starten()
+    entry.async_on_unload(entry.runtime_data.takt_stoppen)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -46,6 +45,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ZapperEntry) -> bool:
 async def _optionen_geaendert(hass: HomeAssistant, entry: ZapperEntry) -> None:
     # Kein Neuladen: ein laufender Zapper soll weiterlaufen und liest die Optionen je Durchgang neu.
     entry.runtime_data.tv.fav_tab = entry.runtime_data.opt(CONF_FAVORIT)
+    entry.runtime_data.takt_starten()
     entry.runtime_data.benachrichtigen()
 
 
@@ -70,6 +70,8 @@ class Steuerung:
         self.beschaeftigt = False
         self._lock = asyncio.Lock()
         self._zuhoerer: list[Callable[[], None]] = []
+        self._takt: Callable[[], None] | None = None
+        self._takt_s: int | None = None
 
     # --- Optionen und Benachrichtigung ----------------------------------------------------
     def opt(self, name):
@@ -91,6 +93,23 @@ class Steuerung:
     def benachrichtigen(self):
         for fn in list(self._zuhoerer):
             fn()
+
+    @callback
+    def takt_starten(self):
+        """Nachfrage "Was laeuft?" im eingestellten Takt (neu nur, wenn sich der Takt geaendert hat)."""
+        takt = int(self.opt(CONF_TAKT))
+        if takt == self._takt_s:
+            return
+        self.takt_stoppen()
+        self._takt_s = takt
+        self._takt = async_track_time_interval(
+            self.hass, self.jetzt_lesen, datetime.timedelta(seconds=takt), name="tv_zapper_jetzt")
+
+    @callback
+    def takt_stoppen(self):
+        if self._takt:
+            self._takt()
+        self._takt, self._takt_s = None, None
 
     @property
     def laeuft(self) -> bool:
@@ -131,7 +150,7 @@ class Steuerung:
                 await self.tv.trennen()
 
     async def jetzt_lesen(self, _now=None):
-        """Jede Minute: was laeuft gerade. Nur wenn kein Durchgang den Fernseher bedient (sonst beim naechsten Mal)."""
+        """Im Takt der Optionen (Standard 15 s): was laeuft gerade. Nur wenn kein Durchgang den Fernseher bedient (sonst beim naechsten Mal)."""
         if not self.opt(CONF_PROTOKOLL) or self._lock.locked():
             return
         async with self._lock:

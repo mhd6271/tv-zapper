@@ -121,7 +121,8 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Verweilzeit | Minuten zwischen zwei Prüfungen |
 | Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
 | Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
-| TV-Protokoll | jede Minute nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
+| TV-Protokoll | regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
+| Abfragetakt | wie oft das TV-Protokoll nachfragt, 5–600 Sekunden; Standard 15 |
 | MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 Mehr muss man nicht kennen: Alles oben steht in HA (Einrichten, „Konfigurieren“, „Neu konfigurieren“), nichts in
@@ -129,8 +130,8 @@ Dateien. Die TV-App braucht **keine eigene Adresse und keinen Port** – HA erre
 (`am broadcast`, ihre Empfänger nehmen nur Aufträge aus der adb-Shell an). ADB und die IP des Fernsehers sind also
 immer nötig, mit und ohne App. Den ADB-Schlüssel legt HA selbst an (`/config/.storage/tv_zapper_adbkey`).
 Fest im Code und nicht einstellbar: die TCL-Programme (`com.tcl.tv`), die Namen der App-Schnittstelle,
-Wake-on-LAN an Port 9 (Broadcast und direkt an den Fernseher), 90 Sekunden Warten nach dem Wecken, TV-Protokoll
-jede Minute. Was die TV-App selbst einstellt (ihre Interessen, Senderauswahl, Werbe-Sensor), stellt man in der App ein;
+Wake-on-LAN an Port 9 (Broadcast und direkt an den Fernseher), 90 Sekunden Warten nach dem Wecken.
+Was die TV-App selbst einstellt (ihre Interessen, Senderauswahl, Werbe-Sensor), stellt man in der App ein;
 HA bewertet mit seinen eigenen Interessen.
 
 **Entitäten** (Gerät „TV-Zapper“):
@@ -139,7 +140,7 @@ HA bewertet mit seinen eigenen Interessen.
   von selbst aus. Attribut `laeuft_bis`.
 - `sensor.tv_zapper_aktueller_treffer` – z. B. `23 ProSieben HD: …`; Attribute Sender, Nummer, Sendung, Punkte,
   Kategorien, Aktion (bleibt/umgeschaltet/uebersprungen/fehler), bester und weitere Treffer.
-- `sensor.tv_zapper_lauft_jetzt` – **TV-Protokoll**: jede Minute, was gerade läuft (`167 ProSieben MAXX HD: Futurama`),
+- `sensor.tv_zapper_lauft_jetzt` – **TV-Protokoll**: im Abfragetakt (Standard 15 s), was gerade läuft (`167 ProSieben MAXX HD: Futurama`),
   „Fernseher aus“ oder „Andere App: …“; Attribute Sendung, Folge, Beschreibung, Start, Ende, Punkte, Kategorien,
   Werbung, dazu die Einstellungen der TV-App `werbung_umgehen` und `ausweichen_bevorzugt` (nur Anzeige; Werbung
   umgeht nur die App, HA nicht). Der Verlauf des Sensors in HA (Verlauf, Logbuch) zeigt, was wann lief. Sender und Sendung kennt HA nur

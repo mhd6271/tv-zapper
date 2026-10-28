@@ -53,7 +53,7 @@ class TrefferSensor(ZapperEntity, SensorEntity):
 
 
 class JetztSensor(ZapperEntity, SensorEntity):
-    """Was gerade laeuft, jede Minute nachgefragt - auch ohne Zapper. Der Verlauf in HA ist das TV-Protokoll."""
+    """Was gerade laeuft, im Abfragetakt nachgefragt - auch ohne Zapper. Der Verlauf in HA ist das TV-Protokoll."""
 
     def __init__(self, st):
         super().__init__(st, "jetzt", "Läuft jetzt", "mdi:television-classic")
