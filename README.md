@@ -171,8 +171,10 @@ HA bewertet mit seinen eigenen Interessen.
 **Wecken:** Beim Einschalten des Zappers prüft die Integration zuerst den Fernseher. Antwortet ADB, aber das Bild
 ist aus (`mWakefulness` nicht `Awake`), drückt sie die Taste WAKEUP. Antwortet ADB nicht und ist unter „Konfigurieren“
 eine MAC-Adresse eingetragen, schickt sie Wake-on-LAN (Broadcast, Port 9) und wartet bis zu 90 Sekunden auf ADB.
-Am Fernseher muss dafür Wake-on-LAN eingeschaltet sein. Danach gilt wie sonst: Zeigt er nicht das Fernsehbild,
-wird nicht gezappt.
+Am Fernseher muss dafür Wake-on-LAN eingeschaltet sein. Ist danach eine andere App vorn (Startbildschirm, Netflix …),
+startet die Integration das Fernsehbild (`am start -n com.tcl.tv/com.tcl.player.TVActivity`) – wer den Zapper
+einschaltet, will fernsehen. Das passiert nur beim Einschalten: Wechselt man danach selbst in eine andere App, wird
+nicht gezappt, bis wieder das Fernsehbild vorn ist.
 
 Wie `zapper.py` lässt die Integration den Fernseher in Ruhe, wenn er gerade etwas anderes als das
 Fernsehprogramm zeigt. Nicht gleichzeitig mit `zapper.py` laufen lassen – beide drücken sonst Tasten

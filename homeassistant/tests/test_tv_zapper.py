@@ -74,7 +74,8 @@ async def test_alles(hass: HomeAssistant):
     with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", dg), \
          patch("custom_components.tv_zapper.tv.Fernseher.einblenden", eb), \
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
-         patch("custom_components.tv_zapper.tv.Fernseher.wecken", AsyncMock(return_value="wach")) as wk:
+         patch("custom_components.tv_zapper.tv.Fernseher.wecken", AsyncMock(return_value="wach")) as wk, \
+         patch("custom_components.tv_zapper.tv.Fernseher.fernsehbild_holen", AsyncMock(return_value=True)) as fh:
         await hass.services.async_call("button", "press", {"entity_id": "button.tv_zapper_jetzt_prufen_nur_lesen"}, blocking=True)
         assert dg.call_args.args[1] is True
         s = hass.states.get("sensor.tv_zapper_aktueller_treffer")
@@ -93,6 +94,7 @@ async def test_alles(hass: HomeAssistant):
         texte = [c.args[0] for c in eb.call_args_list]
         assert texte[0].startswith("TV-Zapper an – läuft bis ") and texte[-1] == "TV-Zapper aus", texte
         assert wk.call_count == 1   # nur beim Einschalten wecken, nicht je Durchgang
+        assert fh.call_count == 1   # Fernsehbild auch nur beim Einschalten holen
 
     # Fehler dreimal -> geht aus
     entry.runtime_data.entry.options  # noqa

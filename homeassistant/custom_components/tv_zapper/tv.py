@@ -150,6 +150,15 @@ class Fernseher:
             await asyncio.sleep(8)   # Fernsehbild und Tuner brauchen nach dem Aufwachen ein paar Sekunden
         return weg
 
+    async def fernsehbild_holen(self) -> bool:
+        """Beim Einschalten des Zappers: ist eine andere App vorn (Startbildschirm, Netflix ...), das Fernsehbild
+        starten. -> True, wenn es dafuer gestartet wurde. Waehrend der Zapper laeuft, wird das nicht gemacht."""
+        if await self.focus_app() in (TV_APP, GUIDE_APP):
+            return False
+        await self.sh(f"am start -n {TV_APP}")
+        await asyncio.sleep(5)   # Tuner und Senderliste brauchen nach dem Start ein paar Sekunden
+        return True
+
     # --- Bausteine wie in zapper.py -------------------------------------------------------
     async def key(self, *names):
         await self.sh("input keyevent " + " ".join(names))

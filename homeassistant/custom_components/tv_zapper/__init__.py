@@ -176,12 +176,14 @@ class Steuerung:
         await self.jetzt_lesen()
 
     async def wecken(self):
-        """Fernseher vor dem ersten Durchgang wecken (Wake-on-LAN nur mit MAC in den Optionen).
+        """Fernseher vor dem ersten Durchgang wecken (Wake-on-LAN nur mit MAC in den Optionen) und das
+        Fernsehbild holen, falls eine andere App vorn ist.
         Klappt es nicht, meldet der erste Durchgang den Fehler."""
         async with self._lock:
             try:
                 weg = await self.tv.wecken(self.opt(CONF_MAC))
-                _LOGGER.info("Fernseher vor dem Zappen: %s", weg)
+                bild = await self.tv.fernsehbild_holen()
+                _LOGGER.info("Fernseher vor dem Zappen: %s%s", weg, ", Fernsehbild gestartet" if bild else "")
             except Exception as e:  # noqa: BLE001
                 _LOGGER.warning("Fernseher nicht erreichbar: %s", e)
                 await self.tv.trennen()

@@ -162,6 +162,18 @@ async def test_wecken():
         pass
 
 
+async def test_fernsehbild_holen():
+    for vorn, gestartet in ((tv.TV_APP, False), (tv.GUIDE_APP, False),
+                            ("com.google.android.apps.tv.launcherx/.home.HomeActivity", True), ("", True)):
+        f = tv.Fernseher("x", 1, None)
+        f.focus_app, f.sh = AsyncMock(return_value=vorn), AsyncMock(return_value="")
+        with patch("asyncio.sleep", AsyncMock()):
+            assert await f.fernsehbild_holen() is gestartet
+        assert f.sh.call_count == gestartet
+        if gestartet:
+            assert f.sh.call_args.args[0] == f"am start -n {tv.TV_APP}"
+
+
 # Antwort der TV-App 0.3.0 (am TCL 27.10.2026, gekuerzt)
 APP_AUSGABE = '''Broadcasting: Intent { act=io.github.mhd6271.tvzapper.ABFRAGEN flg=0x400000 cmp=io.github.mhd6271.tvzapper/.AbfrageEmpfaenger (has extras) }
 Broadcast completed: result=0, data="{"zeit":"2026-10-27T19:29:59+01:00","bildschirm_an":true,"vorn":"com.tcl.tv","fernsehbild_vorn":true,"zapper_laeuft":false,"werbe_sensor":"","werbung":null,"jetzt":{"nr":"23","sender":"ProSieben HD","id":1074,"zustand":"an","sendung":"Galileo","folge":"","genre":"32","beschreibung":"Folge 8314. Magazin, D 2026.","start":"2026-10-27T19:05:00+01:00","ende":"2026-10-27T20:15:00+01:00","punkte":0,"treffer":[]},"liste":[{"nr":"23","sender":"ProSieben HD","id":1074,"zustand":"an","sendung":"Galileo","folge":"","genre":"32","beschreibung":"Folge 8314. Magazin, D 2026.","start":"","ende":"","punkte":0,"treffer":[]},{"nr":"167","sender":"ProSieben MAXX HD","id":1218,"zustand":"an","sendung":"Futurama","folge":"","genre":"83","beschreibung":"4 .Staffel, Folge 9. Zeichentrickserie, USA 2003.","start":"","ende":"","punkte":4,"treffer":["Erwachsenen-Cartoons"]}]}"
