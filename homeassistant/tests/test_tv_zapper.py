@@ -198,6 +198,35 @@ async def test_ausweichen_bevorzugt(hass: HomeAssistant):
         assert hass.states.get(sw).state == "off"
 
 
+
+async def test_grund_einblenden(hass: HomeAssistant):
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    sw = "switch.tv_zapper_umschaltgrund_einblenden"
+    assert hass.states.get(sw).state == "unavailable"
+    # Option "Einblendung" aus: der Grund erscheint trotzdem, wenn die App-Einstellung an ist
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "einblendung": False})
+    st.jetzt = {"quelle": "app", "fernsehbild_vorn": True, "jetzt": None, "grund_einblenden": True}
+    st.benachrichtigen()
+    assert hass.states.get(sw).state == "on"
+    neu = {"nr": 141, "sender": "N24 DOKU", "sendung": "Doku über Rap", "punkte": 7, "treffer": ["Hip-Hop/Rap"],
+           "genre": "", "info": ""}
+    erg = {**ERGEBNIS, "aktion": "umgeschaltet", "neu": neu}
+    eb = AsyncMock(return_value="app")
+    with patch("custom_components.tv_zapper.tv.Fernseher.durchgang", AsyncMock(side_effect=[erg, erg])), \
+         patch("custom_components.tv_zapper.tv.Fernseher.einblenden", eb), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.wecken", AsyncMock(return_value="wach")), \
+         patch("custom_components.tv_zapper.tv.Fernseher.fernsehbild_holen", AsyncMock(return_value=False)):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": "switch.tv_zapper_zapper"}, blocking=True)
+        await asyncio.sleep(0.05)
+        await hass.services.async_call("switch", "turn_off", {"entity_id": "switch.tv_zapper_zapper"}, blocking=True)
+        await hass.async_block_till_done()
+    texte = [c.args for c in eb.call_args_list]
+    assert texte and texte[0][0].startswith("TV-Zapper hat auf 141 N24 DOKU") and "Punkte" in texte[0][0]
+    assert texte[0][1] == 15000
+
+
 # Ausgabe von tv.SPEICHER_BEFEHL am TCL (28.10.2026 06:15)
 SPEICHER_AUSGABE = """MemTotal:        2451272 kB
 MemAvailable:     860320 kB

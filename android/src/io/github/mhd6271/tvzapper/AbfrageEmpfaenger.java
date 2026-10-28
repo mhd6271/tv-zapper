@@ -18,7 +18,7 @@ import java.util.Locale;
  *  am broadcast -a io.github.mhd6271.tvzapper.ABFRAGEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger
  *     [--es was jetzt|liste]
  *  am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger
- *     --es nr 167 | --es sender "ProSieben MAXX HD"  [--es text "Einblendung"]
+ *     --es nr 167 | --es sender "ProSieben MAXX HD"  [--es text "Einblendung"]  [--es grund "Zeile 1 | Zeile 2"]
  *
  *  Antwort als JSON in den Ergebnisdaten (Ausgabe von am broadcast: data="{...}").
  *  Nur fuer Absender mit DUMP-Recht (adb-Shell, System). */
@@ -151,9 +151,10 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             ok = Epg.currentChannelId(c) == target.id;
         }
         String text = i.getStringExtra("text");
-        if (ok && text != null && !text.trim().isEmpty()) Banner.show(c, text.trim(), 6000);
-        Umschaltungen.add(c, Umschaltungen.VON_AUSSEN, from, target, text == null || text.trim().isEmpty()
-                ? "Von außen umgeschaltet auf " + target.name : text.trim(), ok);
+        JSONObject e = Umschaltungen.add(c, Umschaltungen.VON_AUSSEN, from, target, text == null || text.trim().isEmpty()
+                ? "Von außen umgeschaltet auf " + target.name : text.trim(), i.getStringExtra("grund"), ok);
+        if (ok && Config.load(c).showReason) Banner.show(c, Umschaltungen.explain(e), 12000);
+        else if (ok && text != null && !text.trim().isEmpty()) Banner.show(c, text.trim(), 6000);
         Log.add(c, "Von außen umgeschaltet auf " + target.number + " " + target.name + (ok ? "" : " (nicht bestätigt)"));
         out.put("ok", ok);
         out.put("nr", target.number);

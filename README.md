@@ -165,6 +165,11 @@ HA bewertet mit seinen eigenen Interessen.
   erreichbar, TV-Protokoll aus).
   Ist gerade die Einstellungsseite der TV-App offen, speichert sie beim Schließen ihren eigenen Stand und
   überschreibt einen in der Zeit aus HA gesetzten Wert (laut App-Sitzung, 27.10.2026).
+- `switch.tv_zapper_umschaltgrund_einblenden` – setzt die Einstellung `grund_einblenden` der **TV-App**, Standard
+  aus; zum Nachvollziehen. Ist sie an, blendet die App bei ihren Umschaltungen den Grund mit Punkten ein, und der
+  HA-Zapper blendet nach seinen Umschaltungen statt der kurzen Meldung den ganzen Satz aus dem Logbuch ein
+  (15 Sekunden, auch wenn die Option „Einblendung“ aus ist). Verfügbar wie der Schalter darüber, sobald die App die
+  Einstellung meldet.
 - `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
 - Ereignis `tv_zapper_durchgang` nach jedem Durchgang (mit allen Treffern) für eigene Automationen.
 - **Einblendung am Fernseher** (Option, Standard an): beim Einschalten („TV-Zapper an – läuft bis …“), nach jedem

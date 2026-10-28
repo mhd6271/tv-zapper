@@ -7,7 +7,8 @@ from .entity import ZapperEntity
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([ZapperSchalter(entry.runtime_data), AusweichenSchalter(entry.runtime_data)])
+    st = entry.runtime_data
+    async_add_entities([ZapperSchalter(st), AusweichenSchalter(st), GrundSchalter(st)])
 
 
 class ZapperSchalter(ZapperEntity, SwitchEntity):
@@ -30,23 +31,34 @@ class ZapperSchalter(ZapperEntity, SwitchEntity):
         await self.st.stoppen()
 
 
-class AusweichenSchalter(ZapperEntity, SwitchEntity):
-    """Einstellung der TV-App: bei Werbung zuerst auf einen bevorzugten Sender ausweichen. HA weicht selbst
-    nicht aus, es setzt nur die Einstellung der App; nicht verfuegbar, solange die App sie nicht meldet."""
+class AppEinstellungSchalter(ZapperEntity, SwitchEntity):
+    """Eine Einstellung der TV-App, gesetzt ueber EINSTELLEN und gelesen ueber ABFRAGEN; nicht verfuegbar,
+    solange die App sie nicht meldet (aeltere Version, Fernseher aus)."""
 
-    def __init__(self, st):
-        super().__init__(st, "ausweichen_bevorzugt", "Bei Werbung zuerst bevorzugte Sender", "mdi:star-circle")
+    def __init__(self, st, schluessel, name, icon):
+        super().__init__(st, schluessel, name, icon)
+        self._schluessel = schluessel
 
     @property
     def available(self):
-        return (self.st.jetzt or {}).get("ausweichen_bevorzugt") is not None
+        return (self.st.jetzt or {}).get(self._schluessel) is not None
 
     @property
     def is_on(self):
-        return bool((self.st.jetzt or {}).get("ausweichen_bevorzugt"))
+        return bool((self.st.jetzt or {}).get(self._schluessel))
 
     async def async_turn_on(self, **kwargs):
-        await self.st.app_einstellen("ausweichen_bevorzugt", True)
+        await self.st.app_einstellen(self._schluessel, True)
 
     async def async_turn_off(self, **kwargs):
-        await self.st.app_einstellen("ausweichen_bevorzugt", False)
+        await self.st.app_einstellen(self._schluessel, False)
+
+
+def AusweichenSchalter(st):  # noqa: N802
+    """Bei Werbung zuerst auf einen bevorzugten Sender ausweichen. HA weicht selbst nicht aus."""
+    return AppEinstellungSchalter(st, "ausweichen_bevorzugt", "Bei Werbung zuerst bevorzugte Sender", "mdi:star-circle")
+
+
+def GrundSchalter(st):  # noqa: N802
+    """Zum Nachvollziehen: bei jeder Umschaltung den Grund mit Punkten im Fernsehbild einblenden (Standard aus)."""
+    return AppEinstellungSchalter(st, "grund_einblenden", "Umschaltgrund einblenden", "mdi:message-text-outline")

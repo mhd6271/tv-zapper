@@ -253,8 +253,11 @@ public class ZapperService extends Service {
         }
         Log.add(this, (ok ? "→ umgeschaltet auf " : "→ Umschalten auf ") + ch.number + " " + ch.name
                 + (ok ? "" : " nicht bestätigt (Fernseher meldet " + Epg.currentChannelId(this) + ")"));
-        if (ok) Banner.show(this, banner, 6000);
-        Umschaltungen.add(this, reason, from, ch, banner, ok);
+        org.json.JSONObject e = Umschaltungen.add(this, reason, from, ch, banner, ok);
+        if (ok) {
+            if (Config.load(this).showReason) Banner.show(this, Umschaltungen.explain(e), 12000);
+            else Banner.show(this, banner, 6000);
+        }
         return ok;
     }
 
