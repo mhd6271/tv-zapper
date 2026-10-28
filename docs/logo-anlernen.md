@@ -21,8 +21,8 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 125 | kabel eins Doku | hat Logo | laut App 17:58 |
 | [x] | 167 | ProSieben MAXX HD | hat Logo | laut App 17:58 |
 | [ ] | 1 | Das Erste HD | offen | |
-| [ ] | 2 | ZDF HD | offen | |
-| [ ] | 25 | RTL HD | offen | |
+| [x] | 2 | ZDF HD | gelernt | Lauf 28.10. 18:22 nach 6 min |
+| [x] | 25 | RTL HD | gelernt | Lauf 28.10. 18:28 nach 6 min |
 | [ ] | 27 | SPORT 1 HD | offen | |
 | [ ] | 28 | VOX HD | offen | |
 | [ ] | 81 | Deluxe Music HD | offen | |

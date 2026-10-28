@@ -16,7 +16,7 @@ import java.util.Locale;
 /** Schnittstelle fuer Home Assistant & Co. per adb – liest aus der Programmdatenbank, ohne Tasten:
  *
  *  am broadcast -a io.github.mhd6271.tvzapper.ABFRAGEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger
- *     [--es was jetzt|liste|pausen|sender]
+ *     [--es was jetzt|liste|pausen|sender|logos]
  *  am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd6271.tvzapper/.AbfrageEmpfaenger
  *     --es nr 167 | --es sender "ProSieben MAXX HD"  [--es text "Einblendung"]  [--es grund "Zeile 1 | Zeile 2"]
  *
@@ -119,6 +119,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             }
             out.put("sender", alle);
         }
+        if ("logos".equals(was)) out.put("logo_dateien", Logo.export(c));   // fuer logos_sichern.sh (Repo-Sicherung)
         out.put("umschaltungen", Umschaltungen.read(c));
     }
 

@@ -550,7 +550,10 @@ zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind
 gemessenen Pausen je Sender zeigt die App an (`werbepausen.json`). Öffentliche Zahlen zur Blocklänge je Sender gibt
 es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
 kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
-5 min und speichert sie.
+5 min und speichert sie (erst ab 0.4.6 wirklich: vorher ging ein frisch gelerntes Logo beim nächsten Neustart der App
+verloren). Beim Lernen und danach blendet sie „Logo von X wird gelernt“ bzw. „… gelernt – n von N Sendern erkannt“ ein.
+**Logos sichern:** `android/logos_sichern.sh` holt die gelernten Logos vom Fernseher nach `android/assets/logos/`
+(ab 0.4.7); committet, bringt die nächste Fassung sie mit. Stand der Logos je Sender: [docs/logo-anlernen.md](docs/logo-anlernen.md).
 
 **Am Mac geprüft** (20 min Aufnahme von 6 Sendern, 15:56–16:16 Uhr, Bilder angesehen): In allen Lücken ohne Logo
 liefen echte Spots (Kaufland, Lidl, Milkana, ERGO …, bei sixx der „WERBUNG“-Trenner), mit Logo lief die Sendung.
@@ -587,7 +590,8 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 ```
 
 `ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
-`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
+`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `logos` (ab 0.4.6: `gelernt`, `beobachtet`, `ohne_logo`,
+`ohne_fritzbox`; gezählt werden eingeschaltete, nicht werbefreie Sender, die die FRITZ!Box liefert), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
 `id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
 alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
@@ -606,3 +610,6 @@ entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINST
 Stand – dann den Schalter in der App benutzen.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
+Ohne die App nach vorn zu holen (ab 0.4.6): `ABFRAGEN`-Empfänger mit `-a io.github.mhd6271.tvzapper.STARTEN`, mit
+`--ez nur_lesen true` beobachtet der Zapper nur (Werbe-Sensor läuft, keine Zapper-Runden). Mit `--es was logos` (ab 0.4.7)
+liefert `ABFRAGEN` zusätzlich `logo_dateien` = alle gelernten Logo-Masken (`logos_sichern.sh` nutzt das).

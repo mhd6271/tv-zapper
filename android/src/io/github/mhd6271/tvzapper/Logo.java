@@ -2,6 +2,8 @@ package io.github.mhd6271.tvzapper;
 
 import android.content.Context;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -233,6 +235,18 @@ final class Logo {
             for (int x = 0; x < CW; x++) b.append(m[y * CW + x] ? '1' : '0');
             b.append('\n');
         }
+    }
+
+    /** Alle gelernten Logo-Dateien als {Schluessel: Inhalt} – zum Sichern ins Repo (assets/logos/<Schluessel>.txt). */
+    static JSONObject export(Context c) throws Exception {
+        JSONObject o = new JSONObject();
+        File[] fs = new File(c.getFilesDir(), "logos").listFiles();
+        if (fs != null) for (File f : fs) {
+            String n = f.getName();
+            if (n.endsWith("_v2.txt")) o.put(n.substring(0, n.length() - 7),
+                    new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
+        }
+        return o;
     }
 
     /** Gibt es fuer den Sender schon ein Logo (gelernt oder mitgeliefert)? */
