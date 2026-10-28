@@ -114,24 +114,33 @@ Alles mit der Fernbedienung:
   Zeitgrenze, Adresse der FRITZ!Box
 - **Umschaltgrund einblenden** (Fehlersuche): zeigt bei jeder Umschaltung Grund und Punkte im Bild, Standard aus
 - **Einmal prüfen (nur lesen):** bewertet alle Sender, ohne umzuschalten; das Ergebnis steht im Protokoll
+- **Fernseher:** Tuner-Eingang und Fernseh-App. Leer heißt, die App erkennt beides selbst; auf anderen Fernsehern kann
+  man es hier von Hand eintragen.
+- **Einblendung testen** und **Maskottchen:** zeigen zum Ausprobieren eine Einblendung über dem Bild.
 
-Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 Minuten zum Lernen.
+Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 Minuten zum Lernen. Dafür muss man
+so lange auf dem Sender bleiben; wird vorher umgeschaltet, fängt die App beim nächsten Mal von vorn an.
 
 ## Integration für Home Assistant installieren
 
 Voraussetzungen: TCL-Fernseher mit Google TV und eingebautem Tuner, Sprache Deutsch, eine eigene Senderliste in der
-Programmzeitschrift (zum Beispiel „Favorit1“) und ADB über das Netzwerk. Getestet mit Home Assistant 2026.10.4 auf
-einem Home Assistant Green; kein HACS-Paket.
+Programmzeitschrift (zum Beispiel „Favorit1“) und ADB über das Netzwerk. In Home Assistant ein Weg, Dateien in den
+Ordner `config` zu legen, zum Beispiel das Add-on „Samba share“ (oder „File editor“ / „Studio Code Server“).
+Getestet mit Home Assistant 2026.10.4; kein HACS-Paket.
+
+Mit der TV-App auf dem Fernseher (ab 0.3.0) liest die Integration das Programm in etwa einer Sekunde statt in einigen
+Minuten über die Programmzeitschrift; ab App 0.4.0 stehen auch die Umschaltungen der App mit Grund im Logbuch.
 
 1. **ADB freigeben:** Am Fernseher die Entwickleroptionen freischalten (siehe oben) und dort USB-Debugging
-   einschalten. Hört der Fernseher danach noch nicht im Netz, einmal per USB-Kabel von einem Rechner
-   `adb tcpip 5555` ausführen. Dem Fernseher im Router eine feste Adresse geben.
+   einschalten. Je nach Modell nimmt der Fernseher ADB danach schon über das Netzwerk an (Port 5555); wie das bei
+   anderen Geräten freigeschaltet wird, ist hier nicht geprüft. Dem Fernseher im Router eine feste Adresse geben.
 
    | Einstellungen → System → Entwickleroptionen | Unter „Debugging“ USB-Debugging einschalten |
    |---|---|
    | ![Einstellungen: Entwickleroptionen markiert](docs/bilder/installieren-8-entwickleroptionen.webp) | ![Entwickleroptionen: USB-Debugging eingeschaltet](docs/bilder/installieren-9-usb-debugging.webp) |
 2. **Dateien kopieren:** Den Ordner [`homeassistant/custom_components/tv_zapper`](homeassistant/custom_components/tv_zapper)
-   nach `config/custom_components/` kopieren, am Mac zum Beispiel im Finder mit ⌘K `smb://homeassistant.local/config`.
+   nach `config/custom_components/` kopieren, mit „Samba share“ am Mac zum Beispiel im Finder mit ⌘K
+   `smb://homeassistant.local/config`.
 3. **Home Assistant neu starten** (Einstellungen → System → Neu starten).
 4. **Einrichten:** Einstellungen → Geräte & Dienste → Integration hinzufügen → „TV-Zapper“: Adresse des Fernsehers,
    Port 5555 und den Namen der Senderliste eintragen.
@@ -140,7 +149,7 @@ einem Home Assistant Green; kein HACS-Paket.
    Ausprobieren „Nur lesen“ einschalten und „Jetzt prüfen“ drücken. Ein Dashboard-Abschnitt liegt als
    [`homeassistant/dashboard-beispiel.yaml`](homeassistant/dashboard-beispiel.yaml) bei.
 
-App und Integration sollten nicht gleichzeitig zappen. Läuft der Zapper der App, überspringt die Integration ihren
+App und Integration zugleich einzuschalten schadet nicht: Läuft der Zapper der App, überspringt die Integration ihren
 Durchgang.
 
 ## Grenzen
