@@ -401,6 +401,7 @@ etwas anderes als das Fernsehbild vorn ist, und läuft danach für denselben Sen
   noch Sky-Sender; Comedy Central, MTV, Eurosport 1 und DOKUSAT waren auf 418 MHz umgezogen. Abhilfe: in der FRITZ!Box
   unter DVB-C einen Sendersuchlauf starten. Behält die Box danach alte Einträge, probiert die App (ab 0.4.2) nach 20 s
   ohne Bild den nächsten Eintrag desselben Senders.
+  Abgleich aller Sender mit der FRITZ!Box nach dem Suchlauf: [docs/fritzbox-senderabgleich.md](docs/fritzbox-senderabgleich.md).
 - Ein Stream je Gerät: Ein zweites Gerät (z. B. der Mac) daneben lief bei uns nur ~3 min.
 - Sender ohne Logo-Ausblendung in der Werbung werden nicht erkannt; Senderwerbung/Trailer ohne Logo gelten als
   Werbung.
@@ -425,7 +426,7 @@ umgangen, `zurueck` = Werbung vorbei, `zurueck_zeitgrenze`, `zurueck_fehlalarm` 
 „Nie“-Wort), `kategorien` (`name`, `punkte`), `bevorzugt`, `bevorzugt_bonus`, `bestaetigt`, `text` (Einblendung),
 `erklaerung` (nur mit `grund` von außen). `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
 Einblendung, `grund` mit Zeilen „a | b | c“ für die Einblendung bei „Umschaltgrund einblenden“) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
-Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was pausen` liefert `ABFRAGEN` die gemessenen Werbepausen je Sender
+Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was sender` (ab 0.4.3) kommt `sender`: alle Sender des Tuners mit `nr`, `sender`, `id`, `zustand`, `sichtbar`, `favorit`, ohne Programm. Mit `--es was pausen` liefert `ABFRAGEN` die gemessenen Werbepausen je Sender
 (`anzahl`, `durchschnitt_s`, Einzelwerte `pausen` mit `ende` in ms und `s`); `PAUSEN_LOESCHEN` (`--es sender …`,
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
 entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false`,

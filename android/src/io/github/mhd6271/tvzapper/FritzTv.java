@@ -52,8 +52,11 @@ final class FritzTv {
     /** Fernseh-Sendername (z. B. "ProSieben MAXX HD") -> Schluessel der Fritz-Liste. */
     static String norm(String s) {
         s = s.toLowerCase(Locale.GERMAN).trim();
-        s = s.replaceAll("\\s+(hd|uhd|sd)$", "");
+        s = s.replaceAll("(^|\\s)(hd|uhd|sd)(?=\\s|$)", " ").trim();   // auch mittendrin: "WDR HD Köln" = "WDR Köln"
         if (s.equals("nitro")) s = "rtlnitro";
+        if (s.equals("swr bw")) s = "swr fernsehen bw";
+        if (s.equals("swr rp")) s = "swr fernsehen rp";
+        if (s.equals("sonlife broadcasting network")) s = "sonlife";
         s = s.replace("prosieben maxx", "pro7 maxx").replace("rtl television", "rtl").replace("eurosport 1 deutschland", "eurosport 1")
                 .replace("n-tv", "ntv").replace("rtl2", "rtlzwei");
         return s.replaceAll("[^a-z0-9äöüß]", "");
