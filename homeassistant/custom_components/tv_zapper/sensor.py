@@ -9,6 +9,7 @@ from homeassistant.const import EntityCategory, UnitOfInformation
 from homeassistant.util import dt as dt_util
 
 from .entity import ZapperEntity
+from .logik import logo_bild, logo_status
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -86,11 +87,21 @@ class JetztSensor(ZapperEntity, SensorEntity):
             return "Fernsehbild"   # ohne TV-App ist der Sender nicht ohne Tastendruck lesbar
         return f"Andere App: {j.get('vorn') or '?'}"[:255]
 
+    def _logo(self) -> str | None:
+        j = self.st.jetzt or {}
+        return logo_status(j.get("werbe_sensor"), (j.get("jetzt") or {}).get("sender"))
+
+    @property
+    def entity_picture(self):
+        """Kleines Senderabzeichen (Kachel mit show_entity_picture): farbig = Logo gelernt."""
+        return logo_bild(((self.st.jetzt or {}).get("jetzt") or {}).get("sender"), self._logo())
+
     @property
     def extra_state_attributes(self):
         j = self.st.jetzt or {}
         x = j.get("jetzt") or {}
         return _kurz_texte({
+            "logo": self._logo(),
             "sender": x.get("sender"), "nr": x.get("nr"), "sendung": x.get("sendung"), "folge": x.get("folge"),
             "beschreibung": x.get("beschreibung"), "start": x.get("start"), "ende": x.get("ende"),
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "werbung": j.get("werbung"),

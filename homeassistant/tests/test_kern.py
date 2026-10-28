@@ -348,3 +348,21 @@ def test_schluessel_rechte(tmp_path):
     pfad = str(tmp_path / "adbkey")
     tv.lade_signer(pfad)
     assert stat.S_IMODE(os.stat(pfad).st_mode) == 0o600
+
+
+def test_logo_status_und_bild():
+    from custom_components.tv_zapper import logik
+    assert logik.logo_status("Werbe-Sensor: ProSieben HD – Sendung", "ProSieben HD") == "gelernt"
+    assert logik.logo_status("Werbe-Sensor: ProSieben HD – WERBUNG, ausgewichen", "ProSieben HD") == "gelernt"
+    assert logik.logo_status("Werbe-Sensor: lernt Logo von RTL HD (40 %)", "RTL HD") == "lernt 40 %"
+    assert logik.logo_status("Werbe-Sensor: arte HD wird nicht beobachtet", "arte HD") == "nicht beobachtet"
+    assert logik.logo_status("Werbe-Sensor: RTL HD – Sendung", "VOX HD") is None   # anderer Sender
+    assert logik.logo_status("Werbe-Sensor: wartet", "VOX HD") is None
+    assert logik.logo_status(None, "VOX HD") is None
+    assert [logik.sender_kuerzel(n) for n in ("ProSieben MAXX HD", "ZDF HD", "TELE 5 HD", "DMAX HD", "Das Erste HD",
+                                              "Welt HD", "Comedy Central HD", "")] == \
+        ["P7M", "ZDF", "T5", "DMAX", "ARD", "WELT", "CC", "?"]
+    bild = logik.logo_bild("ProSieben HD", "gelernt")
+    assert bild.startswith("data:image/svg+xml;charset=utf-8,") and "%3Csvg" in bild and "P7" in bild
+    assert "dasharray" in logik.logo_bild("RTL HD", "lernt 40 %")
+    assert logik.logo_bild("RTL HD", None) is None

@@ -4,7 +4,9 @@ Bewusst 1:1 aus zapper.py uebernommen; dort ist sie am Fernseher erprobt.
 """
 from __future__ import annotations
 
+from html import escape
 import re
+from urllib.parse import quote
 import xml.etree.ElementTree as ET
 
 # KOMPAT: Reiternamen der TCL-Programmzeitschrift mit deutscher Oberflaeche. In anderer Sprache oder bei
@@ -367,3 +369,63 @@ def text_zu_bonus(text):
             raise ValueError(f"Zeile {nr}: Sendername zu lang oder zu viele Sender "
                              f"(höchstens {MAX_WORT} Zeichen, {MAX_SENDER} Sender)")
     return out
+
+
+# KOMPAT: Liest den deutschen Statustext der TV-App (WerbeWaechter.status()); aendert die App den Wortlaut,
+# gibt es hier einfach keinen Logo-Stand (None) statt eines falschen.
+_WERBE_STATUS = (
+    (re.compile(r"^Werbe-Sensor: lernt Logo von (.+) \((\d+) %\)$"), lambda m: f"lernt {m.group(2)} %"),
+    (re.compile(r"^Werbe-Sensor: (.+?) – (?:Sendung|WERBUNG)(?:, ausgewichen)?$"), lambda m: "gelernt"),
+    (re.compile(r"^Werbe-Sensor: (.+) wird nicht beobachtet$"), lambda m: "nicht beobachtet"),
+)
+
+
+def logo_status(werbe_sensor, sender) -> str | None:
+    """Logo-Stand des laufenden Senders aus dem Werbe-Sensor-Status der TV-App: "gelernt", "lernt 40 %",
+    "nicht beobachtet" oder None (unbekannt, anderer Sender, App ohne Werbe-Sensor)."""
+    if not isinstance(werbe_sensor, str) or not sender:
+        return None
+    for rx, stand in _WERBE_STATUS:
+        m = rx.match(werbe_sensor.strip())
+        if m:
+            return stand(m) if sender_schluessel(m.group(1)) == sender_schluessel(sender) else None
+    return None
+
+
+# Gelaeufige Kuerzel bekannter Sender (Schluessel wie sender_schluessel), sonst Anfangsbuchstaben
+_KUERZEL = {"prosieben": "P7", "pro7maxx": "P7M", "daserste": "ARD", "kabeleins": "K1", "kabeleinsdoku": "K1D",
+            "sat1": "SAT1", "rtlzwei": "RTL2", "comedycentral": "CC", "n24doku": "N24", "sport1": "S1",
+            "eurosport1": "ES1", "tele5": "T5", "zdfneo": "NEO", "deluxemusic": "DLX", "ntv": "NTV",
+            "rtlnitro": "NITRO", "euronewsgerman": "EN"}
+
+
+def sender_kuerzel(name) -> str:
+    """Kurzzeichen fuers kleine Senderabzeichen: `ProSieben HD` -> `P7`, `ZDF HD` -> `ZDF`, `VOXup HD` -> `VOXU`."""
+    if sender_schluessel(name) in _KUERZEL:
+        return _KUERZEL[sender_schluessel(name)]
+    woerter = [w for w in re.split(r"\s+", (name or "").strip()) if w and w.upper() not in ("HD", "UHD", "SD")]
+    if not woerter:
+        return "?"
+    if len(woerter) == 1:
+        return woerter[0][:4].upper()
+    return "".join(w if w.isdigit() else w[0] for w in woerter)[:4].upper()
+
+
+def logo_bild(sender, stand) -> str | None:
+    """Kleines, nachgemachtes Senderabzeichen als SVG-Daten-URL: farbig bei gelerntem Logo, grau umrandet sonst."""
+    if not sender or not stand:
+        return None
+    text = escape(sender_kuerzel(sender))
+    groesse = {1: 30, 2: 26, 3: 21, 4: 16}.get(len(text), 16)
+    if stand == "gelernt":
+        farbe = ("#1565c0", "#2e7d32", "#c62828", "#6a1b9a", "#ef6c00", "#00838f")[
+            sum(map(ord, sender_schluessel(sender))) % 6]
+        form = f'<rect x="2" y="2" width="60" height="60" rx="14" fill="{farbe}"/>'
+        schrift = "#fff"
+    else:
+        form = '<rect x="3" y="3" width="58" height="58" rx="14" fill="none" stroke="#9e9e9e" stroke-width="3" stroke-dasharray="6 4"/>'
+        schrift = "#9e9e9e"
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">{form}'
+           f'<text x="32" y="33" font-family="Arial,sans-serif" font-weight="700" font-size="{groesse}" '
+           f'fill="{schrift}" text-anchor="middle" dominant-baseline="central">{text}</text></svg>')
+    return "data:image/svg+xml;charset=utf-8," + quote(svg)

@@ -121,6 +121,7 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
     st = entry.runtime_data
     jetzt = {"quelle": "app", "fernsehbild_vorn": True, "bildschirm_an": True, "vorn": "com.tcl.tv",
              "logos": {"gelernt": 10, "beobachtet": 28},
+             "werbe_sensor": "Werbe-Sensor: ProSieben MAXX HD – Sendung",
              "jetzt": {"nr": 167, "sender": "ProSieben MAXX HD", "sendung": "Futurama", "punkte": 4,
                        "treffer": ["Erwachsenen-Cartoons"]}}
     with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
@@ -129,6 +130,7 @@ async def test_laeuft_jetzt(hass: HomeAssistant):
         await st.jetzt_lesen()
     s = hass.states.get("sensor.tv_zapper_lauft_jetzt")
     assert s.state == "167 ProSieben MAXX HD: Futurama" and s.attributes["kategorien"] == ["Erwachsenen-Cartoons"]
+    assert s.attributes["logo"] == "gelernt" and s.attributes["entity_picture"].startswith("data:image/svg+xml")
     with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock(side_effect=OSError("aus"))), \
          patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()):
         await st.jetzt_lesen()

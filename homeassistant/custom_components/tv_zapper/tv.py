@@ -450,6 +450,7 @@ class Fernseher:
                 "umschaltgrund_einblenden": daten.get("umschaltgrund_einblenden"),
                 # ab der App-Version mit Logo-Zaehler: {"gelernt": n, "beobachtet": m}, sonst None
                 "logos": logo_zaehler(daten.get("logos")),
+                "werbe_sensor": daten.get("werbe_sensor") if isinstance(daten.get("werbe_sensor"), str) else None,
                 # ab der App-Version mit Umschaltgruenden; nur die letzten 50 (Daten vom Fernseher)
                 "umschaltungen": [u for u in umschaltungen[-50:] if isinstance(u, dict)]
                 if isinstance(umschaltungen, list) else [],
