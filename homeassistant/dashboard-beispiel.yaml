@@ -21,6 +21,8 @@ cards:
   - type: tile
     entity: sensor.tv_zapper_lauft_jetzt
     name: Läuft gerade
+    # Kleines Senderabzeichen: farbig = Logo gelernt, grau gestrichelt = noch nicht
+    show_entity_picture: true
     grid_options:
       columns: 12
   - type: tile
