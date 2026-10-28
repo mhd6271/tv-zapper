@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 from custom_components.tv_zapper import const, tv
 from custom_components.tv_zapper.logik import (
-    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, text_zu_bonus, umschalt_text)
+    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, sender_schluessel, text_zu_bonus,
+    umschalt_text)
 
 CFG = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS,
        "sender_nie": ["sixx HD"], "sender_bevorzugt": const.STANDARD_SENDER_BEVORZUGT}
@@ -279,3 +280,17 @@ def test_app_umschalt_text():
     assert app_umschalt_text({"id": 3, "grund": "interesse", "nr": 141, "sender": "N24 DOKU", "punkte": 3,
                               "kategorien": [{"name": "Doku", "punkte": 2}], "bevorzugt_bonus": 1}) == (
         "hat auf 141 N24 DOKU umgeschaltet. Grund: Doku: 2 Punkte; bevorzugter Sender: 1 Punkt extra. Zusammen 3 Punkte.")
+
+
+def test_sender_tolerant():
+    assert sender_schluessel("RTL Nitro") == sender_schluessel("RTLNITRO") == "rtlnitro"
+    assert sender_schluessel("RTL HD") == sender_schluessel("RTL UHD") == sender_schluessel("rtl") == "rtl"
+    assert sender_schluessel("ZDFinfo") == sender_schluessel("ZDFinfo HD")
+    assert sender_schluessel("NITRO HD") != sender_schluessel("RTLNITRO")       # anderer Name bleibt anders
+    assert sender_schluessel("Comedy Central +1") != sender_schluessel("Comedy Central HD")
+    assert sender_schluessel("HD") == "hd"                                      # nicht zu nichts kuerzen
+    cfg = {"interessen": [{"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}], "aus": [],
+           "sender_nie": ["RTL Nitro"], "sender_bevorzugt": {"zdfinfo": 1}}
+    assert bewerte_sendung(184, "RTLNITRO", "Doku", {}, cfg)["punkte"] == -1
+    b = bewerte_sendung(271, "ZDFinfo HD", "Doku", {}, cfg)
+    assert b["punkte"] == 3 and "bevorzugter Sender" in b["treffer"]

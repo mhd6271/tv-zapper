@@ -98,14 +98,32 @@ def score(text, cfg):
     return total, hits
 
 
+def sender_schluessel(name) -> str:
+    """Sendername zum Vergleichen: ohne Gross-/Kleinschreibung, Leer- und Satzzeichen und ohne HD/SD/UHD am Ende,
+    damit `RTL Nitro` = `RTLNITRO`, `ZDFinfo` = `ZDFinfo HD`, `RTL HD` = `RTL UHD`."""
+    s = re.sub(r"[^0-9a-zäöüß]", "", (name or "").lower())
+    return re.sub(r"(uhd|hd|sd)$", "", s) or s
+
+
+def sender_nie(name, cfg) -> bool:
+    k = sender_schluessel(name)
+    return any(sender_schluessel(n) == k for n in cfg.get("sender_nie", []))
+
+
+def sender_bonus(name, cfg) -> int:
+    """Bonuspunkte fuer einen bevorzugten Sender (tolerant verglichen), sonst 0."""
+    k = sender_schluessel(name)
+    return next((b for n, b in cfg.get("sender_bevorzugt", {}).items() if sender_schluessel(n) == k), 0)
+
+
 def bewerte_sendung(num, name, prog, h, cfg):
     """Eine Zeile der Programmzeitschrift bewerten (inkl. sender_nie / sender_bevorzugt)."""
     text = " ".join(x for x in (name, prog or "", h.get("genre", ""), h.get("info", "")) if x)
     s, hits = score(text, cfg)
-    if name in cfg.get("sender_nie", []):
+    if sender_nie(name, cfg):
         s, hits = -1, ["Sender ausgeschlossen"]
-    elif s > 0 and name in cfg.get("sender_bevorzugt", {}):
-        s += cfg["sender_bevorzugt"][name]
+    elif s > 0 and (bonus := sender_bonus(name, cfg)):
+        s += bonus
         hits.append("bevorzugter Sender")
     return {"nr": num, "sender": name, "sendung": prog, "genre": h.get("genre", ""),
             "info": h.get("info", ""), "punkte": s, "treffer": hits}
@@ -133,7 +151,7 @@ def gruende(x, cfg) -> list[str]:
     out = []
     for name in x.get("treffer") or []:
         if name == "bevorzugter Sender":
-            bonus = cfg.get("sender_bevorzugt", {}).get(x.get("sender"), 0)
+            bonus = sender_bonus(x.get("sender"), cfg)
             out.append(f"bevorzugter Sender: {punkte_text(bonus)} extra")
             continue
         cat = next((c for c in cfg.get("interessen", []) if c["name"] == name), None)

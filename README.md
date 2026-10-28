@@ -117,6 +117,12 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
 | Sender nie nehmen | Sendernamen wie in der Programmzeitschrift, mit Komma getrennt |
 | Bevorzugte Sender | eine Zeile je Sender: `N24 DOKU \| 1` – Bonuspunkte, zählen nur, wenn die Sendung auch passt |
+
+Sendernamen bei „nie“ und „bevorzugt“ vergleicht die Integration tolerant: Groß-/Kleinschreibung, Leer- und
+Satzzeichen und ein HD/SD/UHD am Ende zählen nicht (`RTL Nitro` = `RTLNITRO`, `ZDFinfo` = `ZDFinfo HD`,
+`RTL HD` = `RTL UHD`). Andere Namen bleiben verschieden (`NITRO HD` ≠ `RTLNITRO`, `Comedy Central +1` ≠
+`Comedy Central HD`). Der Sendername zählt beim Bewerten mit: `Deluxe Music HD` hat dadurch immer die Musik-Punkte,
+`N24 DOKU` und `kabel eins Doku` immer die Doku-Punkte – gewollt, weil der Name oft verrät, was läuft.
 | Laufzeit | wie lange der Zapper nach dem Einschalten läuft (Minuten) |
 | Verweilzeit | Minuten zwischen zwei Prüfungen |
 | Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
