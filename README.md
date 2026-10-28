@@ -1,10 +1,168 @@
 # TV-Zapper
 
-Schaltet am TCL-Google-TV selbstständig auf Sendungen, die mich interessieren.
+**Ein Fernseher, der selbst umschaltet.** Der TV-Zapper sucht im laufenden Programm nach Sendungen, die dich
+interessieren, und schaltet hin. Kommt Werbung, weicht er auf einen werbefreien Sender aus und kehrt danach zurück.
+Die Werbung erkennt er daran, dass private Sender in der Pause ihr Logo ausblenden.
 
-`<TV-IP>` steht unten für die Adresse des Fernsehers im eigenen Netz.
+- **App für Google TV und Android TV**, ab Android 8, für Fernseher mit eingebautem Tuner
+- **Integration für Home Assistant**, optional
+- **FRITZ!Box Cable als zweiter Tuner** für die Werbeerkennung
+- **100 % im Heimnetz**, keine Cloud, kein Konto
 
-## Was mich interessiert
+**[⬇ Neueste Version herunterladen](https://muehlbronner.de/download/tv-zapper)** (`tv-zapper-<Version>.apk`) ·
+[alle Versionen](https://github.com/mhd6271/tv-zapper/releases) ·
+[Projektseite mit allen Details](https://muehlbronner.de/projekte/tv-zapper/)
+
+![TV-Zapper-App auf dem Fernseher: Startseite mit Start, Stopp, Einmal prüfen, Berechtigungen, Laufzeit und Verweilzeit](docs/bilder/app-start.webp)
+
+## Was er macht
+
+- **Programm nach Interessen:** Du legst Interessen mit Gewicht und Suchwörtern fest, zum Beispiel Hip-Hop/Rap,
+  Erwachsenen-Cartoons oder Dokumentationen. Dazu eine Liste „Nie“ (Teleshopping …) sowie gesperrte und bevorzugte
+  Sender. Alle paar Minuten bewertet der Zapper, was auf deinen Sendern läuft, und schaltet auf den besten Treffer.
+  Er schaltet aber nur, wenn der Treffer besser ist als das, was gerade läuft.
+- **Werbung am Logo erkennen:** Die App schaut ein paar Mal pro Sekunde in die Logo-Ecke des laufenden Senders. Fehlt
+  das gelernte Logo lange genug, schaltet sie auf einen werbefreien Ausweichsender, zum Beispiel ZDFinfo, zdf_neo,
+  arte oder phoenix. Sie kehrt zurück, sobald das Logo wieder da ist, spätestens nach einer Zeitgrenze.
+- **FRITZ!Box als zweiter Tuner:** Der Fernseher gibt einer App weder Bild noch Ton seines Tuners. Deshalb empfängt
+  die FRITZ!Box den laufenden Sender nebenher über das Kabelnetz und reicht ihn als Stream an die App weiter.
+  Geguckt wird weiter über den Tuner des Fernsehers.
+- **Home Assistant:** Schalter, Sensoren und Regler für den Zapper. Jede Umschaltung landet mit Grund und Punkten im
+  Logbuch. Auf Wunsch blendet der Fernseher den Grund bei jeder Umschaltung kurz ein (zur Fehlersuche, Standard aus).
+
+## So sieht es aus
+
+Bildschirmfotos der App auf dem Fernseher und der Integration in Home Assistant. Das Fernsehbild selbst lässt sich
+nicht fotografieren, es bleibt wegen des Kopierschutzes schwarz.
+
+| | |
+|---|---|
+| ![Interessen mit Gewicht und Suchwörtern](docs/bilder/app-interessen.webp) | ![Werbung umgehen: Ausweichsender, Zeitgrenze, gemessene Pausen und Protokoll](docs/bilder/app-werbung.webp) |
+| **Interessen** mit Gewicht und Suchwörtern, alles mit der Fernbedienung einstellbar | **Werbung umgehen:** Ausweichsender, Zeitgrenze, gemessene Pausen; im Protokoll die Bewertung aller Sender |
+| ![Protokoll einer erkannten Werbepause auf ProSieben](docs/bilder/app-protokoll.webp) | ![Senderliste: jeder Sender an, bevorzugt oder aus](docs/bilder/app-sender.webp) |
+| **Eine echte Werbepause:** Der Logo-Wert fällt auf 0,00–0,13, die Pause dauerte 410 s | **Senderliste:** OK schaltet je Sender zwischen an, bevorzugt ★ und aus |
+| ![Einblendung oben links über dem Bild](docs/bilder/app-einblendung.webp) | ![Home Assistant: Dashboard-Abschnitt TV-Zapper](docs/bilder/ha-dashboard.webp) |
+| **Einblendung** oben links, im Betrieb über dem Fernsehbild | **Home Assistant:** Abschnitt auf dem Dashboard |
+| ![Home Assistant: Gerät TV-Zapper mit Steuerung, Sensor und Aktivität](docs/bilder/ha-geraet.webp) | ![Home Assistant: Integration TV-Zapper](docs/bilder/ha-integration.webp) |
+| **Home Assistant:** das Gerät mit Steuerung, Sensor und Verlauf | **Home Assistant:** die Integration mit eigenem Symbol |
+
+## Was du brauchst
+
+| | |
+|---|---|
+| **Fernseher** | Google TV oder Android TV ab Android 8 mit **eingebautem Tuner**, dessen Sender in der Programmdatenbank von Android TV landen. Getestet nur auf einem TCL Smart TV Pro (Android 14). Andere Marken sollten gehen, sind aber nicht ausprobiert. Streaming-Sticks und -Boxen ohne Tuner gehen nicht. |
+| **FRITZ!Box** (nur für die Werbeerkennung) | Eine FRITZ!Box Cable mit eingebautem TV-Tuner, die Kabelfernsehen ins Heimnetz streamt (Menüpunkt „DVB-C“). Getestet mit der **FRITZ!Box 6660 Cable an einem Kabelanschluss von PŸUR (Tele Columbus)**, dort ohne Zusatzgerät. Laut Hersteller können das auch die 6690, 6670, 6591, 6590 und 6490 Cable. Ob der Menüpunkt da ist, hängt vom Kabelanbieter ab. Erkannt werden nur unverschlüsselte Sender. |
+| **Home Assistant** (optional) | Für die Integration: Zugriff auf den Ordner `config` (zum Beispiel über das Add-on „Samba share“) und ADB über das Netzwerk am Fernseher. Die Integration ist derzeit auf **TCL-Fernseher** zugeschnitten. |
+
+## App auf dem Fernseher installieren
+
+1. **Herunterladen:** Im Webbrowser auf dem Fernseher (zum Beispiel Zeus Browser) oder auf einem Android-Gerät
+   `muehlbronner.de/download/tv-zapper` aufrufen. Die Adresse führt immer zur neuesten Version.
+2. **Installieren:** Die Datei `tv-zapper-<Version>.apk` öffnen. Beim ersten Mal kommt „Aus Sicherheitsgründen kannst
+   du … keine unbekannten Apps aus dieser Quelle installieren“: „Einstellungen“ → den Browser auf „Zugelassen“
+   stellen → Zurück → „Installieren“.
+
+   | ① Im Browser „Herunterladen“ bestätigen | ② In den Downloads die APK anklicken | ③ „Installieren“ (oder „Aktualisieren“) |
+   |---|---|---|
+   | ![Dialog Herunterladen im Zeus Browser](docs/bilder/installieren-1-herunterladen.webp) | ![Download-Liste mit der APK](docs/bilder/installieren-2-downloads.webp) | ![Android-Installer: TV-Zapper aktualisieren](docs/bilder/installieren-3-installieren.webp) |
+
+   Kein Browser auf dem Fernseher? Dann geht es mit der App „Downloader by AFTVnews“ aus dem Play Store: die Adresse
+   `muehlbronner.de/download/tv-zapper` eintippen, „Laden“, und bei „Installieren unbekannter Apps“ Downloader auf
+   „Zugelassen“ stellen.
+3. **Freigaben erteilen, wichtig:** TV-Zapper öffnen. Die Einrichtung startet von selbst und fragt drei Rechte
+   nacheinander ab. Fehlt eines, schaltet die App nicht um:
+   - Android-Dialog „Fernsehprogramm lesen“ → „Zulassen“
+   - „Zugriff auf Nutzungsdaten“: TV-Zapper suchen (steht weiter unten in der Liste) → „Zugelassen“ → Zurück
+   - „Einblendung über anderen Apps zulassen“: TV-Zapper → „Zugelassen“ → Zurück
+
+   | „Zugriff auf Nutzungsdaten“ | „Einblendung über anderen Apps zulassen“ |
+   |---|---|
+   | ![Einstellungsseite Zugriff auf Nutzungsdaten, TV-Zapper zugelassen](docs/bilder/installieren-4-nutzungsdaten.webp) | ![Einstellungsseite Einblendung über anderen Apps, TV-Zapper zugelassen](docs/bilder/installieren-5-einblendung.webp) |
+
+   Fehlt später ein Recht, holt der Knopf „Einrichten“ in der App es nach.
+4. **FRITZ!Box (nur für die Werbeerkennung):** In der Oberfläche der FRITZ!Box unter „DVB-C“ Live-TV einschalten und
+   den Sendersuchlauf starten. In der App steht als Adresse `fritz.box`, das passt meistens.
+5. **„Start“ drücken.** Die App öffnet das Fernsehbild, danach einfach fernsehen.
+
+<details>
+<summary><b>Falls nötig: Entwickleroptionen freischalten</b></summary>
+
+Für die App selbst braucht es weder Entwickleroptionen noch USB-Debugging. Manche Geräte bieten das Installieren aus
+dem Browser aber erst an, wenn die Entwickleroptionen freigeschaltet sind:
+
+1. Einstellungen → System → Info
+2. Ganz nach unten zu „Android TV-Betriebssystem-Build“ und dort siebenmal OK drücken
+3. Danach steht unter System der Punkt „Entwickleroptionen“. Für die App muss darin nichts eingeschaltet werden.
+
+| Einstellungen → System → Info | „Android TV-Betriebssystem-Build“ siebenmal anklicken |
+|---|---|
+| ![Einstellungen: System markiert](docs/bilder/installieren-6-system.webp) | ![Info-Seite: Android TV-Betriebssystem-Build markiert](docs/bilder/installieren-7-build.webp) |
+
+Die Bilder zeigen einen TCL-Fernseher mit Google TV (Android 14). Bei anderen Herstellern können einzelne Punkte etwas
+anders heißen oder an anderer Stelle liegen, die Schritte sind dieselben.
+</details>
+
+## Was du in der App einstellen kannst
+
+Alles mit der Fernbedienung:
+
+- **Interessen** als Kategorien mit Gewicht und Suchwörtern (`doku*` passt als Wortanfang) und eine Liste **„Nie“**
+- **Sender:** je Sender *an*, *bevorzugt ★* oder *aus*. Bevorzugte werden zuerst geprüft und bekommen einen Bonus,
+  aber nur, wenn die Sendung passt.
+- **Laufzeit** (wie lange der Zapper läuft, ab Werk ohne Ende) und **Verweilzeit** je Sender
+- **Werbung umgehen:** an/aus, die werbefreien Ausweichsender, „bei Werbung zuerst auf bevorzugte Sender ausweichen“,
+  Zeitgrenze, Adresse der FRITZ!Box
+- **Umschaltgrund einblenden** (Fehlersuche): zeigt bei jeder Umschaltung Grund und Punkte im Bild, Standard aus
+- **Einmal prüfen (nur lesen):** bewertet alle Sender, ohne umzuschalten; das Ergebnis steht im Protokoll
+
+Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 Minuten zum Lernen.
+
+## Integration für Home Assistant installieren
+
+Voraussetzungen: TCL-Fernseher mit Google TV und eingebautem Tuner, Sprache Deutsch, eine eigene Senderliste in der
+Programmzeitschrift (zum Beispiel „Favorit1“) und ADB über das Netzwerk. Getestet mit Home Assistant 2026.10.4 auf
+einem Home Assistant Green; kein HACS-Paket.
+
+1. **ADB freigeben:** Am Fernseher die Entwickleroptionen freischalten (siehe oben) und dort USB-Debugging
+   einschalten. Hört der Fernseher danach noch nicht im Netz, einmal per USB-Kabel von einem Rechner
+   `adb tcpip 5555` ausführen. Dem Fernseher im Router eine feste Adresse geben.
+
+   | Einstellungen → System → Entwickleroptionen | Unter „Debugging“ USB-Debugging einschalten |
+   |---|---|
+   | ![Einstellungen: Entwickleroptionen markiert](docs/bilder/installieren-8-entwickleroptionen.webp) | ![Entwickleroptionen: USB-Debugging eingeschaltet](docs/bilder/installieren-9-usb-debugging.webp) |
+2. **Dateien kopieren:** Den Ordner [`homeassistant/custom_components/tv_zapper`](homeassistant/custom_components/tv_zapper)
+   nach `config/custom_components/` kopieren, am Mac zum Beispiel im Finder mit ⌘K `smb://homeassistant.local/config`.
+3. **Home Assistant neu starten** (Einstellungen → System → Neu starten).
+4. **Einrichten:** Einstellungen → Geräte & Dienste → Integration hinzufügen → „TV-Zapper“: Adresse des Fernsehers,
+   Port 5555 und den Namen der Senderliste eintragen.
+5. Am Fernseher erscheint **„USB-Debugging zulassen?“** → mit der Fernbedienung „Immer zulassen“ (60 Sekunden Zeit).
+6. Unter **„Konfigurieren“** Interessen, ausgeschlossene Wörter und Sender, Laufzeit und Verweilzeit einstellen. Zum
+   Ausprobieren „Nur lesen“ einschalten und „Jetzt prüfen“ drücken. Ein Dashboard-Abschnitt liegt als
+   [`homeassistant/dashboard-beispiel.yaml`](homeassistant/dashboard-beispiel.yaml) bei.
+
+App und Integration sollten nicht gleichzeitig zappen. Läuft der Zapper der App, überspringt die Integration ihren
+Durchgang.
+
+## Grenzen
+
+- Sender, die in der Werbung ihr Logo nicht ausblenden, erkennt die App nicht; Trailer ohne Logo gelten als Werbung.
+- Werbeerkennung gibt es nur auf Sendern, die die FRITZ!Box unverschlüsselt liefert. Nach einem Sendersuchlauf waren
+  das hier 127 von 271 Sendern, von den 36 eingeschalteten 35 ([ganze Liste](docs/fritzbox-senderabgleich.md)).
+- Geprüft ist alles nur an einem TCL-Fernseher. Bei anderen Herstellern bemerkt die App Umschalten von Hand nicht,
+  weil nur TCL den laufenden Sender meldet.
+
+---
+
+# Technik im Detail
+
+Ab hier für Entwickler: wie die drei Fassungen (Python-Prototyp, Home-Assistant-Integration, TV-App) arbeiten, ihre
+Schnittstellen und Messungen. `<TV-IP>` steht unten für die Adresse des Fernsehers im eigenen Netz.
+
+## Python-Skript (Prototyp)
+
+Der erste Prototyp: liest die Programmzeitschrift des Fernsehers per ADB vom Bildschirm und schaltet per Fernbedienungstasten um.
+
+### Was mich interessiert
 
 Steht in [`interessen.json`](interessen.json) – Kategorien mit Gewicht und Suchwörtern:
 
@@ -18,7 +176,7 @@ Steht in [`interessen.json`](interessen.json) – Kategorien mit Gewicht und Suc
 Nie: Teleshopping, Dauerwerbesendung. Wörter mit `*` passen als Wortanfang (`doku*`).
 Neue Interessen einfach dort eintragen.
 
-## Wie es arbeitet
+### Wie es arbeitet
 
 1. Programmzeitschrift des Fernsehers öffnen (Taste GUIDE), Liste **Favorit1** wählen
    (dort liegen alle freien HD-Sender, die funktionieren).
@@ -34,7 +192,7 @@ Neue Interessen einfach dort eintragen.
 Zeigt der Fernseher etwas anderes als das Fernsehprogramm (App, AirPlay, aus),
 lässt das Skript ihn in Ruhe.
 
-## Aufruf
+### Aufruf
 
 ```bash
 python3 zapper.py                  # 60 Minuten
@@ -44,7 +202,7 @@ python3 zapper.py --einmal --nur-lesen   # nur auslesen und bewerten
 
 Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet wurde).
 
-## Voraussetzungen
+### Voraussetzungen
 
 - Ein TCL-Fernseher mit Google TV (getestet: TCL Smart TV Pro; die Paketnamen `com.tcl.tv` und die
   Programmzeitschrift sind TCL-spezifisch), ADB über Netzwerk in den Entwickleroptionen eingeschaltet.
@@ -56,7 +214,7 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 - Fernseher an und auf dem Tuner-Eingang. Wiedereinschalten aus dem Ruhezustand
   geht nur per Wake-on-LAN (MAC des Fernsehers), nicht über Home Assistant allein.
 
-## Sendernummern (Favorit1, Stand 27.10.2026)
+### Sendernummern (Favorit1, Stand 27.10.2026)
 
 23 ProSieben HD · 24 sixx HD · 25 RTL HD · 26 SAT.1 HD · 27 SPORT 1 HD · 28 VOX HD ·
 29 Kabel Eins HD · 86 DMAX HD · 111 HGTV · 141 N24 DOKU · 167 ProSieben MAXX HD ·
