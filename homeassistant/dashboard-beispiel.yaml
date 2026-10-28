@@ -12,6 +12,10 @@ cards:
   - type: tile
     entity: switch.tv_zapper_zapper
     name: Zapper
+    # Kleine Zeile unter dem Namen, z. B. "An · Logos 7/29" (Attribut logos, braucht die TV-App ab 0.4.6)
+    state_content:
+      - state
+      - logos
     grid_options:
       columns: 12
   - type: tile
