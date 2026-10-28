@@ -1,5 +1,5 @@
 #!/bin/sh
-# Baut build/tv-zapper.apk ohne Gradle: aapt2 (Ressourcen), javac + d8 (Code), zipalign, apksigner.
+# Baut build/tv-zapper-<versionName>.apk ohne Gradle: aapt2 (Ressourcen), javac + d8 (Code), zipalign, apksigner.
 # Voraussetzungen: Java 17 (brew install openjdk@17), Android-SDK mit build-tools 36 und platform 35.
 # Signiert mit dem Release-Schluessel aus ~/.tvzapper/keystore.properties (storeFile, alias, password; liegt
 # nicht im Repo), sonst mit dem Debug-Schluessel ~/.android/debug.keystore (Passwort "android").
@@ -18,6 +18,9 @@ else
 fi
 export TVZ_KP="$KP"   # Passwort nur ueber die Umgebung an apksigner, nicht auf der Befehlszeile
 OUT=build
+VER=$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)
+[ -n "$VER" ] || { echo "versionName nicht gefunden"; exit 1; }
+APK=tv-zapper-$VER.apk   # Version im Dateinamen: muehlbronner.de nimmt nur die APK, deren Name zur Release-Version passt
 
 rm -rf $OUT && mkdir -p $OUT/res $OUT/classes $OUT/dex $OUT/assets
 cp -R assets/. $OUT/assets/
@@ -31,5 +34,5 @@ javac -source 11 -target 11 -Xlint:-options -encoding UTF-8 -classpath "$JAR" -d
 "$BT/d8" --min-api 26 --lib "$JAR" --output $OUT/dex $(find $OUT/classes -name '*.class')
 (cd $OUT/dex && zip -q ../unsigned.apk classes.dex)
 "$BT/zipalign" -f 4 $OUT/unsigned.apk $OUT/aligned.apk
-"$BT/apksigner" sign --ks "$KS" --ks-key-alias "$KA" --ks-pass env:TVZ_KP --key-pass env:TVZ_KP --out $OUT/tv-zapper.apk $OUT/aligned.apk
-echo "fertig: $(pwd)/$OUT/tv-zapper.apk ($(basename "$KS"))"
+"$BT/apksigner" sign --ks "$KS" --ks-key-alias "$KA" --ks-pass env:TVZ_KP --key-pass env:TVZ_KP --out $OUT/$APK $OUT/aligned.apk
+echo "fertig: $(pwd)/$OUT/$APK ($(basename "$KS"))"

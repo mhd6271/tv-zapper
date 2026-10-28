@@ -291,12 +291,14 @@ und läuft bis zum gemerkten Ende weiter (ab 0.3.3; Protokoll: „Von Android be
 - *Über anderen Apps einblenden* – Android erlaubt einer App im Hintergrund sonst nicht, das Fernsehbild zu öffnen;
   auch für die Einblendung nötig.
 
-**Fertige App:** [neueste Version herunterladen](https://github.com/mhd6271/tv-zapper/releases/latest/download/tv-zapper.apk)
+**Fertige App:** [neueste Version herunterladen](https://muehlbronner.de/download/tv-zapper) (Datei `tv-zapper-<Version>.apk`)
 (Releases auf GitHub, Prüfsumme jeweils in der Release-Notiz). Signiert mit dem Release-Schlüssel des Projekts
 (Zertifikat SHA-256 `8c371cfa…3f06ee`); eigene Builds mit anderem Schlüssel lassen sich nicht darüber installieren.
 Neue Versionen: `versionCode`/`versionName` in `android/AndroidManifest.xml` erhöhen, `android/build.sh`, dann ein
-GitHub-Release als „latest“ (kein Pre-Release) mit der Datei genau unter dem Namen `tv-zapper.apk` – muehlbronner.de
-holt sich alle 15 min das neueste Release und zeigt Version und Prüfsumme an.
+GitHub-Release `v<Version>` als „latest“ (kein Pre-Release) mit der Datei `android/build/tv-zapper-<Version>.apk` unter
+genau diesem Namen – muehlbronner.de holt sich alle 5 min das neueste Release und zeigt Version, Dateiname und Prüfsumme
+an. Passt die Version im Dateinamen nicht zum Release, bleibt dort der alte Link stehen (seit 28.10.2026; bis 0.4.4 hieß
+die Datei `tv-zapper.apk`).
 
 **Bauen und installieren** (kein Gradle, nur Java 17 und das Android-SDK mit build-tools 36 und platform 35;
 Pfade über `JAVA_HOME`, `ANDROID_HOME`, eigener Schlüssel über `TVZ_KEYSTORE`):
@@ -306,7 +308,7 @@ android/build.sh
 ```
 
 ```bash
-adb -s <TV-IP>:5555 install -r android/build/tv-zapper.apk
+adb -s <TV-IP>:5555 install -r android/build/tv-zapper-*.apk
 ```
 
 `build.sh` signiert mit dem Schlüssel aus `~/.tvzapper/keystore.properties` (`storeFile`, `alias`, `password`;
