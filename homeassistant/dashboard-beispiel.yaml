@@ -12,8 +12,13 @@ cards:
     grid_options:
       columns: 12
   - type: tile
-    entity: sensor.tv_zapper_aktueller_treffer
+    entity: sensor.tv_zapper_lauft_jetzt
     name: Läuft gerade
+    grid_options:
+      columns: 12
+  - type: tile
+    entity: sensor.tv_zapper_aktueller_treffer
+    name: Letzte Bewertung des Zappers
     grid_options:
       columns: 12
   - type: tile
