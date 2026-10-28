@@ -5,6 +5,7 @@
 # nicht im Repo), sonst mit dem Debug-Schluessel ~/.android/debug.keystore (Passwort "android").
 set -e
 cd "$(dirname "$0")"
+# KOMPAT: Nur Bauen: Pfade fuer macOS/Homebrew, build-tools 36.0.0 und platform 35 fest eingetragen.
 JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}
 SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
 BT=$SDK/build-tools/36.0.0
@@ -31,6 +32,8 @@ cp ../interessen.json $OUT/assets/interessen.json
   --java $OUT/gen $OUT/res.zip
 javac -source 11 -target 11 -Xlint:-options -encoding UTF-8 -classpath "$JAR" -d $OUT/classes \
   $(find src $OUT/gen -name '*.java')
+# KOMPAT: d8 ersetzt hier keine fehlenden Bibliotheksmethoden (kein core library desugaring): InputStream.readAllBytes
+#   bleibt ein direkter Aufruf (im dex nachgesehen 28.10.2026) und fehlt unter Android 13.
 "$BT/d8" --min-api 26 --lib "$JAR" --output $OUT/dex $(find $OUT/classes -name '*.class')
 (cd $OUT/dex && zip -q ../unsigned.apk classes.dex)
 "$BT/zipalign" -f 4 $OUT/unsigned.apk $OUT/aligned.apk

@@ -45,6 +45,7 @@ final class Config {
     boolean dodgePreferred = false;
     /** Debug: bei jeder Umschaltung Grund und Punkte einblenden. */
     boolean showReason = false;
+    // KOMPAT: "fritz.box" loest nur auf, wenn die FRITZ!Box der DNS-Server ist; sonst IP in den Einstellungen eintragen.
     String fritz = "fritz.box";
     /** Leer = automatisch erkennen. */
     String tvInput = "", tvApp = "";
@@ -79,6 +80,8 @@ final class Config {
                 json = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
             } else {
                 try (InputStream in = c.getAssets().open("interessen.json")) {
+                    // KOMPAT: readAllBytes() erst ab Android 13: beim ersten Start (noch keine Einstellungsdatei) stuerzt die App auf
+                    //   Android 8 bis 12 ab – NoSuchMethodError faengt catch (Exception) nicht.
                     json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
                 }
             }

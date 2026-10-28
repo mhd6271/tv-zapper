@@ -104,12 +104,15 @@ public class MainActivity extends Activity {
         refreshStatus();
         if (setupStep < 1 && !listingsGranted()) {
             setupStep = 1;
+            // KOMPAT: POST_NOTIFICATIONS fragt Android erst ab 13; darunter still uebergangen (unschaedlich).
             requestPermissions(new String[]{PERM_LISTINGS, "android.permission.POST_NOTIFICATIONS"}, 1);
             return;
         }
         if (setupStep < 2 && !usageAccess()) {
             setupStep = 2;
             hint("Gleich: „TV-Zapper“ auswählen und auf „Zugelassen“ stellen, dann Zurück.");
+            // KOMPAT: Die Seiten Nutzungszugriff/Ueber anderen Apps fehlen auf manchen TV-Firmwares; openSettings faengt das ab,
+            //   dann geht es nur per adb appops (siehe Manifest).
             Intent i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:" + getPackageName()));
             if (i.resolveActivity(getPackageManager()) == null) i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
             openSettings(i);
@@ -476,6 +479,7 @@ public class MainActivity extends Activity {
         String adb = Settings.Global.getString(getContentResolver(), Settings.Global.ADB_ENABLED);
         String port = "";
         try {
+            // KOMPAT: Versteckte API; kann ab Android 9 gesperrt sein -> Port wird als "nicht freigegeben" angezeigt (nur Anzeige).
             port = (String) Class.forName("android.os.SystemProperties").getMethod("get", String.class)
                     .invoke(null, "service.adb.tcp.port");
         } catch (Exception ignored) {
@@ -499,6 +503,8 @@ public class MainActivity extends Activity {
 
     private boolean usageAccess() {
         AppOpsManager ao = getSystemService(AppOpsManager.class);
+        // KOMPAT: unsafeCheckOpNoThrow gibt es erst ab API 29: auf Android 8/9 stuerzt die Oberflaeche beim Anzeigen ab
+        //   (checkOpNoThrow waere der aeltere Weg).
         return ao.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), getPackageName())
                 == AppOpsManager.MODE_ALLOWED;
     }

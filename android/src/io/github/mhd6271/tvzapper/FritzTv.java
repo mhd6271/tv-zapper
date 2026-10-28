@@ -24,6 +24,8 @@ final class FritzTv {
     static FritzTv load(String host) throws Exception {
         FritzTv f = new FritzTv();
         for (String list : new String[]{"tvsd", "tvhd"}) {
+            // KOMPAT: Diese Listen gibt es nur bei FRITZ!Box-Modellen mit DVB-C-Empfang (Cable); DSL-/Glasfaser-Boxen liefern
+            //   nichts -> keine Werbeerkennung. Verschluesselte Sender (CI-Karte) liefert die Box nicht. Geprueft nur an der 6660.
             HttpURLConnection c = (HttpURLConnection) new URL("http://" + host + "/dvb/m3u/" + list + ".m3u").openConnection();
             c.setConnectTimeout(4000);
             c.setReadTimeout(6000);
@@ -57,6 +59,8 @@ final class FritzTv {
     static String norm(String s) {
         s = s.toLowerCase(Locale.GERMAN).trim();
         s = s.replaceAll("(^|\\s)(hd|uhd|sd)(?=\\s|$)", " ").trim();   // auch mittendrin: "WDR HD Köln" = "WDR Köln"
+        // KOMPAT: Angleichungen fuer TCL-Namen gegen Vodafone-Kabel-Namen (BW). Andere Fernseher, Netze oder Satellit
+        //   schreiben Namen anders -> "gibt es nicht bei der FRITZ!Box".
         if (s.equals("nitro")) s = "rtlnitro";
         if (s.equals("swr bw")) s = "swr fernsehen bw";
         if (s.equals("swr rp")) s = "swr fernsehen rp";

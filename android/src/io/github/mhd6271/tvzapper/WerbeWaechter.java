@@ -12,6 +12,8 @@ import java.util.List;
 final class WerbeWaechter implements Sensor.Frames {
     /** Entscheidung wie am Mac gemessen: Werbung, wenn in 10 s >= 80 % ohne Logo (Wert < 0,35);
      *  Sendung wieder, wenn in 30 s >= 80 % mit Logo (Wert > 0,7). */
+    // KOMPAT: Schwellen am Mac an 6 Sendern gemessen; Sender mit durchsichtigen, wechselnden oder animierten Logos
+    //   und Sport mit Einblendungen in der Ecke verhalten sich evtl. anders.
     static final int WIN_IN = 10, WIN_OUT = 30;
     static final float LO = .35f, HI = .7f;
     /** Laenger als so lange "Werbung" = eher falsches Logo: neu lernen und Hauptsender aufgeben. */

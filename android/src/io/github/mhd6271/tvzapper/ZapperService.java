@@ -60,6 +60,8 @@ public class ZapperService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        // KOMPAT: startForeground mit Typ gibt es erst ab API 29 (Android 8/9: NoSuchMethodError, Dienst stuerzt);
+        //   der Typ SPECIAL_USE erst ab 34 – auf 29 bis 33 ungeprueft.
         startForeground(1, notification("Läuft"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         handler.removeCallbacksAndMessages(null);
         once = ACTION_ONCE.equals(action);
@@ -158,6 +160,8 @@ public class ZapperService extends Service {
         String fg = foregroundApp(this);
         boolean screenOn = getSystemService(PowerManager.class).isInteractive();
         String tvApp = Epg.tvPackage(this);
+        // KOMPAT: Ohne Nutzungszugriff (fg null) oder ohne erkannte TV-App schaltet der Zapper nie. Ob isInteractive()
+        //   bei TVs mit "Bildschirm aus, Ton an" false liefert, ist herstellerabhaengig.
         if (!readOnly && (!screenOn || tvApp == null || !tvApp.equals(fg))) {
             Log.add(this, "Fernseher zeigt gerade etwas anderes (" + (screenOn ? (fg == null ? "unbekannt – Nutzungszugriff erlaubt?" : fg)
                     : "Bildschirm aus") + ") – lasse ihn in Ruhe");
@@ -237,6 +241,8 @@ public class ZapperService extends Service {
         if (tvApp != null) i.setPackage(tvApp);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
+            // KOMPAT: Aktivitaet aus dem Hintergrund starten geht seit Android 10 nur dank SYSTEM_ALERT_WINDOW; ob kuenftige
+            //   Versionen (15+) oder Hersteller das weiter einschraenken, ist ungeprueft.
             startActivity(i);
         } catch (Exception e) {
             Log.add(this, "Umschalten fehlgeschlagen: " + e.getMessage());
@@ -283,6 +289,8 @@ public class ZapperService extends Service {
         UsageEvents.Event e = new UsageEvents.Event();
         while (ev != null && ev.hasNextEvent()) {
             ev.getNextEvent(e);
+            // KOMPAT: ACTIVITY_RESUMED (API 29) hat denselben Wert 1 wie das alte MOVE_TO_FOREGROUND und wird eingebaut – geht
+            //   auch darunter. Zeigt die TV-App das Bild ueber ein anderes Paket (Bild-in-Bild, Eingangsdienst), passt der Vergleich nicht.
             if (e.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) fgLast = e.getPackageName();
         }
         fgQueried = now;

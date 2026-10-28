@@ -38,6 +38,8 @@ final class Banner {
             bg.setStroke((int) (2 * d), Color.rgb(0xF2, 0xB1, 0x34));
             bg.setCornerRadius(12 * d);
             v.setBackground(bg);
+            // KOMPAT: Overlay ueber dem Tuner-Bild: am TCL sichtbar. Ob andere Geraete Overlays ueber geschuetztem Video
+            //   oder eigener Video-Ebene zeigen, ist ungeprueft; Groessen in dp, Text deutsch.
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,

@@ -18,6 +18,8 @@ final class Epg {
 
     /** Tuner-Eingang: Einstellung "tv_eingang", sonst der Tuner-Eingang (TYPE_TUNER) mit den meisten Sendern,
      *  sonst der Eingang mit den meisten Sendern ueberhaupt. Am TCL: com.tcl.tvinput/.TunerInputService/HW2. */
+    // KOMPAT: Ein Eingang wird genommen: Geraete mit getrennten Tuner-Eingaengen (DVB-C/S/T) oder Sendern bei
+    //   Nicht-Tuner-Eingaengen (IPTV, Zattoo, waipu) sehen nur einen Teil – Einstellung tv_eingang setzen.
     static synchronized String tunerInput(Context c) {
         String cfg = Config.load(c).tvInput;
         if (!cfg.isEmpty()) return cfg;
@@ -48,6 +50,8 @@ final class Epg {
 
     /** App, die einen Sender abspielt (ACTION_VIEW auf eine Sender-Adresse): Einstellung "tv_app", sonst vom
      *  System erfragt. Am TCL: com.tcl.tv. null, wenn unbekannt. */
+    // KOMPAT: Ist keine Fernseh-App Standard, liefert resolveActivity die Auswahl ("android") -> null; dann gilt das
+    //   Fernsehbild nie als vorn und der Zapper schaltet nie. Andere TV-Apps (z. B. Live Channels) nehmen ACTION_VIEW evtl. nicht an.
     static synchronized String tvPackage(Context c) {
         String cfg = Config.load(c).tvApp;
         if (!cfg.isEmpty()) return cfg;
@@ -97,6 +101,8 @@ final class Epg {
                 ch.number = nz(cur.getString(1));
                 ch.name = nz(cur.getString(2));
                 ch.browsable = cur.getInt(3) != 0;
+                // KOMPAT: internal_provider_flag2 = Favorit ist TCL-eigen; andere Hersteller nutzen das Feld anders
+                //   (oder gar nicht) – dann stimmen die Vorgaben an/aus nicht.
                 ch.favorite = !cur.isNull(4) && cur.getInt(4) == 1;
                 list.add(ch);
             }
@@ -116,6 +122,8 @@ final class Epg {
                 TvContract.Programs.COLUMN_BROADCAST_GENRE, TvContract.Programs.COLUMN_START_TIME_UTC_MILLIS,
                 TvContract.Programs.COLUMN_END_TIME_UTC_MILLIS};
         ContentResolver cr = c.getContentResolver();
+        // KOMPAT: Sendungen gibt es nur, wenn der Tuner das EPG in TvContract schreibt; manche Hersteller halten es intern
+        //   (dann ueberall leer, kaum Punkte).
         try (Cursor cur = cr.query(TvContract.buildProgramsUriForChannel(channelId, now, now), proj,
                 null, null, null)) {
             if (cur == null) return null;
@@ -125,6 +133,8 @@ final class Epg {
                 p.title = nz(cur.getString(0));
                 p.episode = nz(cur.getString(1));
                 p.desc = nz(cur.getString(2));
+                // KOMPAT: Genre: TCL liefert DVB-Codes als Zahl ("32"), andere Geraete Texte ("MOVIES") oder nichts; Beschreibungen
+                //   fehlen bei manchen Tunern ganz – Kategorie-Woerter treffen dann anders.
                 p.genre = (nz(cur.getString(3)) + " " + nz(cur.getString(4))).trim();
                 p.start = cur.getLong(5);
                 p.end = cur.getLong(6);
@@ -143,6 +153,8 @@ final class Epg {
     static long currentChannelId(Context c) {
         String v = null;
         try {
+            // KOMPAT: TCL-eigener Schluessel. Anderswo null -> lastTuned: selbst Umschalten bemerkt die App nicht, der
+            //   Werbe-Sensor beobachtet dann den falschen Sender, und tuneTo() meldet jedes Umschalten als bestaetigt.
             v = Settings.Global.getString(c.getContentResolver(), "recent_play_channel_id");
         } catch (Exception ignored) {
         }
@@ -195,6 +207,7 @@ final class Epg {
 
     static long num(String s) {
         try {
+            // KOMPAT: Nummern wie "1-2"/"1.1" (ATSC, Unterkanaele) zaehlen nur mit dem ersten Teil – Reihenfolge dann ungenau.
             return Long.parseLong(s.replaceAll("[^0-9].*", ""));
         } catch (Exception e) {
             return Long.MAX_VALUE;

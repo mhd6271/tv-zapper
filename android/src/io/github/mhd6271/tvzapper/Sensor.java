@@ -94,6 +94,8 @@ final class Sensor {
             udp.setReceiveBufferSize(2 << 20);
             udp.setSoTimeout(3000);
             rtsp = new Socket();
+            // KOMPAT: SAT>IP so, wie die FRITZ!Box es macht: RTSP ueber TCP, Video als RTP/UDP-Unicast. Andere Server
+            //   (Digibit, minisatip, tvheadend) bieten teils RTP ueber TCP oder Multicast, andere URL-Parameter – ungetestet.
             rtsp.connect(new InetSocketAddress(u.getHost(), u.getPort() > 0 ? u.getPort() : 554), 4000);
             rtsp.setSoTimeout(6000);
             int p = udp.getLocalPort();
@@ -113,6 +115,7 @@ final class Sensor {
                 } catch (SocketTimeoutException e) {
                     throw new Exception("keine Daten von der FRITZ!Box");
                 }
+                // KOMPAT: Setzt einen RTP-Kopf voraus; ein Server, der reinen TS ueber UDP schickt, wuerde verschoben gelesen.
                 int off = 12 + 4 * (buf[0] & 0x0f);
                 if ((buf[0] & 0x10) != 0) off += 4 + 4 * (((buf[off + 2] & 0xff) << 8) | (buf[off + 3] & 0xff));
                 for (int i = off; i + 188 <= pkt.getLength(); i += 188) demux.ts(buf, i);
@@ -121,6 +124,9 @@ final class Sensor {
                 while ((au = demux.poll()) != null) {
                     if (codec == null) {
                         if (!demux.hasConfig(au)) continue;   // erst ab Sequenzkopf/SPS
+                        // KOMPAT: Zweiter Hardware-Decoder neben dem Fernsehbild. Am TCL (MediaTek) mit MPEG-2 geprueft. Andere Chips
+                        //   (Amlogic, Realtek) erlauben oft nur wenige Decoder gleichzeitig – dann Fehler hier oder ruckelndes Fernsehbild;
+                        //   HEVC/UHD braucht noch mehr. Die feste Groesse 720x576 mag nicht jeder Decoder bei HD-Strom (ungeprueft).
                         codec = MediaCodec.createDecoderByType(demux.mime);
                         MediaFormat f = MediaFormat.createVideoFormat(demux.mime, 720, 576);
                         f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
@@ -143,6 +149,7 @@ final class Sensor {
                         long now = System.currentTimeMillis();
                         if (now >= nextFrame) {
                             nextFrame = now + 250;
+                            // KOMPAT: Manche Decoder liefern kein Image (null, z. B. nur getunnelt) – dann kommen nie Bilder.
                             Image img = codec.getOutputImage(o);
                             if (img != null) {
                                 grab(img);
@@ -181,6 +188,8 @@ final class Sensor {
 
     /** Y-Ebene auf halbe Groesse mitteln (2x2, wie ffmpeg scale am Mac), oberes und unteres Viertel kopieren. */
     private void grab(Image img) {
+        // KOMPAT: Nimmt 8-Bit-Y an und ignoriert getCropRect(): aufgefuellte Bilder (1088 statt 1080 Zeilen) verschieben die
+        //   untere Kante leicht, 10-Bit-Video (HEVC Main10, HDR) haette 2 Bytes je Punkt und ergaebe Unsinn.
         Image.Plane y = img.getPlanes()[0];
         ByteBuffer b = y.getBuffer();
         int rs = y.getRowStride(), ps = y.getPixelStride();
@@ -246,6 +255,7 @@ final class Sensor {
                     int type = b[k] & 0xff;
                     int es = ((b[k + 1] & 0x1f) << 8) | (b[k + 2] & 0xff);
                     int esLen = ((b[k + 3] & 0x0f) << 8) | (b[k + 4] & 0xff);
+                    // KOMPAT: Nur MPEG-2, H.264 und HEVC; nur das erste Programm mit Video (FRITZ!Box schickt eines je Stream).
                     if (type == 0x02 || type == 0x01) mime = MediaFormat.MIMETYPE_VIDEO_MPEG2;
                     else if (type == 0x1b) mime = MediaFormat.MIMETYPE_VIDEO_AVC;
                     else if (type == 0x24) mime = MediaFormat.MIMETYPE_VIDEO_HEVC;

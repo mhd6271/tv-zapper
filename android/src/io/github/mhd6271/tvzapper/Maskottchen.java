@@ -52,6 +52,7 @@ final class Maskottchen extends View {
             WindowManager wm = c.getSystemService(WindowManager.class);
             Maskottchen v = new Maskottchen(c);
             float d = v.d;
+            // KOMPAT: Wie Banner: Overlay ueber dem Fernsehbild, nur am TCL gesehen.
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams((int) (360 * d), (int) (300 * d),
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,

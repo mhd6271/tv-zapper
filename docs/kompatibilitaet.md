@@ -86,3 +86,87 @@ Der zweite Weg ist fast vollständig an den TCL gebunden.
 | `zapper.py` `now` | Ortszeit des Rechners | Nur für Protokoll und Ausgabe |
 
 Gefährdet ist in Max' Aufbau nichts davon (TCL, Deutsch, HA 2026.10.4, gleiches Netz, gleiche Zeitzone).
+
+## TV-App (`android/`)
+
+Stand 28.10.2026, App-Sitzung, Version 0.4.5. Durchgesehen wurden alle Dateien in `android/src/`, dazu
+`AndroidManifest.xml` und `build.sh`. Die Hilfs-App `android/tonprobe/` ist ein Test und wird nicht ausgeliefert.
+Geprüft ist alles nur am TCL (Android 14, API 34, Google TV, MediaTek) mit der FRITZ!Box 6660 Cable und Vodafone-Kabel.
+
+**Belegt** sind die API-Stufen (aus `api-versions.xml` des SDK, platform 35) und die direkten Aufrufe im fertigen dex
+(mit `dexdump` nachgesehen). Die Berechtigungsstufen hat `dumpsys package` am TCL gezeigt. Alles, was „ungeprüft“
+oder „vermutlich“ heißt, ist nicht belegt. Zeilen beziehen sich auf den `KOMPAT:`-Kommentar.
+
+Risiko: **hoch** = geht dort sicher oder sehr wahrscheinlich nicht, **mittel** = geht auf einem Teil der Geräte nicht,
+**niedrig** = kleine Abweichung.
+
+### Android-Version (minSdk 26, geprüft nur 34)
+
+| Datei:Zeile | Abhängigkeit | Risiko | Folge auf anderen Geräten | Möglicher Weg später |
+|---|---|---|---|---|
+| `AndroidManifest.xml:7` | `minSdk 26` zugesagt, der Code braucht aber API 29 bzw. 33 | hoch | Android 8 bis 12 stürzen ab (Zeilen unten) | minSdk ehrlich auf 33 setzen oder die drei Stellen unten ersetzen |
+| `Config.java:83` | `InputStream.readAllBytes()` (API 33), direkt im dex | hoch | Android 8 bis 12: Absturz beim ersten Start (noch keine Einstellungsdatei); `NoSuchMethodError` fängt `catch (Exception)` nicht | Eigene Leseschleife mit `ByteArrayOutputStream` |
+| `Logo.java:245` | dasselbe für die mitgelieferten Logos | hoch | Android 8 bis 12: Werbe-Thread stürzt ab, sobald ein Sender mit mitgeliefertem Logo beobachtet wird | wie oben |
+| `ZapperService.java:63` | `startForeground(id, n, typ)` (API 29), Typ `SPECIAL_USE` (API 34) | hoch (8/9), mittel (10 bis 13) | Android 8/9: Dienst stürzt beim Start ab. 10 bis 13: unbekannter Typ, Verhalten ungeprüft | Nach `Build.VERSION.SDK_INT` verzweigen: unter 29 ohne Typ, unter 34 Typ 0 oder dataSync |
+| `MainActivity.java:506` | `unsafeCheckOpNoThrow` (API 29) | hoch | Android 8/9: Oberfläche stürzt beim Anzeigen ab | Unter 29 `checkOpNoThrow` |
+| `AndroidManifest.xml:87` | Dienst-Typ `specialUse` | mittel | Google Play verlangt eine Begründung. Ältere Android-Versionen kennen den Typ nicht (ungeprüft) | Bei Store-Einreichung begründen |
+| `ZapperService.java:244` | Start einer Aktivität aus dem Hintergrund nur dank `SYSTEM_ALERT_WINDOW` (Sperre seit Android 10) | mittel | Künftige Android-Versionen (15+) oder Hersteller schränken das evtl. weiter ein (ungeprüft) | Bei neuer Android-Version am Gerät testen |
+| `ZapperService.java:292` | `ACTIVITY_RESUMED` (API 29) | niedrig | Wert 1 = altes `MOVE_TO_FOREGROUND`, wird eingebaut, geht also auch darunter. Zeigt die TV-App das Bild über ein anderes Paket, passt der Vergleich nicht | – |
+| `MainActivity.java:107` | `POST_NOTIFICATIONS` erst ab Android 13 eine Laufzeit-Berechtigung | niedrig | Darunter still übergangen, unschädlich | – |
+| `MainActivity.java:482` | versteckte API `SystemProperties` (Spiegelung) | niedrig | Kann gesperrt sein, dann zeigt die App den adb-Port als „nicht freigegeben“, nur eine Anzeige | – |
+| `build.sh:35` | d8 ohne core library desugaring | niedrig (nur Bauen) | Ersetzt keine fehlenden Bibliotheksmethoden, deshalb bleibt die API-33-Stelle | Mit `--desugared-lib` bauen oder die Stellen ersetzen |
+| `build.sh:8` | macOS/Homebrew-Pfade, build-tools 36.0.0, platform 35 fest | niedrig (nur Bauen) | Auf Linux/Windows Pfade per `JAVA_HOME`/`ANDROID_HOME` setzen | – |
+
+### Fernseher, Hersteller und Live-TV (TvContract)
+
+| Datei:Zeile | Abhängigkeit | Risiko | Folge auf anderen Geräten | Möglicher Weg später |
+|---|---|---|---|---|
+| `Epg.java:156` | `Settings.Global "recent_play_channel_id"`, gibt es nur bei TCL | hoch | Die App kennt den laufenden Sender nicht (nur den zuletzt selbst gewählten). Selbst Umschalten bemerkt sie nicht, der Werbe-Sensor beobachtet dann den falschen Sender, und jedes Umschalten gilt als bestätigt | Andere Herstellerquellen suchen, sonst laufenden Sender per `dumpsys`/TvInputManager oder vom Nutzer |
+| `Epg.java:53` | Fernseh-App über `ACTION_VIEW` auf einen Sender gefunden | hoch | Ist keine App Standard (Auswahl „android“), bleibt sie unbekannt. Dann gilt das Fernsehbild nie als vorn, und der Zapper schaltet nie. Manche TV-Apps nehmen den Intent nicht an | Einstellung `tv_app` (gibt es schon); Liste bekannter Pakete (Sony, Philips, Live Channels) |
+| `AndroidManifest.xml:16` | `READ_TV_LISTINGS` vom TvProvider (am TCL „dangerous“, zur Laufzeit erteilt), nicht im öffentlichen SDK | mittel | Ob andere Hersteller oder ältere Android-Versionen fremde Sender und Sendungen an Dritt-Apps herausgeben, ist ungeprüft. Wenn nicht: „Keine Sender lesbar“ | An einem zweiten Gerät testen |
+| `Epg.java:136` | EPG muss in TvContract stehen | mittel | Manche Hersteller halten das EPG intern, dann sind alle Sendungen leer und es gibt kaum Punkte | Nur Sendernamen bewerten; HA-Weg über die Programmzeitschrift |
+| `Epg.java:104` | `internal_provider_flag2 = 1` als Favorit, TCL-eigen | mittel | Andere nutzen das Feld anders, dann stimmen die Vorgaben an/aus nicht. Gesetzt ist es nur, wenn überhaupt ein Sender so markiert ist | Je Hersteller erkennen, sonst „sichtbar“ (`browsable`) als Vorgabe |
+| `Epg.java:21` | ein Tuner-Eingang (`TYPE_TUNER` mit den meisten Sendern) | mittel | Getrennte Eingänge für DVB-C/S/T oder Sender bei IPTV/Zattoo/waipu: nur ein Teil wird gesehen | Mehrere Eingänge zulassen; Einstellung `tv_eingang` gibt es schon |
+| `Epg.java:125` | Genre als DVB-Code (TCL: „32“) | niedrig | Andere liefern Text oder nichts, Beschreibungen fehlen manchmal, die Kategorie-Wörter treffen dann anders | Genre-Codes in Wörter übersetzen |
+| `Epg.java:210` | Sendernummer = erste Zahl | niedrig | „1-2“/„1.1“ (ATSC, Unterkanäle) werden ungenau sortiert | – |
+| `ZapperService.java:163` | Nutzungszugriff und `isInteractive()` | mittel | Ohne Nutzungszugriff schaltet der Zapper nie. „Bildschirm aus, Ton an“ meldet jeder Hersteller anders | – |
+| `AndroidManifest.xml:29`, `:33`, `MainActivity.java:114` | Einstellungsseiten „Über anderen Apps“ und „Nutzungszugriff“ | mittel | Fehlen auf manchen TV-Firmwares, dann nur per adb `appops set … allow` | In der App die adb-Befehle anzeigen |
+| `Banner.java:41`, `Maskottchen.java:55` | Overlay über dem Tuner-Bild | mittel | Am TCL sichtbar. Ob andere Geräte Overlays über geschütztem Video oder eigener Video-Ebene zeigen, ist ungeprüft | Am zweiten Gerät testen |
+
+### Video-Decoder und Werbeerkennung
+
+| Datei:Zeile | Abhängigkeit | Risiko | Folge auf anderen Geräten | Möglicher Weg später |
+|---|---|---|---|---|
+| `Sensor.java:127` | zweiter Hardware-Decoder neben dem Fernsehbild, feste Größe 720x576 | mittel bis hoch | Am TCL (MediaTek) mit MPEG-2 geprüft. Amlogic/Realtek erlauben oft nur wenige Decoder gleichzeitig, dann Fehler oder ruckelndes Fernsehbild. HEVC/UHD braucht mehr. Feste Größe bei HD ungeprüft | Decoder-Fähigkeiten abfragen (`MediaCodecList`, `getMaxSupportedInstances`), SD-Eintrag bevorzugen, Software-Decoder als Rückfall |
+| `Logo.java:186` | rechte Logo-Ecke ab 70 % der Bildbreite, für 360 Punkte bemessen | hoch bei HD | Bei HD (960 Punkte) nur 672 bis 780, Logos ganz rechts liegen außerhalb. **Betrifft auch Max' Aufbau**, sobald die FRITZ!Box einen HD-Eintrag liefert (die alten SD-Einträge sind teils tot) | Ecke relativ zur Breite schneiden oder das Bild vorher auf 360 Breite verkleinern |
+| `Logo.java:15` | Ecke 108x72 und Maske für SD in halber Auflösung | mittel | Bei HD/UHD ist das Fenster relativ kleiner als das Logo | wie oben |
+| `Logo.java:245` | mitgelieferte Logos aus SD-Aufnahmen (Vodafone-Kabel, Okt. 2026) | mittel | Bei anderer Auflösung oder Logoform passen sie nicht: Fehlalarm, nach 12 min wird neu gelernt | Mitgelieferte Logos nur bei passender Auflösung nehmen |
+| `Sensor.java:191` | 8-Bit-Y, `getCropRect()` nicht beachtet | niedrig bis mittel | Bei 1088 statt 1080 Zeilen ist die Unterkante leicht verschoben; 10-Bit-Video (HEVC Main10, HDR) ergibt Unsinn | Crop-Rechteck und Bittiefe beachten |
+| `Sensor.java:152` | Decoder liefert `Image` | niedrig | Manche Decoder (nur getunnelt) liefern null, dann kommen nie Bilder | Ausgabe auf eine Surface/ImageReader |
+| `Sensor.java:258` | nur MPEG-2/H.264/HEVC, nur das erste Programm mit Video | niedrig | Andere Codecs werden nicht erkannt | – |
+| `WerbeWaechter.java:15` | Schwellen am Mac an 6 Sendern gemessen | mittel | Durchsichtige, wechselnde oder animierte Logos und Sport mit Eckeinblendungen verhalten sich evtl. anders. Heute bei SPORT 1 HD scheiterten zwei Lernrunden, vermutlich wegen Werbung während des Lernens | Lernen nur in Abschnitten mit stabilem Bild; Schwellen je Sender |
+
+### FRITZ!Box und Kabelnetz
+
+| Datei:Zeile | Abhängigkeit | Risiko | Folge auf anderen Geräten | Möglicher Weg später |
+|---|---|---|---|---|
+| `FritzTv.java:27` | `/dvb/m3u/tvsd.m3u` und `tvhd.m3u` gibt es nur bei FRITZ!Box-Modellen mit DVB-C | hoch ohne Cable-Box | DSL-/Glasfaser-Boxen: keine Werbeerkennung (die App läuft sonst weiter). Verschlüsselte Sender (CI-Karte) liefert die Box nicht. Geprüft nur an der 6660 | Andere SAT>IP-Quellen per eigener M3U-Adresse zulassen |
+| `Sensor.java:97` | SAT>IP wie bei der FRITZ!Box: RTSP über TCP, RTP/UDP-Unicast | mittel | Digibit, minisatip und tvheadend arbeiten teils mit RTP über TCP, Multicast oder anderen URL-Parametern (ungetestet) | Übertragungsart aus der SETUP-Antwort lesen |
+| `Sensor.java:118` | RTP-Kopf vorausgesetzt | mittel | Reiner TS über UDP würde verschoben gelesen | Am Sync-Byte 0x47 ausrichten |
+| `FritzTv.java:62` | Namensangleichung TCL ↔ Vodafone-Kabel BW | mittel | Andere Fernseher, Netze oder Satellit schreiben Namen anders, dann „gibt es nicht bei der FRITZ!Box“ | Zuordnung in den Einstellungen; muss gleich bleiben mit `sender_schluessel` der HA-Integration |
+| `Config.java:48` | Vorgabe `fritz.box` | niedrig | Löst nur auf, wenn die FRITZ!Box der DNS-Server ist, sonst die IP eintragen | – |
+
+### Sprache, Zeit und Speicher (nur hier, ohne eigenen Kommentar)
+
+- **Deutsch:** Alle Texte der App sind fest auf Deutsch, auch die Interessen (`interessen.json`), die Wortgrenzen
+  (a–z, äöüß in `Scorer.java`) und die Sendernamen. In anderen Ländern trifft wenig, und die Oberfläche ist deutsch.
+- **Zeit:** Die Zeiten folgen der Zeitzone des Fernsehers. Die ABFRAGEN-Zeiten tragen den Versatz (ISO mit `+01:00`)
+  und stimmen deshalb auch in HA.
+- **Speicher:** Puffer bis 2 MB (UDP), 4 MB (PES) und 5000 FRITZ!Box-Einträge sind auch für Geräte mit 1 GB RAM klein.
+  Ein zweiter Decoder kostet aber Video-Speicher; auf schwachen Geräten ungeprüft.
+- **Bedienung:** Die Oberfläche ist für die Fernbedienung (D-Pad) gebaut und geht auch mit Touch. Auf Handys und
+  Tablets gibt es aber keinen Tuner und damit keine Sender.
+
+Gefährdet ist in Max' Aufbau (TCL, Android 14, FRITZ!Box 6660, Vodafone-Kabel) nur ein Punkt: die rechte Logo-Ecke
+bei HD-Einträgen (`Logo.java:186`). Ob sie dort schon zu falschen Ergebnissen führt, ist nicht geprüft. Bisher haben
+die gelernten HD-Logos (z. B. SPORT 1 HD) wohl in der linken Ecke gesessen; welche Ecke es war, ist nicht nachgesehen.

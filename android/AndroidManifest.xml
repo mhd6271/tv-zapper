@@ -4,6 +4,8 @@
     android:versionCode="14"
     android:versionName="0.4.5">
 
+    <!-- KOMPAT: minSdk 26 ist zugesagt, der Code ruft aber Methoden ab API 29 (startForeground mit Typ,
+         unsafeCheckOpNoThrow) und API 33 (InputStream.readAllBytes) direkt auf – Android 8 bis 12 stuerzen ab. Geprueft nur Android 14 (TCL). -->
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -11,6 +13,8 @@
 
     <!-- Senderliste und laufende Sendungen aus der Android-TV-Datenbank (TvContract) -->
     <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />
+    <!-- KOMPAT: READ_TV_LISTINGS stellt der TvProvider (am TCL "dangerous", zur Laufzeit erteilt); nicht im oeffentlichen SDK.
+         Ob andere Hersteller/aeltere Android-Versionen fremde Sender und Sendungen an Dritt-Apps herausgeben, ist ungeprueft. -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
     <!-- Werbeerkennung: Senderliste und Stream von der FRITZ!Box im Heimnetz -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -22,8 +26,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Umschalten aus dem Hintergrund (Android erlaubt Activity-Starts sonst nicht) -->
+    <!-- KOMPAT: Manche Android-TV-Firmwares haben keine Seite "Ueber anderen Apps" – dann nur per adb
+         (appops set io.github.mhd6271.tvzapper SYSTEM_ALERT_WINDOW allow). Ohne sie kein Umschalten aus dem Hintergrund, keine Einblendung. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Pruefen, ob gerade das Fernsehprogramm vorn ist -->
+    <!-- KOMPAT: Auch die Seite "Nutzungszugriff" fehlt auf manchen TV-Firmwares (dann adb: appops set ... GET_USAGE_STATS allow);
+         ohne sie weiss die App nicht, ob das Fernsehbild vorn ist, und schaltet nie. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
 
     <!-- Welche App spielt einen Sender ab? (am TCL com.tcl.tv) -->
@@ -76,6 +84,8 @@
             </intent-filter>
         </receiver>
 
+        <!-- KOMPAT: specialUse gibt es erst ab Android 14; wie aeltere Versionen den unbekannten Typ behandeln, ist ungeprueft.
+             Fuer Google Play muesste specialUse begruendet werden. -->
         <service
             android:name=".ZapperService"
             android:exported="false"

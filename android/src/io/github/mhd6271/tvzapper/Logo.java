@@ -12,6 +12,8 @@ import java.nio.file.Files;
  *  Bilder an derselben Stelle sind, ohne Bildrand und lange Linien, nur der dichteste 70x50-Bereich.
  *  Wert je Bild = Anteil der Maskenpunkte, die gerade eine Kante haben (Sendung ~1,0, Werbung ~0,1). */
 final class Logo {
+    // KOMPAT: Ecke und Maske sind fuer SD in halber Aufloesung (360x288) bemessen. Bei HD-Strom (960x540) ist das
+    //   Fenster kleiner als das Logo; UHD ebenso.
     static final int CW = 108, CH = 72;
     /** Lernzeit fuer unbekannte Sender: 5 min bei 4 Bildern/s. */
     static final int LEARN_FRAMES = 1200;
@@ -181,6 +183,8 @@ final class Logo {
 
     static byte[] crop(byte[] top, byte[] bottom, int w, int c) {
         byte[] src = c < 2 ? top : bottom;
+        // KOMPAT: Rechte Ecke ab 70 % der Breite: bei 360 genau bis zum Rand, bei HD (960) nur 672 bis 780 – Logos ganz
+        //   rechts liegen dann ausserhalb. Betrifft auch das eigene Setup, sobald ein HD-Eintrag der FRITZ!Box genommen wird.
         int x0 = (c % 2 == 0) ? 0 : (int) (w * .7);
         byte[] r = new byte[CW * CH];
         for (int y = 0; y < CH; y++)
@@ -238,6 +242,9 @@ final class Logo {
         try {
             File f = file(c, key);
             if (f.exists()) txt = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+            // KOMPAT: Mitgelieferte Logos stammen aus SD-Aufnahmen aus Vodafone-Kabel (Okt. 2026); bei anderer Aufloesung oder
+            //   Logoform passen sie nicht (Fehlalarm, nach 12 min neu lernen).
+            //   readAllBytes() gibt es erst ab Android 13 – darunter NoSuchMethodError (wird von catch (Exception) nicht gefangen).
             else try (InputStream in = c.getAssets().open("logos/" + key + ".txt")) {
                 txt = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             }
