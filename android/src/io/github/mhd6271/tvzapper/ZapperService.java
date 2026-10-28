@@ -25,6 +25,7 @@ public class ZapperService extends Service {
     static final String ACTION_START = "start", ACTION_ONCE = "once", ACTION_STOP = "stop";
     static final String EXTRA_READ_ONLY = "nurLesen";
     private static final String CHANNEL = "lauf";
+    private static final String RUN_PREFS = "lauf";
 
     /** Ende des laufenden Durchgangs (ms) fuer die Anzeige, 0 = steht. */
     static volatile long endAt = 0;
@@ -48,9 +49,14 @@ public class ZapperService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null && intent.getAction() != null ? intent.getAction() : ACTION_STOP;
+        // intent == null: Android startet den Dienst neu, nachdem es ihn beendet hat (z. B. Speichermangel)
+        long savedEnd = getSharedPreferences(RUN_PREFS, MODE_PRIVATE).getLong("ende", 0);
+        boolean resume = intent == null && savedEnd > System.currentTimeMillis();
+        String action = resume ? ACTION_START
+                : intent != null && intent.getAction() != null ? intent.getAction() : ACTION_STOP;
         if (ACTION_STOP.equals(action)) {
-            Log.add(this, "Gestoppt");
+            if (intent != null) Log.add(this, "Gestoppt");
+            saveRun(0, false);
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -58,21 +64,31 @@ public class ZapperService extends Service {
         handler.removeCallbacksAndMessages(null);
         once = ACTION_ONCE.equals(action);
         if (!once && waechter == null) startWaechter();
-        readOnly = intent.getBooleanExtra(EXTRA_READ_ONLY, false);
+        readOnly = resume ? getSharedPreferences(RUN_PREFS, MODE_PRIVATE).getBoolean("nurLesen", false)
+                : intent.getBooleanExtra(EXTRA_READ_ONLY, false);
         Config cfg = Config.load(this);
-        endAt = once ? System.currentTimeMillis()
+        endAt = resume ? savedEnd : once ? System.currentTimeMillis()
                 : cfg.runMin <= 0 ? Long.MAX_VALUE : System.currentTimeMillis() + cfg.runMin * 60_000L;
+        saveRun(once ? 0 : endAt, readOnly);
         if (!once) {
-            Log.add(this, "Start: " + (cfg.runMin <= 0 ? "ohne Ende" : cfg.runMin + " min Laufzeit") + ", alle " + cfg.dwellMin + " min prüfen; Fernseher: Eingang "
+            if (resume) Log.add(this, "Von Android beendet und neu gestartet – Zapper läuft weiter");
+            else Log.add(this, "Start: " + (cfg.runMin <= 0 ? "ohne Ende" : cfg.runMin + " min Laufzeit") + ", alle " + cfg.dwellMin + " min prüfen; Fernseher: Eingang "
                     + Epg.tunerInput(this) + ", App " + Epg.tvPackage(this));
             PowerManager pm = getSystemService(PowerManager.class);
+            if (wake != null && wake.isHeld()) wake.release();
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
-            wake.acquire(cfg.runMin <= 0 ? 24 * 3600_000L : cfg.runMin * 60_000L + 60_000L);
+            wake.acquire(endAt == Long.MAX_VALUE ? 24 * 3600_000L : endAt - System.currentTimeMillis() + 60_000L);
         }
-        if (!once) greet(0);
+        if (!once && !resume) greet(0);
         // Beim Start aus der App heraus ist sie selbst noch vorn – kurz warten, bis das Fernsehbild zurueck ist
         handler.postDelayed(this::tick, once ? 0 : 5000);
-        return START_NOT_STICKY;
+        // Laufender Zapper: nach einem Beenden durch Android von selbst wieder anlaufen
+        return once ? START_NOT_STICKY : START_STICKY;
+    }
+
+    /** Laufendes Ende merken, damit ein Neustart durch Android weitermachen kann; 0 = laeuft nicht. */
+    private void saveRun(long end, boolean ro) {
+        getSharedPreferences(RUN_PREFS, MODE_PRIVATE).edit().putLong("ende", end).putBoolean("nurLesen", ro).commit();
     }
 
     private void startWaechter() {
@@ -116,6 +132,7 @@ public class ZapperService extends Service {
         long next = System.currentTimeMillis() + Math.max(1, cfg.dwellMin) * 60_000L;
         if (once || next > endAt) {
             if (!once) Log.add(this, "Laufzeit um – Ende");
+            saveRun(0, false);
             stopSelf();
             return;
         }

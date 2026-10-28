@@ -259,6 +259,8 @@ ist abgeleitet, nicht von TCL dokumentiert. In der App zeigt „Alle Sender zeig
 **Bedienung:** „Start“ läuft im Hintergrund (Vordergrund-Dienst mit Benachrichtigung) bis die Laufzeit um ist,
 „Stopp“ beendet, „Einmal prüfen (nur lesen)“ bewertet nur und schreibt das Ergebnis ins Protokoll unten auf der Seite.
 Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, lässt die App ihn in Ruhe.
+Beendet Android den Dienst (z. B. bei Speichermangel – der TCL hat nur 2,4 GB RAM), startet er sich von selbst neu
+und läuft bis zum gemerkten Ende weiter (ab 0.3.3; Protokoll: „Von Android beendet und neu gestartet“).
 
 **Berechtigungen** (Zeile „Berechtigungen“ in der App zeigt ✓/✗):
 - *Fernsehprogramm lesen* (`READ_TV_LISTINGS`) – Abfrage beim ersten Start.
