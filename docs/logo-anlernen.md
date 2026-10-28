@@ -42,7 +42,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [ ] | 183 | RTL UHD | offen | |
 | [x] | 184 | RTLNITRO | gelernt | Lauf 28.10. 20:04 nach 0 min |
 | [x] | 187 | RTLZWEI HD | gelernt | Lauf 28.10. 20:16 nach 6 min |
-| [ ] | 237 | TELE 5 HD | offen | |
+| [x] | 237 | TELE 5 HD | gelernt | Lauf 28.10. 20:22 nach 6 min |
 | [ ] | 244 | TLC HD | offen | |
 | [ ] | 260 | VOXup HD | offen | |
 | [ ] | 268 | WELT HD | offen | |
