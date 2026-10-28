@@ -44,7 +44,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 187 | RTLZWEI HD | gelernt | Lauf 28.10. 20:16 nach 6 min |
 | [x] | 237 | TELE 5 HD | gelernt | Lauf 28.10. 20:22 nach 6 min |
 | [x] | 244 | TLC HD | gelernt | Lauf 28.10. 20:28 nach 6 min |
-| [ ] | 260 | VOXup HD | offen | |
+| [ ] | 260 | VOXup HD | offen | nach 30 min nicht gelernt |
 | [ ] | 268 | WELT HD | offen | |
 
 ## Nicht beobachtet (7)
