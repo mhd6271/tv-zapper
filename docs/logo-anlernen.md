@@ -26,7 +26,7 @@ eingetragen und 2 sind UHD-Sender, die die FRITZ!Box nicht liefert. Damit beobac
 | [x] | 24 | sixx HD | mitgeliefert | Logo in der App |
 | [x] | 26 | SAT.1 HD | mitgeliefert | Logo in der App |
 | [x] | 29 | Kabel Eins HD | mitgeliefert | Logo in der App |
-| [ ] | 237 | TELE 5 HD | lernt gerade | 17:46: 39 % |
+| [x] | 237 | TELE 5 HD | gelernt | Lauf 28.10. 17:51 nach 0 min |
 | [ ] | 1 | Das Erste HD | offen | |
 | [ ] | 2 | ZDF HD | offen | |
 | [ ] | 25 | RTL HD | offen | |
