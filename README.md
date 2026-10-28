@@ -391,7 +391,10 @@ Sendungslogos (SAT.1 „Auf Streife“), Spielstände (RTL Fußball) oder Laufb�
 etwas anderes als das Fernsehbild vorn ist, und läuft danach für denselben Sender weiter.
 
 **Grenzen:**
-- Die FRITZ!Box liefert die Frequenz 562 MHz nicht (MTV, Comedy Central) – dort keine Werbeerkennung.
+- Liefert ein Sender bei der FRITZ!Box kein Bild, ist oft ihre Senderliste veraltet: Am 28.10.2026 lagen auf 562 MHz nur
+  noch Sky-Sender; Comedy Central, MTV, Eurosport 1 und DOKUSAT waren auf 418 MHz umgezogen. Abhilfe: in der FRITZ!Box
+  unter DVB-C einen Sendersuchlauf starten. Behält die Box danach alte Einträge, probiert die App (ab 0.4.2) nach 20 s
+  ohne Bild den nächsten Eintrag desselben Senders.
 - Ein Stream je Gerät: Ein zweites Gerät (z. B. der Mac) daneben lief bei uns nur ~3 min.
 - Sender ohne Logo-Ausblendung in der Werbung werden nicht erkannt; Senderwerbung/Trailer ohne Logo gelten als
   Werbung.

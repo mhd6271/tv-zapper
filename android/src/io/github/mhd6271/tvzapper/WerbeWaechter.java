@@ -95,10 +95,18 @@ final class WerbeWaechter implements Sensor.Frames {
         }
         if (!away && (home == null || home.id != cur) && System.currentTimeMillis() >= retryAt) watch(cur);
         if (sensor != null && System.currentTimeMillis() - lastFrame > 20_000) {
-            if (!gotFrame) {
+            if (!gotFrame && fritz.next(home.name)) {
+                Log.add(c, "Werbe-Sensor: FRITZ!Box liefert für " + home.name + " kein Bild – versuche den nächsten Eintrag ("
+                        + fritz.fritzName(home.name) + ")");
+                stopSensor();
+                lastFrame = System.currentTimeMillis();
+                sensor = new Sensor(fritz.urlFor(home.name), this);
+                sensor.start();
+            } else if (!gotFrame) {
                 Log.add(c, "Werbe-Sensor: FRITZ!Box liefert für " + home.name + " kein Bild – keine Werbeerkennung, "
                         + "neuer Versuch in 30 min");
                 noSignal.put(homeKey, System.currentTimeMillis() + 30 * 60_000L);
+                fritz.reset(home.name);
                 stopSensor();
             } else {
                 Log.add(c, "Werbe-Sensor: keine Bilder mehr – starte neu");

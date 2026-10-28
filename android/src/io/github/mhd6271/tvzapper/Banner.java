@@ -27,6 +27,7 @@ final class Banner {
             float d = c.getResources().getDisplayMetrics().density;
             v.setText(text);
             v.setTextSize(22);
+            v.setMaxWidth((int) (c.getResources().getDisplayMetrics().widthPixels * 0.6));   // lange Texte umbrechen
             v.setTextColor(Color.WHITE);
             v.setPadding((int) (24 * d), (int) (14 * d), (int) (24 * d), (int) (14 * d));
             GradientDrawable bg = new GradientDrawable();
