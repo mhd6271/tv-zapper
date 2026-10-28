@@ -192,6 +192,7 @@ async def test_durchgang_ueber_app():
     f.app_umschalten.reset_mock()
     e = await f.durchgang(CFG)
     assert e["aktion"] == "uebersprungen" and "TV-App" in e["app"]
+    assert e["vorher"]["nr"] == 23 and e["vorher"]["sendung"] == "Galileo"   # fuer den Sensor "Aktueller Treffer"
     f.app_umschalten.assert_not_called()
 
 

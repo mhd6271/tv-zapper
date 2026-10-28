@@ -369,7 +369,9 @@ class Fernseher:
                 return {"aktion": "uebersprungen", "quelle": "app", "app": daten.get("vorn")}
             if daten.get("zapper_laeuft") and not nur_lesen:
                 # Zappen beide, schalten sie gegeneinander: dann bewertet nur die TV-App
-                return {"aktion": "uebersprungen", "quelle": "app", "app": "Zapper der TV-App laeuft"}
+                x = daten.get("jetzt")
+                return {"aktion": "uebersprungen", "quelle": "app", "app": "Zapper der TV-App laeuft",
+                        "vorher": app_sendung(x, cfg) if x else None}
             return await self.durchgang_app(daten, cfg, nur_lesen)
         app = await self.focus_app()
         if app not in (TV_APP, GUIDE_APP):

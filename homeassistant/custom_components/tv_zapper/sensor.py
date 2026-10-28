@@ -32,9 +32,9 @@ class TrefferSensor(ZapperEntity, SensorEntity):
             return None
         if e["aktion"] == "fehler":
             return "Fehler"
-        if e["aktion"] == "uebersprungen":
-            return "TV-App zappt gerade" if "TV-App" in (e.get("app") or "") else "Fernseher zeigt etwas anderes"
         x = self._laeuft()
+        if e["aktion"] == "uebersprungen" and not x:
+            return "TV-App zappt gerade" if "TV-App" in (e.get("app") or "") else "Fernseher zeigt etwas anderes"
         text = f"{x.get('nr')} {x.get('sender') or ''}: {x.get('sendung') or '?'}"
         return text[:255]
 
