@@ -118,10 +118,12 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Sender nie nehmen | Sendernamen wie in der Programmzeitschrift, mit Komma getrennt |
 | Bevorzugte Sender | eine Zeile je Sender: `N24 DOKU \| 1` – Bonuspunkte, zählen nur, wenn die Sendung auch passt |
 
-Sendernamen bei „nie“ und „bevorzugt“ vergleicht die Integration tolerant: Groß-/Kleinschreibung, Leer- und
-Satzzeichen und ein HD/SD/UHD am Ende zählen nicht (`RTL Nitro` = `RTLNITRO`, `ZDFinfo` = `ZDFinfo HD`,
-`RTL HD` = `RTL UHD`). Andere Namen bleiben verschieden (`NITRO HD` ≠ `RTLNITRO`, `Comedy Central +1` ≠
-`Comedy Central HD`). Der Sendername zählt beim Bewerten mit: `Deluxe Music HD` hat dadurch immer die Musik-Punkte,
+Sendernamen bei „nie“ und „bevorzugt“ vergleicht die Integration tolerant, mit denselben Regeln wie die TV-App beim
+FRITZ!Box-Abgleich (`FritzTv.norm`, Tabelle in `docs/fritzbox-senderabgleich.md`): Groß-/Kleinschreibung, Leer- und
+Satzzeichen zählen nicht, HD/UHD/SD als eigenes Wort auch mittendrin nicht (`WDR HD Köln` = `WDR Köln`,
+`RTL HD` = `RTL UHD`), dazu feste Gleichsetzungen (`NITRO` = `RTLNITRO`, `ProSieben MAXX` = `Pro7 MAXX`,
+`n-tv` = `ntv`, `RTL2` = `RTLZWEI`, `SWR BW` = `SWR Fernsehen BW` …). Andere Namen bleiben verschieden
+(`Comedy Central +1` ≠ `Comedy Central HD`). Der Sendername zählt beim Bewerten mit: `Deluxe Music HD` hat dadurch immer die Musik-Punkte,
 `N24 DOKU` und `kabel eins Doku` immer die Doku-Punkte – gewollt, weil der Name oft verrät, was läuft.
 | Laufzeit | wie lange der Zapper nach dem Einschalten läuft (Minuten) |
 | Verweilzeit | Minuten zwischen zwei Prüfungen |

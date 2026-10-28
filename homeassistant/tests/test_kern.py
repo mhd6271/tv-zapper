@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 from custom_components.tv_zapper import const, tv
 from custom_components.tv_zapper.logik import (
-    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, sender_schluessel, text_zu_bonus,
+    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, sender_nie, sender_schluessel, text_zu_bonus,
     umschalt_text)
 
 CFG = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS,
@@ -283,12 +283,18 @@ def test_app_umschalt_text():
 
 
 def test_sender_tolerant():
-    assert sender_schluessel("RTL Nitro") == sender_schluessel("RTLNITRO") == "rtlnitro"
-    assert sender_schluessel("RTL HD") == sender_schluessel("RTL UHD") == sender_schluessel("rtl") == "rtl"
+    # gleiche Regeln wie FritzTv.norm der TV-App (Beispiele aus docs/fritzbox-senderabgleich.md)
+    assert sender_schluessel("WDR HD Köln") == sender_schluessel("WDR Köln") == "wdrköln"
+    assert sender_schluessel("Comedy Central HD") == "comedycentral"
+    assert sender_schluessel("RTL Nitro") == sender_schluessel("RTLNITRO") == sender_schluessel("NITRO HD") == "rtlnitro"
+    assert sender_schluessel("RTL HD") == sender_schluessel("RTL UHD") == sender_schluessel("RTL Television") == "rtl"
+    assert sender_schluessel("ProSieben MAXX HD") == sender_schluessel("Pro7 MAXX") == "pro7maxx"
+    assert sender_schluessel("SWR BW HD") == sender_schluessel("SWR Fernsehen BW") == "swrfernsehenbw"
+    assert sender_schluessel("n-tv") == sender_schluessel("ntv HD") and sender_schluessel("RTL2") == "rtlzwei"
     assert sender_schluessel("ZDFinfo") == sender_schluessel("ZDFinfo HD")
-    assert sender_schluessel("NITRO HD") != sender_schluessel("RTLNITRO")       # anderer Name bleibt anders
+    assert sender_schluessel("HDTV Plus") == "hdtvplus"                         # HD nur als eigenes Wort
     assert sender_schluessel("Comedy Central +1") != sender_schluessel("Comedy Central HD")
-    assert sender_schluessel("HD") == "hd"                                      # nicht zu nichts kuerzen
+    assert sender_schluessel("HD") == "" and not sender_nie("HD", {"sender_nie": ["SD"]})   # leer passt nie
     cfg = {"interessen": [{"name": "Doku", "gewicht": 2, "woerter": ["doku*"]}], "aus": [],
            "sender_nie": ["RTL Nitro"], "sender_bevorzugt": {"zdfinfo": 1}}
     assert bewerte_sendung(184, "RTLNITRO", "Doku", {}, cfg)["punkte"] == -1

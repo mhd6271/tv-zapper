@@ -98,22 +98,33 @@ def score(text, cfg):
     return total, hits
 
 
+_SENDER_ALIAS = {"nitro": "rtlnitro", "swr bw": "swr fernsehen bw", "swr rp": "swr fernsehen rp",
+                 "sonlife broadcasting network": "sonlife"}
+_SENDER_ERSETZEN = (("prosieben maxx", "pro7 maxx"), ("rtl television", "rtl"),
+                    ("eurosport 1 deutschland", "eurosport 1"), ("n-tv", "ntv"), ("rtl2", "rtlzwei"))
+
+
 def sender_schluessel(name) -> str:
-    """Sendername zum Vergleichen: ohne Gross-/Kleinschreibung, Leer- und Satzzeichen und ohne HD/SD/UHD am Ende,
-    damit `RTL Nitro` = `RTLNITRO`, `ZDFinfo` = `ZDFinfo HD`, `RTL HD` = `RTL UHD`."""
-    s = re.sub(r"[^0-9a-zäöüß]", "", (name or "").lower())
-    return re.sub(r"(uhd|hd|sd)$", "", s) or s
+    """Sendername zum Vergleichen, gleiche Regeln wie FritzTv.norm der TV-App: klein, HD/UHD/SD als eigenes Wort
+    weg (auch mittendrin), feste Gleichsetzungen, dann nur a-z, 0-9, äöüß. `WDR HD Köln` = `WDR Köln`,
+    `RTL Nitro` = `RTLNITRO` = `NITRO HD`, `ProSieben MAXX HD` = `Pro7 MAXX`, `RTL HD` = `RTL UHD`."""
+    s = (name or "").lower().strip()
+    s = re.sub(r"(^|\s)(hd|uhd|sd)(?=\s|$)", " ", s).strip()
+    s = _SENDER_ALIAS.get(s, s)
+    for alt, neu in _SENDER_ERSETZEN:
+        s = s.replace(alt, neu)
+    return re.sub(r"[^a-z0-9äöüß]", "", s)
 
 
 def sender_nie(name, cfg) -> bool:
     k = sender_schluessel(name)
-    return any(sender_schluessel(n) == k for n in cfg.get("sender_nie", []))
+    return bool(k) and any(sender_schluessel(n) == k for n in cfg.get("sender_nie", []))
 
 
 def sender_bonus(name, cfg) -> int:
     """Bonuspunkte fuer einen bevorzugten Sender (tolerant verglichen), sonst 0."""
     k = sender_schluessel(name)
-    return next((b for n, b in cfg.get("sender_bevorzugt", {}).items() if sender_schluessel(n) == k), 0)
+    return next((b for n, b in cfg.get("sender_bevorzugt", {}).items() if k and sender_schluessel(n) == k), 0)
 
 
 def bewerte_sendung(num, name, prog, h, cfg):
