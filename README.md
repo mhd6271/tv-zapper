@@ -297,8 +297,8 @@ und läuft bis zum gemerkten Ende weiter (ab 0.3.3; Protokoll: „Von Android be
 Neue Versionen: `versionCode`/`versionName` in `android/AndroidManifest.xml` erhöhen, `android/build.sh`, dann ein
 GitHub-Release `v<Version>` als „latest“ (kein Pre-Release) mit der Datei `android/build/tv-zapper-<Version>.apk` unter
 genau diesem Namen – muehlbronner.de holt sich alle 5 min das neueste Release und zeigt Version, Dateiname und Prüfsumme
-an. Passt die Version im Dateinamen nicht zum Release, bleibt dort der alte Link stehen (seit 28.10.2026; bis 0.4.4 hieß
-die Datei `tv-zapper.apk`).
+an. Passt die Version im Dateinamen nicht zum Release, bleibt dort der alte Link stehen. Die Versionsnummer gehört immer in
+den Dateinamen – auch die älteren Releases tragen sie.
 
 **Bauen und installieren** (kein Gradle, nur Java 17 und das Android-SDK mit build-tools 36 und platform 35;
 Pfade über `JAVA_HOME`, `ANDROID_HOME`, eigener Schlüssel über `TVZ_KEYSTORE`):
