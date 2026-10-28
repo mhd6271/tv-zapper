@@ -321,6 +321,7 @@ Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper
 | Werbung umgehen an/aus, werbefreie Ausweichsender, Zeitgrenze | „Werbung umgehen“ | an; ZDFinfo, zdf_neo, arte …; 6 min |
 | Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen (`ausweichen_bevorzugt`): bester bevorzugter Sender, der nicht gerade selbst Werbung hat, sonst ein werbefreier | „Werbung umgehen“ | aus |
 | FRITZ!Box-Adresse | „Werbung umgehen“ | `fritz.box` |
+| Umschaltgrund einblenden (`umschaltgrund_einblenden`, Fehlersuche): bei jeder Umschaltung 12 s Sender, Grund und Punkte einzeln mit Summe | „Fehlersuche“ | aus |
 | Tuner-Eingang, Fernseh-App | „Fernseher“ (leer = automatisch, Erkanntes steht dabei) | automatisch |
 | Für Home Assistant: IP des Fernsehers, adb an/aus, adb-Port, Befehle | „Schnittstelle für Home Assistant“ (nur Anzeige) | – |
 
@@ -405,16 +406,21 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 ```
 
 `ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
-`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `werbung_umgehen`, `ausweichen_bevorzugt` und `jetzt` = laufender Sender mit `nr`, `sender`,
+`werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
 `id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
-alle nicht ausgeschalteten Sender in derselben Form. `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
-Einblendung) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
+alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
+zuletzt: `id` (ms, steigt streng, auch über Neustarts), `zeit`, `grund` (`interesse` = Zapper-Runde, `werbung` = Werbung
+umgangen, `zurueck` = Werbung vorbei, `zurueck_zeitgrenze`, `zurueck_fehlalarm` = doch keine Werbung, `von_aussen` =
+`UMSCHALTEN`), `von` (`nr`, `sender`, `punkte`; null wenn unbekannt), `nr`, `sender`, `sendung`, `punkte` (null bei einem
+„Nie“-Wort), `kategorien` (`name`, `punkte`), `bevorzugt`, `bevorzugt_bonus`, `bestaetigt`, `text` (Einblendung),
+`erklaerung` (nur mit `grund` von außen). `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
+Einblendung, `grund` mit Zeilen „a | b | c“ für die Einblendung bei „Umschaltgrund einblenden“) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
 Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was pausen` liefert `ABFRAGEN` die gemessenen Werbepausen je Sender
 (`anzahl`, `durchschnitt_s`, Einzelwerte `pausen` mit `ende` in ms und `s`); `PAUSEN_LOESCHEN` (`--es sender …`,
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
-entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false` und/oder
-`--es werbung_umgehen true|false` und antwortet `{"ok", "ausweichen_bevorzugt", "werbung_umgehen"}` (ungültiger Wert:
+entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false`,
+`--es werbung_umgehen true|false` und/oder `--es umschaltgrund_einblenden true|false` und antwortet mit `ok` und allen drei Werten (ungültiger Wert:
 `result=1` mit `fehler`). Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
 Stand – dann den Schalter in der App benutzen.
 
