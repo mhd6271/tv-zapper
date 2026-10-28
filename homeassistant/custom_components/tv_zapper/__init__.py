@@ -11,6 +11,7 @@ from typing import Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
@@ -178,6 +179,15 @@ class Steuerung:
         self.benachrichtigen()
 
     @callback
+    def _umgeschaltet_melden(self, daten: dict):
+        """Ereignis fuers Logbuch, verknuepft mit dem Geraet "TV-Zapper" und dem Sensor "Laeuft jetzt" - so steht es
+        auch im Logbuch der Geraeteseite und im Fenster der Kachel, nicht nur auf der Logbuch-Seite."""
+        entity_id = er.async_get(self.hass).async_get_entity_id("sensor", DOMAIN, f"{self.entry.entry_id}_jetzt")
+        geraet = dr.async_get(self.hass).async_get_device_by_identifier((DOMAIN, self.entry.entry_id), self.entry.entry_id)
+        self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
+            **daten, **({"entity_id": entity_id} if entity_id else {}), **({"device_id": geraet.id} if geraet else {})})
+
+    @callback
     def _app_umschaltungen_melden(self, liste):
         """Neue Umschaltungen der TV-App ins Logbuch. Beim ersten Lesen nach dem Start nur merken, wo die Liste
         steht (keine alten Eintraege nachtragen)."""
@@ -190,7 +200,7 @@ class Steuerung:
         neue = (u for u in liste if (u.get("id") or 0) > self._app_letzte_id
                 and u.get("grund") != "von_aussen")   # von_aussen = UMSCHALTEN von HA, steht schon im Logbuch
         for u in sorted(neue, key=lambda u: u["id"]):
-            self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
+            self._umgeschaltet_melden({
                 "wer": "TV-Zapper (TV-App)", "nr": u.get("nr"), "sender": u.get("sender"), "sendung": u.get("sendung"),
                 "punkte": u.get("punkte"), "grund": u.get("grund"), "text": app_umschalt_text(u)})
         self._app_letzte_id = max(self._app_letzte_id, *ids)
@@ -284,7 +294,7 @@ class Steuerung:
             self.hass.bus.async_fire(EVENT_DURCHGANG, ergebnis)
             if ergebnis.get("aktion") == "umgeschaltet" and ergebnis.get("neu"):
                 neu = ergebnis["neu"]
-                self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
+                self._umgeschaltet_melden({
                     "wer": "TV-Zapper (HA)", "nr": neu.get("nr"), "sender": neu.get("sender"), "sendung": neu.get("sendung"),
                     "punkte": neu.get("punkte"), "text": umschalt_text(neu, ergebnis.get("vorher"), self.cfg())})
             self.benachrichtigen()

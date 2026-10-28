@@ -11,6 +11,9 @@ def async_describe_events(hass, async_describe_event):
     @callback
     def beschreiben(event):
         d = event.data
-        return {"name": d.get("wer") or "TV-Zapper", "message": d.get("text") or f"hat auf {d.get('nr')} umgeschaltet"}
+        aus = {"name": d.get("wer") or "TV-Zapper", "message": d.get("text") or f"hat auf {d.get('nr')} umgeschaltet"}
+        if d.get("entity_id"):
+            aus["entity_id"] = d["entity_id"]   # Sensor "Laeuft jetzt": Eintrag auch im Fenster der Kachel
+        return aus
 
     async_describe_event(DOMAIN, EVENT_UMGESCHALTET, beschreiben)

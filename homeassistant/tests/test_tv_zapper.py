@@ -270,6 +270,11 @@ async def test_logbuch(hass: HomeAssistant):
     tvz_logbook.async_describe_events(hass, lambda dom, ev, fn: beschreiber.setdefault(ev, fn))
     b = beschreiber["tv_zapper_umgeschaltet"](ereignisse[0])
     assert b["name"] == "TV-Zapper (HA)" and b["message"] == ereignisse[0].data["text"]
+    # verknuepft mit Sensor und Geraet: steht auch im Logbuch der Geraeteseite und im Fenster der Kachel
+    assert ereignisse[0].data["entity_id"] == b["entity_id"] == "sensor.tv_zapper_lauft_jetzt"
+    from homeassistant.helpers import device_registry as dr
+    geraet = dr.async_get(hass).async_get_device_by_identifier(("tv_zapper", entry.entry_id), entry.entry_id)
+    assert ereignisse[0].data["device_id"] == geraet.id
 
     # TV-App: erstes Lesen nur merken, danach jede neue Umschaltung einmal
     alt = [{"id": 100, "grund": "werbung", "nr": 1, "sender": "Das Erste"}]
