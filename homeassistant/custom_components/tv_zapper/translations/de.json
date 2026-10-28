@@ -20,7 +20,9 @@
       }
     },
     "error": {
-      "cannot_connect": "Keine ADB-Verbindung zum Fernseher. Ist er an, ADB über Netzwerk eingeschaltet und die Abfrage am Fernseher bestätigt?"
+      "cannot_connect": "Keine ADB-Verbindung zum Fernseher. Ist er an, ADB über Netzwerk eingeschaltet und die Abfrage am Fernseher bestätigt?",
+      "host_ungueltig": "Adresse ungültig: IP-Adresse oder Rechnername, nur Buchstaben, Ziffern, Punkt, Doppelpunkt und Bindestrich.",
+      "favorit_ungueltig": "Name der Senderliste fehlt oder ist zu lang (höchstens 60 Zeichen)."
     },
     "abort": {
       "already_configured": "Dieser Fernseher ist schon eingerichtet.",
@@ -52,7 +54,9 @@
     "error": {
       "interessen_ungueltig": "Interessen fehlerhaft – siehe Hinweis oben.",
       "bonus_ungueltig": "Bevorzugte Sender fehlerhaft – siehe Hinweis oben.",
-      "mac_ungueltig": "MAC-Adresse fehlerhaft – siehe Hinweis oben."
+      "mac_ungueltig": "MAC-Adresse fehlerhaft – siehe Hinweis oben.",
+      "woerter_ungueltig": "Liste fehlerhaft – siehe Hinweis oben.",
+      "favorit_ungueltig": "Name der Senderliste fehlt oder ist zu lang (höchstens 60 Zeichen)."
     }
   }
 }

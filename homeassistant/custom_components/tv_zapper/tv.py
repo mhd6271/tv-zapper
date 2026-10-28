@@ -65,15 +65,38 @@ SPEICHER_BEFEHL = (
     f'dumpsys activity exit-info {APP_PAKET} | grep -E "timestamp=|reason=|importance="')
 
 
+MAX_SHELL_TEXT = 500   # Zeichen fuer Texte, die per adb shell an die TV-App gehen (Einblendung, Grund)
+
+
+def shell_text(text, laenge: int = MAX_SHELL_TEXT) -> str:
+    """Text fuer `am broadcast --es ...`: Steuerzeichen raus, Laenge begrenzen, fuer die Shell quoten."""
+    sauber = re.sub(r"[\x00-\x1f\x7f]", " ", str(text))[:laenge]
+    return shlex.quote(sauber)
+
+
+def gueltige_sender(liste) -> list[dict]:
+    """Senderliste aus ABFRAGEN: nur Eintraege mit ganzzahliger Nummer (Daten vom Fernseher, nicht blind trauen)."""
+    out = []
+    for x in liste if isinstance(liste, list) else []:
+        if isinstance(x, dict):
+            try:
+                int(x.get("nr"))
+            except (TypeError, ValueError):
+                continue
+            out.append(x)
+    return out
+
+
 def broadcast_daten(ausgabe: str) -> dict | None:
     """`Broadcast completed: result=0, data="{...}"` -> dict; None, wenn kein Empfaenger geantwortet hat."""
     m = re.search(r'Broadcast completed: result=(-?\d+), data="(.*)"\s*$', ausgabe, re.S)
     if not m:
         return None
     try:
-        return json.loads(m.group(2))
+        daten = json.loads(m.group(2))
     except ValueError:
         return None
+    return daten if isinstance(daten, dict) else None
 
 
 def app_sendung(x: dict, cfg) -> dict:
@@ -90,6 +113,9 @@ def lade_signer(pfad: str) -> PythonRSASigner:
     if not os.path.isfile(pfad):
         os.makedirs(os.path.dirname(pfad) or ".", exist_ok=True)
         keygen(pfad)
+    for datei in (pfad, pfad + ".pub"):   # privater ADB-Schluessel: nur fuer den Besitzer lesbar
+        if os.path.isfile(datei):
+            os.chmod(datei, 0o600)
     with open(pfad, encoding="utf-8") as f:
         priv = f.read()
     pub = None   # ohne .pub geht nur ein schon freigegebener Schluessel (z. B. ~/.android/adbkey)
@@ -331,7 +357,7 @@ class Fernseher:
 
     async def app_umschalten(self, nr: int, text: str = "", grund: str = "") -> dict:
         """`grund`: Zeilen mit „|“ getrennt; zeigt die App bei ihrer Option „Umschaltgrund einblenden“ (ab 0.4.0)."""
-        zusatz = (f" --es text {shlex.quote(text)}" if text else "") + (f" --es grund {shlex.quote(grund)}" if grund else "")
+        zusatz = (f" --es text {shell_text(text)}" if text else "") + (f" --es grund {shell_text(grund)}" if grund else "")
         antwort = broadcast_daten(await self.sh(
             f"am broadcast -a {UMSCHALTEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es nr {int(nr)}{zusatz}"))
         if not antwort or not antwort.get("ok"):
@@ -340,6 +366,8 @@ class Fernseher:
 
     async def app_einstellen(self, name: str, wert: bool) -> dict:
         """Eine Einstellung der TV-App setzen (z. B. ausweichen_bevorzugt)."""
+        if not re.fullmatch(r"[a-z_]{1,40}", name):   # landet ungequotet im Befehl
+            raise ValueError(f"ungueltiger Name einer Einstellung: {name!r}")
         antwort = broadcast_daten(await self.sh(
             f"am broadcast -a {EINSTELLEN_ACTION} -n {ABFRAGE_EMPFAENGER} --es {name} {'true' if wert else 'false'}"))
         if not antwort or not antwort.get("ok"):
@@ -353,21 +381,25 @@ class Fernseher:
             app = await self.focus_app()
             return {"quelle": "adb", "fernsehbild_vorn": app == TV_APP, "vorn": app, "jetzt": None}
         x = daten.get("jetzt")
+        x = x if gueltige_sender([x]) else None
+        umschaltungen = daten.get("umschaltungen")
         return {"quelle": "app", "fernsehbild_vorn": daten.get("fernsehbild_vorn"), "vorn": daten.get("vorn"),
                 "bildschirm_an": daten.get("bildschirm_an"), "werbung": daten.get("werbung"),
                 "zapper_app": daten.get("zapper_laeuft"),
                 # Einstellungen der TV-App (ab dem Stand nach 0.3.0), nur zur Anzeige
                 "werbung_umgehen": daten.get("werbung_umgehen"), "ausweichen_bevorzugt": daten.get("ausweichen_bevorzugt"),
                 "umschaltgrund_einblenden": daten.get("umschaltgrund_einblenden"),
-                "umschaltungen": daten.get("umschaltungen") or [],   # ab der App-Version mit Umschaltgruenden
+                # ab der App-Version mit Umschaltgruenden; nur die letzten 50 (Daten vom Fernseher)
+                "umschaltungen": [u for u in umschaltungen[-50:] if isinstance(u, dict)]
+                if isinstance(umschaltungen, list) else [],
                 "jetzt": app_sendung(x, cfg) | {"folge": x.get("folge"), "beschreibung": x.get("beschreibung")}
                 if x else None}
 
     async def durchgang_app(self, daten: dict, cfg, nur_lesen: bool) -> dict:
         """Durchgang ueber die TV-App: Liste lesen, bewerten, einmal umschalten, nachfragen."""
-        scored = [app_sendung(x, cfg) for x in daten["liste"]]
-        jetzt = daten.get("jetzt") or {}
-        current = int(jetzt["nr"]) if jetzt.get("nr") else None
+        scored = [app_sendung(x, cfg) for x in gueltige_sender(daten["liste"])]
+        jetzt = (gueltige_sender([daten.get("jetzt")]) or [{}])[0]
+        current = int(jetzt["nr"]) if jetzt.get("nr") is not None else None
         cur = next((x for x in scored if x["nr"] == current), {"nr": current, "punkte": 0})
         best = max(scored, key=lambda x: (x["punkte"], x["nr"] == current), default=None)
         aktion, neu, nachgelesen = "bleibt", None, None
@@ -376,7 +408,7 @@ class Fernseher:
             aktion, neu = "umgeschaltet", best
             await asyncio.sleep(1)
             danach = await self.app_abfragen()
-            if danach and danach.get("jetzt") and int(danach["jetzt"]["nr"]) == best["nr"]:
+            if danach and gueltige_sender([danach.get("jetzt")]) and int(danach["jetzt"]["nr"]) == best["nr"]:
                 nachgelesen = neu = app_sendung(danach["jetzt"], cfg)
         return {"aktion": aktion, "quelle": "app", "vorher": cur, "bester": best, "neu": neu,
                 "passt_nach_umschalten": None if nachgelesen is None else nachgelesen["punkte"] > 0,
@@ -390,9 +422,9 @@ class Fernseher:
         app = await self.sh(f"cmd package query-receivers --brief -a {EINBLENDEN_ACTION}")
         if "EinblendungEmpfaenger" in app:
             await self.sh(f"am broadcast -a {EINBLENDEN_ACTION} -n {EINBLENDEN_EMPFAENGER} "
-                          f"--es text {shlex.quote(text)} --ei ms {int(ms)}")
+                          f"--es text {shell_text(text)} --ei ms {max(1000, min(int(ms), 60000))}")
             return "app"
-        await self.sh(f"cmd notification post -S bigtext -t {shlex.quote('TV-Zapper')} tvzapper {shlex.quote(text)}")
+        await self.sh(f"cmd notification post -S bigtext -t {shlex.quote('TV-Zapper')} tvzapper {shell_text(text)}")
         return "benachrichtigung"
 
     async def verify(self, cand, cfg):
@@ -411,14 +443,14 @@ class Fernseher:
         """Ein Durchgang wie zapper.cycle(). Ergebnis-dict (aktion: uebersprungen/bleibt/umgeschaltet/...).
         Mit TV-App ab 0.3.0 ueber deren Schnittstelle, sonst ueber die Programmzeitschrift."""
         daten = await self.app_abfragen(liste=True)
-        if daten is not None and daten.get("liste"):
+        if daten is not None and gueltige_sender(daten.get("liste")):
             if not daten.get("fernsehbild_vorn"):
                 return {"aktion": "uebersprungen", "quelle": "app", "app": daten.get("vorn")}
             if daten.get("zapper_laeuft") and not nur_lesen:
                 # Zappen beide, schalten sie gegeneinander: dann bewertet nur die TV-App
                 x = daten.get("jetzt")
                 return {"aktion": "uebersprungen", "quelle": "app", "app": "Zapper der TV-App laeuft",
-                        "vorher": app_sendung(x, cfg) if x else None}
+                        "vorher": app_sendung(x, cfg) if gueltige_sender([x]) else None}
             return await self.durchgang_app(daten, cfg, nur_lesen)
         app = await self.focus_app()
         if app not in (TV_APP, GUIDE_APP):

@@ -300,3 +300,42 @@ def test_sender_tolerant():
     assert bewerte_sendung(184, "RTLNITRO", "Doku", {}, cfg)["punkte"] == -1
     b = bewerte_sendung(271, "ZDFinfo HD", "Doku", {}, cfg)
     assert b["punkte"] == 3 and "bevorzugter Sender" in b["treffer"]
+
+
+def test_sicherheit_eingaben():
+    from custom_components.tv_zapper.logik import pruefe_woerter, text_zu_interessen, text_zu_bonus
+    import pytest
+    for kaputt in ("A | 5 | *", "A | 5 | a*", "A | 5 | " + "x" * 61, "A | 1000 | rap", "A | -101 | rap",
+                   "\n".join(f"K{i} | 1 | rap" for i in range(51)), "A | 1 | " + ", ".join(f"w{i:03}" for i in range(201)),
+                   "N" * 61 + " | 1 | rap", "A | 1 | rap\n" * 3000):
+        with pytest.raises(ValueError):
+            text_zu_interessen(kaputt)
+    assert text_zu_interessen("Musik | 3 | dj, r&b, rap*")[0]["woerter"] == ["dj", "r&b", "rap*"]
+    for kaputt in ("N24 DOKU | 1000", "X" * 61 + " | 1", "\n".join(f"S{i} | 1" for i in range(201))):
+        with pytest.raises(ValueError):
+            text_zu_bonus(kaputt)
+    assert text_zu_bonus("N24 DOKU | 1\nZDFinfo HD") == {"N24 DOKU": 1, "ZDFinfo HD": 1}
+    with pytest.raises(ValueError):
+        pruefe_woerter(["teleshopping", "*"])
+    assert pruefe_woerter(["disney*", "micky*"]) == ["disney*", "micky*"]
+
+
+def test_sicherheit_shell_und_fremddaten():
+    import pytest
+    t = tv.shell_text("a'; reboot\n$(id)" + "x" * 1000)
+    assert t.startswith("'") and "\n" not in t and len(t) < 520 and "reboot" in t   # gequotet, nicht ausgefuehrt
+    assert tv.broadcast_daten('Broadcast completed: result=0, data="[1,2]"') is None   # nur Objekte
+    assert tv.gueltige_sender([{"nr": "5"}, {"nr": "x"}, "kaputt", {"sender": "ohne"}, None]) == [{"nr": "5"}]
+    assert tv.gueltige_sender("keine Liste") == []
+    f = tv.Fernseher("x", 1, None)
+    f.sh = AsyncMock(return_value='Broadcast completed: result=0, data="{\\"ok\\":true}"')
+    with pytest.raises(ValueError):
+        asyncio.run(f.app_einstellen("x; reboot", True))
+    f.sh.assert_not_called()
+
+
+def test_schluessel_rechte(tmp_path):
+    import os, stat
+    pfad = str(tmp_path / "adbkey")
+    tv.lade_signer(pfad)
+    assert stat.S_IMODE(os.stat(pfad).st_mode) == 0o600

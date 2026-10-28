@@ -250,6 +250,39 @@ def soll_umschalten(cur, best):
 
 # --- Interessen als Text (fuer die Eingabe in Home Assistant) ---------------------------
 
+# Grenzen fuer Eingaben aus "Konfigurieren": schuetzen vor versehentlich riesigen Listen (jede Sendung wird gegen
+# jedes Wort geprueft) und vor Woertern, die auf alles passen (`*`, `a*`).
+MAX_KATEGORIEN = 50
+MAX_WOERTER = 200          # je Kategorie bzw. je Liste ("aus", "nie")
+MAX_WORT = 60              # Zeichen je Wort / Sendername
+MAX_NAME = 60              # Zeichen je Kategoriename
+MAX_GEWICHT = 100          # Gewicht und Bonuspunkte: -100 ... 100
+MAX_TEXT = 20000           # Zeichen je Eingabefeld
+
+
+def _zahl(text, nr, was):
+    try:
+        z = int(text)
+    except ValueError as e:
+        raise ValueError(f"Zeile {nr}: {was} muss eine ganze Zahl sein") from e
+    if not -MAX_GEWICHT <= z <= MAX_GEWICHT:
+        raise ValueError(f"Zeile {nr}: {was} muss zwischen -{MAX_GEWICHT} und {MAX_GEWICHT} liegen")
+    return z
+
+
+def pruefe_woerter(liste, was="Wort"):
+    """Suchwoerter bzw. Sendernamen pruefen: Anzahl, Laenge, und kein Wort, das auf fast alles passt
+    (`*` allein oder ein Buchstabe mit `*`). Wirft ValueError mit verstaendlicher Meldung."""
+    if len(liste) > MAX_WOERTER:
+        raise ValueError(f"Höchstens {MAX_WOERTER} Einträge je Liste (jetzt {len(liste)})")
+    for w in liste:
+        if len(w) > MAX_WORT:
+            raise ValueError(f"{was} „{w[:20]}…“ ist zu lang (höchstens {MAX_WORT} Zeichen)")
+        if len(w.rstrip("*").strip()) < 2:
+            raise ValueError(f"{was} „{w}“ ist zu kurz und würde auf fast alles passen (mindestens 2 Zeichen)")
+    return liste
+
+
 def interessen_zu_text(interessen):
     """[{name, gewicht, woerter}] -> eine Zeile je Kategorie: `Name | Gewicht | wort1, wort2*`."""
     return "\n".join(f"{c['name']} | {c['gewicht']} | {', '.join(c['woerter'])}" for c in interessen)
@@ -257,6 +290,8 @@ def interessen_zu_text(interessen):
 
 def text_zu_interessen(text):
     """Umkehrung von interessen_zu_text. Wirft ValueError mit verstaendlicher Meldung."""
+    if len(text) > MAX_TEXT:
+        raise ValueError(f"Zu viel Text (höchstens {MAX_TEXT} Zeichen)")
     out = []
     for nr, zeile in enumerate(text.splitlines(), 1):
         zeile = zeile.strip()
@@ -266,14 +301,19 @@ def text_zu_interessen(text):
         if len(teile) != 3:
             raise ValueError(f"Zeile {nr}: bitte `Name | Gewicht | Wörter` schreiben")
         name, gewicht, woerter = teile
-        try:
-            gewicht = int(gewicht)
-        except ValueError as e:
-            raise ValueError(f"Zeile {nr}: Gewicht muss eine ganze Zahl sein") from e
+        gewicht = _zahl(gewicht, nr, "Gewicht")
         liste = woerter_zu_liste(woerter)
         if not name or not liste:
             raise ValueError(f"Zeile {nr}: Name und mindestens ein Wort nötig")
+        if len(name) > MAX_NAME:
+            raise ValueError(f"Zeile {nr}: Name zu lang (höchstens {MAX_NAME} Zeichen)")
+        try:
+            pruefe_woerter(liste)
+        except ValueError as e:
+            raise ValueError(f"Zeile {nr}: {e}") from None
         out.append({"name": name, "gewicht": gewicht, "woerter": liste})
+        if len(out) > MAX_KATEGORIEN:
+            raise ValueError(f"Höchstens {MAX_KATEGORIEN} Kategorien")
     if not out:
         raise ValueError("Mindestens eine Interessen-Zeile nötig")
     return out
@@ -289,14 +329,21 @@ def bonus_zu_text(bonus):
 
 
 def text_zu_bonus(text):
+    if len(text) > MAX_TEXT:
+        raise ValueError(f"Zu viel Text (höchstens {MAX_TEXT} Zeichen)")
     out = {}
     for nr, zeile in enumerate(text.splitlines(), 1):
         zeile = zeile.strip()
         if not zeile or zeile.startswith("#"):
             continue
         name, _, punkte = (t.strip() for t in zeile.rpartition("|"))
+        if not name:   # ohne `| Zahl`: 1 Bonuspunkt
+            name, punkte = punkte, "1"
         try:
-            out[name or punkte] = int(punkte) if name else 1   # ohne `| Zahl`: 1 Bonuspunkt
+            out[name] = _zahl(punkte, nr, "Bonuspunkte")
         except ValueError as e:
-            raise ValueError(f"Zeile {nr}: bitte `Sendername | Bonuspunkte` schreiben") from e
+            raise ValueError(f"Zeile {nr}: bitte `Sendername | Bonuspunkte` schreiben ({e})") from e
+        if len(name) > MAX_WORT or len(out) > MAX_WOERTER:
+            raise ValueError(f"Zeile {nr}: Sendername zu lang oder zu viele Sender "
+                             f"(höchstens {MAX_WORT} Zeichen, {MAX_WOERTER} Sender)")
     return out

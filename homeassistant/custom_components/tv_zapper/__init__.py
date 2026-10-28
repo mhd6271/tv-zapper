@@ -24,6 +24,7 @@ from .logik import app_umschalt_text, umschalt_text
 from .tv import Fernseher, lade_signer
 
 _LOGGER = logging.getLogger(__name__)
+MAX_TEXT_LOGBUCH = 1000   # Zeichen je Text im Logbuch-Ereignis
 
 type ZapperEntry = ConfigEntry[Steuerung]
 
@@ -184,6 +185,8 @@ class Steuerung:
         auch im Logbuch der Geraeteseite und im Fenster der Kachel, nicht nur auf der Logbuch-Seite."""
         entity_id = er.async_get(self.hass).async_get_entity_id("sensor", DOMAIN, f"{self.entry.entry_id}_jetzt")
         geraet = dr.async_get(self.hass).async_get_device_by_identifier((DOMAIN, self.entry.entry_id), self.entry.entry_id)
+        # Texte begrenzen: Namen und Sendungen kommen vom Fernseher bzw. aus den Optionen, das Ereignis landet in der DB
+        daten = {k: (v[:MAX_TEXT_LOGBUCH] if isinstance(v, str) else v) for k, v in daten.items()}
         self.hass.bus.async_fire(EVENT_UMGESCHALTET, {
             **daten, **({"entity_id": entity_id} if entity_id else {}), **({"device_id": geraet.id} if geraet else {})})
 
@@ -191,13 +194,15 @@ class Steuerung:
     def _app_umschaltungen_melden(self, liste):
         """Neue Umschaltungen der TV-App ins Logbuch. Beim ersten Lesen nach dem Start nur merken, wo die Liste
         steht (keine alten Eintraege nachtragen)."""
-        ids = [u["id"] for u in liste if isinstance(u, dict) and u.get("id") is not None]
+        # nur ganzzahlige ids (Daten vom Fernseher; ein Text als id liesse den Vergleich scheitern)
+        liste = [u for u in liste if isinstance(u, dict) and type(u.get("id")) is int]
+        ids = [u["id"] for u in liste]
         if not ids:
             return
         if self._app_letzte_id is None:
             self._app_letzte_id = max(ids)
             return
-        neue = (u for u in liste if (u.get("id") or 0) > self._app_letzte_id
+        neue = (u for u in liste if u["id"] > self._app_letzte_id
                 and u.get("grund") != "von_aussen")   # von_aussen = UMSCHALTEN von HA, steht schon im Logbuch
         for u in sorted(neue, key=lambda u: u["id"]):
             self._umgeschaltet_melden({

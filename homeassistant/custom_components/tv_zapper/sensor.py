@@ -17,6 +17,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
                         AppBeendetSensor(st)])
 
 
+MAX_ATTR_TEXT = 1000   # Zeichen je Text-Attribut (Beschreibungen kommen vom Fernseher und landen in der DB)
+
+
+def _kurz_texte(attr: dict) -> dict:
+    return {k: (v[:MAX_ATTR_TEXT] if isinstance(v, str) else v) for k, v in attr.items()}
+
+
 def _kurz(x):
     if not x:
         return None
@@ -49,14 +56,14 @@ class TrefferSensor(ZapperEntity, SensorEntity):
     def extra_state_attributes(self):
         e = self.st.letztes or {}
         x = self._laeuft() or {}
-        return {
+        return _kurz_texte({
             "sender": x.get("sender"), "nr": x.get("nr"), "sendung": x.get("sendung"),
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "genre": x.get("genre"),
             "aktion": e.get("aktion"), "zeit": e.get("zeit"), "fehler": e.get("fehler"),
             "app": e.get("app"), "passt_nach_umschalten": e.get("passt_nach_umschalten"), "sender_gelesen": e.get("sender_gelesen"),
             "bester_treffer": _kurz(e.get("bester")),
             "weitere_treffer": [_kurz(t) for t in (e.get("treffer") or [])[:6]],
-        }
+        })
 
 
 class JetztSensor(ZapperEntity, SensorEntity):
@@ -83,13 +90,13 @@ class JetztSensor(ZapperEntity, SensorEntity):
     def extra_state_attributes(self):
         j = self.st.jetzt or {}
         x = j.get("jetzt") or {}
-        return {
+        return _kurz_texte({
             "sender": x.get("sender"), "nr": x.get("nr"), "sendung": x.get("sendung"), "folge": x.get("folge"),
             "beschreibung": x.get("beschreibung"), "start": x.get("start"), "ende": x.get("ende"),
             "punkte": x.get("punkte"), "kategorien": x.get("treffer", []), "werbung": j.get("werbung"),
             "zapper_der_tv_app": j.get("zapper_app"), "werbung_umgehen": j.get("werbung_umgehen"),
             "ausweichen_bevorzugt": j.get("ausweichen_bevorzugt"), "vorn": j.get("vorn"), "quelle": j.get("quelle"),
-        }
+        })
 
 
 class _SpeicherSensor(ZapperEntity, SensorEntity):

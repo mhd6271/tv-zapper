@@ -225,6 +225,30 @@ async def test_umschaltgrund_einblenden(hass: HomeAssistant):
     assert not any(t.startswith(("N24", "TV-Zapper hat")) for t in texte), texte   # nur "an"/"aus"
 
 
+
+async def test_sicherheit_formulare(hass: HomeAssistant):
+    import voluptuous as vol
+    # Adresse mit Shell-Zeichen und Port ausserhalb 1-65535 werden abgewiesen, ohne Verbindungsversuch
+    r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()) as vb:
+        r2 = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "1.2.3.4; reboot", "port": 5555, "favorit": "Favorit1"})
+        assert r2["errors"] == {"host": "host_ungueltig"} and not vb.called
+        r2 = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.0.2.61", "port": 5555, "favorit": "F" * 61})
+        assert r2["errors"] == {"favorit": "favorit_ungueltig"}
+    try:
+        await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.0.2.61", "port": 70000, "favorit": "Favorit1"})
+        assert False, "Port 70000 haette abgewiesen werden muessen"
+    except vol.Invalid:
+        pass
+    # Optionen: Wort, das auf alles passt, wird abgewiesen
+    entry = await _einrichten(hass)
+    r = await hass.config_entries.options.async_init(entry.entry_id)
+    r2 = await hass.config_entries.options.async_configure(r["flow_id"], {
+        "interessen": "Doku | 2 | doku*", "aus": "teleshopping, *", "laufzeit_min": 30, "verweilen_min": 3,
+        "favorit": "Favorit1", "nur_lesen": True})
+    assert r2["errors"] == {"aus": "woerter_ungueltig"}
+
+
 # Ausgabe von tv.SPEICHER_BEFEHL am TCL (28.10.2026 06:15)
 SPEICHER_AUSGABE = """MemTotal:        2451272 kB
 MemAvailable:     860320 kB
