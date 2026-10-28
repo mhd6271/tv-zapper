@@ -16,7 +16,10 @@ final class Banner {
     private static final Handler main = new Handler(Looper.getMainLooper());
 
     static void show(Context ctx, String text, long ms) {
-        Context c = ctx.getApplicationContext();   // Fenster soll die Activity ueberleben
+        Context c = ctx.getApplicationContext();
+        if (text.length() > 600) text = text.substring(0, 600) + " …";   // auch von aussen (adb) nicht endlos
+        final long dur = Math.max(1000, Math.min(60_000, ms));
+        final String shown = text;   // Fenster soll die Activity ueberleben
         if (!Settings.canDrawOverlays(c)) {
             Log.add(c, "Einblendung nicht möglich – „Über anderen Apps“ ist nicht erlaubt");
             return;
@@ -25,7 +28,7 @@ final class Banner {
             WindowManager wm = c.getSystemService(WindowManager.class);
             TextView v = new TextView(c);
             float d = c.getResources().getDisplayMetrics().density;
-            v.setText(text);
+            v.setText(shown);
             v.setTextSize(22);
             v.setMaxWidth((int) (c.getResources().getDisplayMetrics().widthPixels * 0.6));   // lange Texte umbrechen
             v.setTextColor(Color.WHITE);
@@ -50,7 +53,7 @@ final class Banner {
                         wm.removeView(v);
                     } catch (Exception ignored) {
                     }
-                }, ms);
+                }, dur);
             } catch (Exception e) {
                 Log.add(c, "Einblendung fehlgeschlagen: " + e.getMessage());
             }

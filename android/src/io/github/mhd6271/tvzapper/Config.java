@@ -85,6 +85,9 @@ final class Config {
             return parse(new JSONObject(json));
         } catch (Exception e) {
             Log.add(c, "Einstellungen nicht lesbar: " + e.getMessage());
+            // kaputte Datei aufheben, bevor sie beim naechsten Speichern mit der Grundeinstellung ueberschrieben wird
+            File f = file(c), bak = new File(c.getFilesDir(), "einstellungen.kaputt.json");
+            if (f.exists() && !bak.exists()) f.renameTo(bak);
             return new Config();
         }
     }
@@ -125,7 +128,67 @@ final class Config {
             }
         }
         for (String n : strings(o.optJSONArray("sender_nie"))) cfg.channels.put(n, AUS);
+        cfg.sanitize();
         return cfg;
+    }
+
+    // Grenzen fuer alle Eingaben (Oberflaeche, Datei, Schnittstelle): schuetzen den Fernseher mit wenig Speicher
+    static final int MAX_CATS = 50, MAX_WORDS = 100, MAX_NEVER = 200, MAX_TEXT = 60, MAX_CHANNELS = 2000, MAX_ADFREE = 100;
+
+    /** Werte auf sinnvolle Bereiche begrenzen, ueberlange Listen kuerzen, unbrauchbare Woerter entfernen. */
+    void sanitize() {
+        List<Cat> keep = new ArrayList<>();
+        for (Cat cat : cats) {
+            if (keep.size() >= MAX_CATS) break;
+            cat.name = cut(cat.name, MAX_TEXT);
+            cat.weight = clamp(cat.weight, -100, 100);
+            cat.words = words(cat.words, MAX_WORDS);
+            keep.add(cat);
+        }
+        cats = keep;
+        never = words(never, MAX_NEVER);
+        dwellMin = clamp(dwellMin, 1, 24 * 60);
+        runMin = clamp(runMin, 0, 30 * 24 * 60);
+        bonus = clamp(bonus, -100, 100);
+        pauseMaxMin = clamp(pauseMaxMin, 1, 60);
+        if (!AN.equals(newChannels) && !AUS.equals(newChannels) && !BEVORZUGT.equals(newChannels)) newChannels = AUS;
+        List<String> af = new ArrayList<>();
+        for (String n : adFree) if (af.size() < MAX_ADFREE && !n.trim().isEmpty()) af.add(cut(n.trim(), 100));
+        adFree = af;
+        Map<String, String> ch = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : channels.entrySet()) {
+            if (ch.size() >= MAX_CHANNELS) break;
+            String v = e.getValue();
+            if (e.getKey().length() <= 100 && (AN.equals(v) || AUS.equals(v) || BEVORZUGT.equals(v))) ch.put(e.getKey(), v);
+        }
+        channels = ch;
+        prefBonus.keySet().retainAll(channels.keySet());
+        prefBonus.replaceAll((k, v) -> clamp(v, -100, 100));
+        // nur ein Rechnername / eine IP (auch [IPv6]) mit optionalem Port – kein Pfad, keine Zugangsdaten
+        if (fritz == null || !fritz.matches("[A-Za-z0-9.\\-]{1,253}(:\\d{1,5})?|\\[[0-9A-Fa-f:.]{2,45}\\](:\\d{1,5})?"))
+            fritz = "fritz.box";
+        tvInput = cut(tvInput == null ? "" : tvInput.trim(), 200);
+        if (tvApp == null || !tvApp.trim().matches("([A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+)?")) tvApp = "";
+        tvApp = tvApp.trim();
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
+    private static String cut(String s, int n) {
+        return s == null ? "" : s.length() > n ? s.substring(0, n) : s;
+    }
+
+    /** Woerter kuerzen; leere und reine "*"-Woerter (passen sonst auf jede Sendung) weglassen. */
+    private static List<String> words(List<String> in, int max) {
+        List<String> out = new ArrayList<>();
+        for (String w : in) {
+            if (out.size() >= max) break;
+            w = cut(w == null ? "" : w.trim(), MAX_TEXT);
+            if (!w.replace("*", "").trim().isEmpty()) out.add(w);
+        }
+        return out;
     }
 
     JSONObject toJson() throws JSONException {
@@ -166,6 +229,7 @@ final class Config {
     }
 
     void save(Context c) {
+        sanitize();
         try (FileOutputStream out = new FileOutputStream(file(c))) {
             out.write(toJson().toString(2).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {

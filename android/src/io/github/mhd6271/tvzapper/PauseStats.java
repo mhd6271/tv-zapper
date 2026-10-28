@@ -17,6 +17,8 @@ import java.util.TreeMap;
  *  aus 0.2.x/0.3.0 ohne Einzelwerte. Oeffentliche Zahlen je Sender gibt es nicht; gesetzlich sind 20 % je
  *  Zeitfenster erlaubt (§ 70 MStV). */
 final class PauseStats {
+    private static final int MAX_PER_CHANNEL = 200;
+
     private static File file(Context c) {
         return new File(c.getFilesDir(), "werbepausen.json");
     }
@@ -43,6 +45,11 @@ final class PauseStats {
             JSONArray list = e.optJSONArray("pausen");
             if (list == null) list = new JSONArray();
             list.put(new JSONObject().put("ende", System.currentTimeMillis()).put("s", secs));
+            if (list.length() > MAX_PER_CHANNEL) {   // nur die neuesten behalten, die Datei soll nicht unbegrenzt wachsen
+                JSONArray keep = new JSONArray();
+                for (int i = list.length() - MAX_PER_CHANNEL; i < list.length(); i++) keep.put(list.get(i));
+                list = keep;
+            }
             e.put("pausen", list);
             o.put(channel, e);
             write(c, o);
@@ -52,11 +59,14 @@ final class PauseStats {
 
     /** {anzahl, summe_s} aus Einzelwerten und alten Sammelwerten. */
     private static long[] totals(JSONObject e) {
+        if (e == null) return new long[]{0, 0};
         long n = e.optInt("anzahl"), sum = e.optLong("summe_s");
         JSONArray list = e.optJSONArray("pausen");
         for (int i = 0; list != null && i < list.length(); i++) {
+            JSONObject p = list.optJSONObject(i);
+            if (p == null) continue;
             n++;
-            sum += list.optJSONObject(i).optLong("s");
+            sum += p.optLong("s");
         }
         return new long[]{n, sum};
     }
@@ -88,6 +98,7 @@ final class PauseStats {
         for (Iterator<String> it = o.keys(); it.hasNext(); ) {
             String k = it.next();
             JSONObject e = o.optJSONObject(k);
+            if (e == null) continue;
             long[] t = totals(e);
             JSONObject r = new JSONObject();
             r.put("anzahl", t[0]);
@@ -116,6 +127,7 @@ final class PauseStats {
         JSONArray list = e.optJSONArray("pausen"), keep = new JSONArray();
         for (int i = 0; list != null && i < list.length(); i++) {
             JSONObject p = list.optJSONObject(i);
+            if (p == null) continue;
             long end = p.optLong("ende");
             boolean hit = all || (from > 0 || to > 0) && (from <= 0 || end >= from) && (to <= 0 || end <= to);
             if (hit) removed++;

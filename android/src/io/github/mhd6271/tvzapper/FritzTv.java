@@ -29,7 +29,11 @@ final class FritzTv {
             c.setReadTimeout(6000);
             try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
                 String name = null, line;
+                long read = 0;
                 while ((line = r.readLine()) != null) {
+                    // fremde Daten begrenzen: die echte Liste hat ~20 kB, ueberlange Zeilen sind kein Sender
+                    if ((read += line.length()) > 2_000_000 || f.urls.size() > 5000) break;
+                    if (line.length() > 2000) continue;
                     if (line.startsWith("#EXTINF:")) name = line.substring(line.indexOf(',') + 1).trim();
                     else if (line.startsWith("rtsp://") && name != null) {
                         String key = norm(name);

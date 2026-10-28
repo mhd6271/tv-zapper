@@ -17,6 +17,7 @@ final class Log {
     private static final int KEEP = 300;
 
     static synchronized void add(Context c, String msg) {
+        if (msg.length() > 500) msg = msg.substring(0, 500) + " …";   // fremde Texte (Fehler, Sendernamen) begrenzen
         android.util.Log.i("TVZapper", msg);
         String line = new SimpleDateFormat("dd.MM. HH:mm:ss", Locale.GERMANY).format(new Date()) + "  " + msg;
         List<String> lines = read(c);

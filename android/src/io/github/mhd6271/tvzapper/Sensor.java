@@ -71,6 +71,7 @@ final class Sensor {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         int c, nl = 0;
         while ((c = in.read()) >= 0) {   // Kopf bis Leerzeile
+            if (b.size() > 16_384) throw new Exception(method + ": Antwort zu lang");
             b.write(c);
             if (c == '\n') {
                 if (++nl == 2) break;
@@ -78,7 +79,7 @@ final class Sensor {
         }
         String resp = b.toString("US-ASCII");
         Matcher len = Pattern.compile("(?i)Content-Length:\\s*(\\d+)").matcher(resp);
-        if (len.find()) in.skip(Integer.parseInt(len.group(1)));
+        if (len.find()) in.skip(Math.min(65_536, Long.parseLong(len.group(1))));
         if (!resp.startsWith("RTSP/1.0 200")) throw new Exception(method + ": " + resp.split("\r\n")[0]);
         return resp;
     }
@@ -228,6 +229,7 @@ final class Sensor {
             if (p >= end) return;
             if (pid == 0 && pusi && pmtPid < 0) {
                 p += 1 + (b[p] & 0xff);   // pointer
+                if (p + 8 > end) return;
                 int secLen = ((b[p + 1] & 0x0f) << 8) | (b[p + 2] & 0xff);
                 for (int k = p + 8; k + 4 <= p + 3 + secLen - 4 && k + 4 <= end; k += 4) {
                     int prog = ((b[k] & 0xff) << 8) | (b[k + 1] & 0xff);
@@ -236,6 +238,7 @@ final class Sensor {
                 }
             } else if (pmtPid < 0 && pusi && candidates[pid]) {
                 p += 1 + (b[p] & 0xff);
+                if (p + 12 > end) return;
                 int secLen = ((b[p + 1] & 0x0f) << 8) | (b[p + 2] & 0xff);
                 int infoLen = ((b[p + 10] & 0x0f) << 8) | (b[p + 11] & 0xff);
                 int k = p + 12 + infoLen, stop = Math.min(p + 3 + secLen - 4, end);
@@ -269,6 +272,7 @@ final class Sensor {
                     }
                     pes.reset();
                 }
+                if (pes.size() > 4 << 20) pes.reset();   // ohne Paketanfang nicht endlos sammeln (wenig RAM)
                 pes.write(b, p, end - p);
             }
         }

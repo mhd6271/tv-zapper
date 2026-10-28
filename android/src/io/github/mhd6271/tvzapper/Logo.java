@@ -30,6 +30,7 @@ final class Logo {
     final java.util.List<boolean[]> variantMask = new java.util.ArrayList<>();
     /** Variante lernen: Bilder, in denen 2 min lang an derselben Stelle oben ein festes Zeichen steht. */
     static final int VARIANT_FRAMES = 400;
+    static final int MAX_VARIANTS = 10;
     private int[][] vCounts;
     private int vLearned;
 
@@ -82,6 +83,10 @@ final class Logo {
             int n = 0;
             for (boolean b : m) if (b) n++;
             if (n >= 40) {
+                if (variantMask.size() >= MAX_VARIANTS) {   // aelteste Variante verwerfen, Datei und Rechenzeit begrenzen
+                    variantCorner.remove(0);
+                    variantMask.remove(0);
+                }
                 variantCorner.add(new int[]{c, n});
                 variantMask.add(m);
                 found = true;
@@ -241,7 +246,13 @@ final class Logo {
         if (txt != null) {
             String[] lines = txt.split("\n");
             for (int at = 0; at + CH < lines.length + 1 && at < lines.length && !lines[at].trim().isEmpty(); at += CH + 1) {
-                int corner = Integer.parseInt(lines[at].trim());
+                int corner;
+                try {
+                    corner = Integer.parseInt(lines[at].trim());
+                } catch (NumberFormatException e) {
+                    break;   // kaputte Datei: Rest ignorieren, Logo wird notfalls neu gelernt
+                }
+                if (corner < 0 || corner > 1) break;
                 boolean[] m = new boolean[CW * CH];
                 int n = 0;
                 for (int y = 0; y < CH && at + 1 + y < lines.length; y++)
@@ -255,7 +266,7 @@ final class Logo {
                     l.corner = corner;
                     l.mask = m;
                     l.points = n;
-                } else {
+                } else if (l.variantMask.size() < MAX_VARIANTS) {
                     l.variantCorner.add(new int[]{corner, n});
                     l.variantMask.add(m);
                 }

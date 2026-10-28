@@ -76,8 +76,9 @@ final class Umschaltungen {
             o.put("bevorzugt", pref);
             o.put("bevorzugt_bonus", bonus == null ? JSONObject.NULL : bonus);
             o.put("bestaetigt", ok);
-            o.put("text", text);
-            if (extra != null && !extra.trim().isEmpty()) o.put("erklaerung", extra.trim());
+            o.put("text", text == null ? "" : text.length() > 600 ? text.substring(0, 600) : text);
+            if (extra != null && !extra.trim().isEmpty())
+                o.put("erklaerung", extra.trim().length() > 600 ? extra.trim().substring(0, 600) : extra.trim());
             all.put(o);
             JSONArray keep = new JSONArray();
             for (int i = Math.max(0, all.length() - MAX); i < all.length(); i++) keep.put(all.get(i));
