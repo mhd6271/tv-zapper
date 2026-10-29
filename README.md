@@ -118,7 +118,7 @@ Alles mit der Fernbedienung:
   man es hier von Hand eintragen.
 - **Einblendung testen** und **Maskottchen:** zeigen zum Ausprobieren eine Einblendung über dem Bild.
 
-### Kinder-Modus (ab 0.4.15)
+### Kinder-Modus (ab 0.4.17)
 
 Der rote Knopf **„Kinder-Modus einschalten“** unter „Einrichten“ stellt die Einstellungsseite um. Dann gibt es nur
 noch Start und Stopp, die Zeit (Laufzeit, Verweilen je Sender), die Sender und die Sperrbegriffe. Gestartet wird
@@ -627,7 +627,7 @@ DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`
 alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
 zuletzt: `id` (ms, steigt streng, auch über Neustarts), `zeit`, `grund` (`interesse` = Zapper-Runde, `werbung` = Werbung
 umgangen, `zurueck` = Werbung vorbei, `zurueck_zeitgrenze`, `zurueck_fehlalarm` = doch keine Werbung, `von_aussen` =
-`UMSCHALTEN`, `kinder` = Kinder-Modus, ab 0.4.15), `von` (`nr`, `sender`, `punkte`; null wenn unbekannt), `nr`, `sender`, `sendung`, `punkte` (null bei einem
+`UMSCHALTEN`, `kinder` = Kinder-Modus, ab 0.4.17), `von` (`nr`, `sender`, `punkte`; null wenn unbekannt), `nr`, `sender`, `sendung`, `punkte` (null bei einem
 „Nie“-Wort), `kategorien` (`name`, `punkte`), `bevorzugt`, `bevorzugt_bonus`, `bestaetigt`, `text` (Einblendung),
 `erklaerung` (nur mit `grund` von außen). `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
 Einblendung, `grund` mit Zeilen „a | b | c“ für die Einblendung bei „Umschaltgrund einblenden“) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
@@ -636,7 +636,7 @@ Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was sender` (ab 0.4.
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
 entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false`,
 `--es werbung_umgehen true|false` und/oder `--es umschaltgrund_einblenden true|false` und antwortet mit `ok` und allen drei Werten (ungültiger Wert:
-`result=1` mit `fehler`). Ab 0.4.15 auch den Kinder-Modus: `--es kinder_modus true|false`, `--es kinder_sender "A, B"`
+`result=1` mit `fehler`). Ab 0.4.17 auch den Kinder-Modus: `--es kinder_modus true|false`, `--es kinder_sender "A, B"`
 (erlaubt), `--es kinder_sender_gesperrt "C, D"`, `--es kinder_uebrige_erlaubt true|false`, `--es kinder_sperrbegriffe
 "krimi, horror*"`; die Antwort enthält dann auch diese Werte. `ABFRAGEN` liefert `kinder_modus` und, wenn er an ist,
 die übrigen vier. `UMSCHALTEN` auf einen nicht erlaubten Sender antwortet im Kinder-Modus mit `fehler`. Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
