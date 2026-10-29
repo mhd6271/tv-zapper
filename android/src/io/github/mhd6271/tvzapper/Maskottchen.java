@@ -86,7 +86,7 @@ final class Maskottchen extends View {
                     PixelFormat.TRANSLUCENT);
             if (klein) {
                 lp.gravity = Gravity.TOP | Gravity.START;   // oberer Rand, etwa in Hoehe der Senderlogos
-                lp.y = (int) (8 * d);   // Max: minimal hoeher als die ersten 18
+                lp.y = 0;   // ganz oben; Max wollte es zweimal je 10 dp hoeher als die ersten 18 (Rest in onDraw)
             } else {
                 lp.gravity = Gravity.BOTTOM | Gravity.END;
                 lp.x = 0;   // am rechten Bildrand, damit er hinausrennen kann
@@ -135,7 +135,7 @@ final class Maskottchen extends View {
             drawFigure(bc, tt + RENNEN_AB + 1, 360 * d, 300 * d, tt);
             float f = tt / (FLITZ_MS / 1000f);
             float x = rechts ? -bw + f * (getWidth() + bw) : getWidth() - f * (getWidth() + bw);
-            cv.drawBitmap(frame, x, 0, null);
+            cv.drawBitmap(frame, x, -2 * d, null);   // 2 dp hoeher als der Fensterrand (ueber den Antennen ist ~20 dp Luft)
         }
         if (tt * 1000 < (klein ? FLITZ_MS : DAUER_MS)) postInvalidateOnAnimation();
     }
