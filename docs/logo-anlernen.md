@@ -5,8 +5,9 @@ Stand 28.10.2026, 17:58, nach der App selbst (ABFRAGEN `logos`, Fassung 0.4.6). 
 **Zahlen:** 377 Sender am Fernseher, 36 eingeschaltet. Davon beobachtet der Werbe-Sensor **29**,
 **7** haben ein Logo, **22** sind offen.
 
-**Stand 29.10.2026, 07:30:** Im Repo liegen 25 Logos (`android/assets/logos/`), das sind 25 von 27. Offen sind nur noch
-**WELT HD** und **Das Erste HD**. Der Lauf endete am 28.10. nach VOXup (20:59); der Fernseher war am Morgen aus.
+**Stand 29.10.2026, 08:35: fertig.** Alle **27 von 27** Logos sind gelernt und im Repo (`android/assets/logos/`, 27 Dateien).
+Die App meldet `"gelernt":27,"beobachtet":27,"ohne_logo":[]`. WELT HD (08:28) und Das Erste HD (08:34) kamen zuletzt dazu,
+beide nach 6 min. Ab 0.4.7 bringt die App alle 27 mit.
 
 **Zählweise:** Die Tabelle zählt Sender, die App zählt Logos. RTL HD und RTL UHD teilen sich ein Logo, ebenso NITRO HD
 und RTLNITRO. Aus 29 Sendern werden so 27 Logos. Bis 18:50 zählte die App je Sender, RTL also doppelt. Ab der
