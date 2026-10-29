@@ -27,7 +27,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 75 | Comedy Central HD | hat Logo | laut App 17:58 |
 | [x] | 125 | kabel eins Doku | hat Logo | laut App 17:58 |
 | [x] | 167 | ProSieben MAXX HD | hat Logo | laut App 17:58 |
-| [ ] | 1 | Das Erste HD | offen | |
+| [x] | 1 | Das Erste HD | gelernt | Lauf 29.10. 08:34 nach 6 min |
 | [x] | 2 | ZDF HD | gelernt | Lauf 28.10. 18:22 nach 6 min |
 | [x] | 25 | RTL HD | gelernt | Lauf 28.10. 18:28 nach 6 min |
 | [x] | 27 | SPORT 1 HD | gelernt | Lauf 28.10. 18:34 nach 6 min |
@@ -48,7 +48,7 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 237 | TELE 5 HD | gelernt | Lauf 28.10. 20:22 nach 6 min |
 | [x] | 244 | TLC HD | gelernt | Lauf 28.10. 20:28 nach 6 min |
 | [x] | 260 | VOXup HD | gelernt | nach über 30 min, Logo-Datei am 28.10. 20:59 gesichert |
-| [ ] | 268 | WELT HD | offen | |
+| [x] | 268 | WELT HD | gelernt | Lauf 29.10. 08:28 nach 6 min |
 
 ## Nicht beobachtet (7)
 
