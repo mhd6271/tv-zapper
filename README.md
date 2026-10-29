@@ -118,6 +118,30 @@ Alles mit der Fernbedienung:
   man es hier von Hand eintragen.
 - **Einblendung testen** und **Maskottchen:** zeigen zum Ausprobieren eine Einblendung über dem Bild.
 
+### Kinder-Modus (ab 0.4.15)
+
+Der rote Knopf **„Kinder-Modus einschalten“** unter „Einrichten“ stellt die Einstellungsseite um. Dann gibt es nur
+noch Start und Stopp, die Zeit (Laufzeit, Verweilen je Sender), die Sender und die Sperrbegriffe. Gestartet wird
+dabei nichts, das macht man mit „Start“.
+
+- **Sender:** OK auf einem Sender wechselt *erlaubt ✓* → *gesperrt ✗* → *wie die übrigen*. Der Knopf **„Alle
+  übrigen Sender“** sagt, was mit allen nicht eingestellten (auch neuen) Sendern ist. Steht er auf *gesperrt*, laufen
+  nur die erlaubten (Erlaubt-Liste, Vorgabe). Steht er auf *erlaubt*, laufen alle außer den gesperrten (Sperrliste).
+- **Sperrbegriffe** (freiwillig): Wörter mit Komma getrennt, `*` am Ende = Wortanfang. Geprüft werden Titel, Folge,
+  Genre und Beschreibung der laufenden Sendung. Der Name einer Interessen-Kategorie (zum Beispiel „Krimi“) sperrt
+  alle ihre Wörter. Das Genre liefert der TCL nur als Zahl, deshalb treffen Wörter dort kaum.
+
+Solange der TV-Zapper läuft, auch mit „nur lesen“, prüft die App alle 2,5 Sekunden den laufenden Sender. Ist er nicht
+erlaubt, oder läuft eine Sendung mit Sperrbegriff, schaltet sie sofort auf einen zufälligen erlaubten Sender ohne
+Sperrbegriff, möglichst einen ohne Werbung. Das gilt auch nach Umschalten mit der Fernbedienung. Zeigt die
+Fernseh-App einen anderen Eingang (am TCL führt „Programm runter“ auf Sender 1 zu HDMI 4), schaltet sie nach etwa
+5 Sekunden zurück auf einen erlaubten Sender. Zapper-Runde, Werbe-Sensor und `UMSCHALTEN` von außen schalten im
+Kinder-Modus nie auf einen nicht erlaubten Sender. Am Fernseher geprüft am 29.10.2026: Wegschalten von 75 Comedy
+Central HD nach etwa 1 bis 3 Sekunden, von HDMI 4 nach 4 Sekunden.
+
+Grenzen: Wer die Fernbedienung hat, kann den Kinder-Modus in der App ausschalten oder „Stopp“ drücken. Andere Apps
+(YouTube, Mediatheken) und der Startbildschirm bleiben frei, geprüft wird nur das Fernsehbild.
+
 Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 Minuten zum Lernen. Dafür muss man
 so lange auf dem Sender bleiben; wird vorher umgeschaltet, fängt die App beim nächsten Mal von vorn an.
 
@@ -603,7 +627,7 @@ DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`
 alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
 zuletzt: `id` (ms, steigt streng, auch über Neustarts), `zeit`, `grund` (`interesse` = Zapper-Runde, `werbung` = Werbung
 umgangen, `zurueck` = Werbung vorbei, `zurueck_zeitgrenze`, `zurueck_fehlalarm` = doch keine Werbung, `von_aussen` =
-`UMSCHALTEN`), `von` (`nr`, `sender`, `punkte`; null wenn unbekannt), `nr`, `sender`, `sendung`, `punkte` (null bei einem
+`UMSCHALTEN`, `kinder` = Kinder-Modus, ab 0.4.15), `von` (`nr`, `sender`, `punkte`; null wenn unbekannt), `nr`, `sender`, `sendung`, `punkte` (null bei einem
 „Nie“-Wort), `kategorien` (`name`, `punkte`), `bevorzugt`, `bevorzugt_bonus`, `bestaetigt`, `text` (Einblendung),
 `erklaerung` (nur mit `grund` von außen). `UMSCHALTEN` (`nr` oder `sender`, optional `text` für die
 Einblendung, `grund` mit Zeilen „a | b | c“ für die Einblendung bei „Umschaltgrund einblenden“) antwortet `{"ok", "nr", "sender"}`; `ok` = der Fernseher meldet den neuen Sender. Am TCL geprüft:
@@ -612,7 +636,10 @@ Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was sender` (ab 0.4.
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
 entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false`,
 `--es werbung_umgehen true|false` und/oder `--es umschaltgrund_einblenden true|false` und antwortet mit `ok` und allen drei Werten (ungültiger Wert:
-`result=1` mit `fehler`). Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
+`result=1` mit `fehler`). Ab 0.4.15 auch den Kinder-Modus: `--es kinder_modus true|false`, `--es kinder_sender "A, B"`
+(erlaubt), `--es kinder_sender_gesperrt "C, D"`, `--es kinder_uebrige_erlaubt true|false`, `--es kinder_sperrbegriffe
+"krimi, horror*"`; die Antwort enthält dann auch diese Werte. `ABFRAGEN` liefert `kinder_modus` und, wenn er an ist,
+die übrigen vier. `UMSCHALTEN` auf einen nicht erlaubten Sender antwortet im Kinder-Modus mit `fehler`. Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
 Stand – dann den Schalter in der App benutzen.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.

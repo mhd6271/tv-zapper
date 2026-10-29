@@ -55,6 +55,13 @@ final class Config {
     /** Werbefreie Ausweichsender, bei gleicher Punktzahl gilt die Reihenfolge. */
     List<String> adFree = new ArrayList<>(java.util.Arrays.asList("ZDFinfo HD", "zdf_neo HD", "arte HD",
             "tagesschau24 HD", "3sat HD", "phoenix HD", "WDR HD Köln", "hr-fernsehen HD"));
+    /** Kinder-Modus: erlaubte (kidsChannels) und gesperrte Sender (kidsDenied); alle uebrigen nach kidsRestAllowed.
+     *  Keine Sendung mit einem Wort aus kidsBlock (siehe Kinder). */
+    boolean kids = false;
+    List<String> kidsChannels = new ArrayList<>(), kidsDenied = new ArrayList<>();
+    boolean kidsRestAllowed = false;
+    /** Sperrbegriffe; ein Name einer Interessen-Kategorie sperrt auch alle Woerter dieser Kategorie. */
+    List<String> kidsBlock = new ArrayList<>();
 
     /** Eigene Einstellung des Senders, sonst die Markierung des Fernsehers (Favorit1 = an), sonst newChannels. */
     String state(Epg.Channel ch) {
@@ -121,6 +128,11 @@ final class Config {
         cfg.tvApp = o.optString("tv_app", "");
         cfg.pauseMaxMin = o.optInt("werbepause_max_min", 6);
         if (o.has("werbefrei")) cfg.adFree = strings(o.optJSONArray("werbefrei"));
+        cfg.kids = o.optBoolean("kinder_modus", false);
+        cfg.kidsChannels = strings(o.optJSONArray("kinder_sender"));
+        cfg.kidsDenied = strings(o.optJSONArray("kinder_sender_gesperrt"));
+        cfg.kidsRestAllowed = o.optBoolean("kinder_uebrige_erlaubt", false);
+        cfg.kidsBlock = strings(o.optJSONArray("kinder_sperrbegriffe"));
         for (String n : strings(o.optJSONArray("sender_an"))) cfg.channels.put(n, AN);
         JSONObject pref = o.optJSONObject("sender_bevorzugt");
         if (pref != null) {
@@ -158,6 +170,10 @@ final class Config {
         List<String> af = new ArrayList<>();
         for (String n : adFree) if (af.size() < MAX_ADFREE && !n.trim().isEmpty()) af.add(cut(n.trim(), 100));
         adFree = af;
+        kidsChannels = names(kidsChannels);
+        kidsDenied = names(kidsDenied);
+        kidsDenied.removeAll(kidsChannels);   // ein Sender ist entweder erlaubt oder gesperrt
+        kidsBlock = words(kidsBlock, MAX_NEVER);
         Map<String, String> ch = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : channels.entrySet()) {
             if (ch.size() >= MAX_CHANNELS) break;
@@ -173,6 +189,15 @@ final class Config {
         tvInput = cut(tvInput == null ? "" : tvInput.trim(), 200);
         if (tvApp == null || !tvApp.trim().matches("([A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+)?")) tvApp = "";
         tvApp = tvApp.trim();
+    }
+
+    private static List<String> names(List<String> in) {
+        List<String> out = new ArrayList<>();
+        for (String n : in) {
+            n = n == null ? "" : n.trim();
+            if (out.size() < MAX_CHANNELS && !n.isEmpty() && n.length() <= 100 && !out.contains(n)) out.add(n);
+        }
+        return out;
     }
 
     private static int clamp(int v, int lo, int hi) {
@@ -218,6 +243,11 @@ final class Config {
         o.put("tv_app", tvApp);
         o.put("werbepause_max_min", pauseMaxMin);
         o.put("werbefrei", new JSONArray(adFree));
+        o.put("kinder_modus", kids);
+        o.put("kinder_sender", new JSONArray(kidsChannels));
+        o.put("kinder_sender_gesperrt", new JSONArray(kidsDenied));
+        o.put("kinder_uebrige_erlaubt", kidsRestAllowed);
+        o.put("kinder_sperrbegriffe", new JSONArray(kidsBlock));
         JSONArray on = new JSONArray(), nie = new JSONArray();
         JSONObject pref = new JSONObject();
         for (Map.Entry<String, String> e : channels.entrySet()) {

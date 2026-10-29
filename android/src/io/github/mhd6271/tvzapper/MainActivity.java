@@ -33,6 +33,8 @@ public class MainActivity extends Activity {
     private Config cfg;
     private LinearLayout root, catBox, chanBox;
     private final List<View[]> catRows = new ArrayList<>();   // {name, gewicht, woerter}
+    private EditText kidsBlock;
+    private Button kidsBtn;
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats, apiInfo;
     private Button adToggle, setupButton, startButton, prefToggle, reasonToggle;
@@ -152,6 +154,10 @@ public class MainActivity extends Activity {
 
     private void build() {
         root.addView(text("TV-Zapper", 28, true));
+        if (cfg.kids) {
+            buildKids();
+            return;
+        }
         root.addView(text("Prüft im Hintergrund, was auf den eingeschalteten Sendern läuft, bewertet es nach deinen "
                 + "Interessen und schaltet auf den besten Treffer. Läuft nur, wenn das Fernsehprogramm vorn ist.", 15, false));
 
@@ -164,6 +170,7 @@ public class MainActivity extends Activity {
         });
         setupButton.setTextSize(18);
         root.addView(setupButton);
+        root.addView(kidsButton());
         LinearLayout ctl = row();
         startButton = button("Start", v -> start(ZapperService.ACTION_START, false));
         ctl.addView(startButton);
@@ -184,19 +191,7 @@ public class MainActivity extends Activity {
                 Uri.parse("package:" + getPackageName())))));
         root.addView(pr);
 
-        section("Zeit");
-        LinearLayout t = row();
-        t.addView(text("Laufzeit", 16, false));
-        runH = number(String.valueOf(cfg.runMin / 60));
-        t.addView(runH);
-        t.addView(text("Std.", 16, false));
-        runM = number(String.valueOf(cfg.runMin % 60));
-        t.addView(runM);
-        t.addView(text("Min. (0 = ohne Ende)   Verweilen je Sender", 16, false));
-        dwell = number(String.valueOf(cfg.dwellMin));
-        t.addView(dwell);
-        t.addView(text("Min.", 16, false));
-        root.addView(t);
+        buildTime();
 
         section("Interessen");
         root.addView(text("Wörter mit Komma trennen. * am Ende = Wortanfang (doku* passt auf Dokumentation). "
@@ -314,6 +309,139 @@ public class MainActivity extends Activity {
         root.addView(log);
     }
 
+    private void buildTime() {
+        section("Zeit");
+        LinearLayout t = row();
+        t.addView(text("Laufzeit", 16, false));
+        runH = number(String.valueOf(cfg.runMin / 60));
+        t.addView(runH);
+        t.addView(text("Std.", 16, false));
+        runM = number(String.valueOf(cfg.runMin % 60));
+        t.addView(runM);
+        t.addView(text("Min. (0 = ohne Ende)   Verweilen je Sender", 16, false));
+        dwell = number(String.valueOf(cfg.dwellMin));
+        t.addView(dwell);
+        t.addView(text("Min.", 16, false));
+        root.addView(t);
+    }
+
+    /** Roter Knopf unter "Einrichten", gleich gross: Kinder-Modus an/aus, baut die Einstellungen neu auf (startet nichts). */
+    private Button kidsButton() {
+        Button b = button(cfg.kids ? "Kinder-Modus: AN  –  zum Ausschalten drücken" : "Kinder-Modus einschalten", v -> {
+            readForm();
+            cfg.kids = !cfg.kids;
+            cfg.save(this);
+            Log.add(this, "Kinder-Modus " + (cfg.kids ? "an" : "aus"));
+            catRows.clear();
+            root.removeAllViews();
+            build();
+            refreshStatus();
+            if (kidsBtn != null) kidsBtn.requestFocus();
+        });
+        kidsBtn = b;
+        b.setTextSize(18);
+        b.setTypeface(b.getTypeface(), android.graphics.Typeface.BOLD);
+        b.setTextColor(Color.WHITE);
+        android.graphics.drawable.GradientDrawable normal = new android.graphics.drawable.GradientDrawable();
+        normal.setColor(Color.rgb(0xC6, 0x28, 0x28));
+        normal.setCornerRadius(dp(8));
+        android.graphics.drawable.GradientDrawable focus = new android.graphics.drawable.GradientDrawable();
+        focus.setColor(Color.rgb(0xF4, 0x43, 0x36));
+        focus.setCornerRadius(dp(8));
+        focus.setStroke(dp(4), Color.WHITE);   // Fokus mit der Fernbedienung deutlich sichtbar
+        android.graphics.drawable.StateListDrawable bg = new android.graphics.drawable.StateListDrawable();
+        bg.addState(new int[]{android.R.attr.state_focused}, focus);
+        bg.addState(new int[]{android.R.attr.state_pressed}, focus);
+        bg.addState(new int[]{}, normal);
+        b.setBackground(bg);
+        b.setPadding(dp(24), dp(12), dp(24), dp(12));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);   // so breit wie "Einrichten" darueber
+        lp.setMargins(dp(4), dp(6), dp(4), dp(6));
+        b.setLayoutParams(lp);
+        return b;
+    }
+
+    /** Einstellungen im Kinder-Modus: Start/Stopp, Zeit, erlaubte Sender und Sperrbegriffe – sonst nichts. */
+    private void buildKids() {
+        root.addView(kidsButton());
+        root.addView(text("Nur die erlaubten Sender dürfen laufen. Läuft ein anderer Sender oder eine Sendung mit einem "
+                + "Sperrbegriff, schaltet die App sofort auf einen zufälligen erlaubten Sender – auch nach Umschalten mit "
+                + "der Fernbedienung. Wirkt, solange der TV-Zapper gestartet ist.", 15, false));
+        status = text("", 17, true);
+        status.setPadding(0, dp(12), 0, dp(4));
+        root.addView(status);
+        LinearLayout ctl = row();
+        startButton = button("Start", v -> start(ZapperService.ACTION_START, false));
+        ctl.addView(startButton);
+        ctl.addView(button("Stopp", v -> startService(new Intent(this, ZapperService.class)
+                .setAction(ZapperService.ACTION_STOP))));
+        root.addView(ctl);
+
+        buildTime();
+
+        section("Sender");
+        root.addView(text("OK auf einem Sender wechselt: erlaubt ✓ → gesperrt ✗ → wie die übrigen. Neue und nicht "
+                + "eingestellte Sender gelten wie „alle übrigen“.", 14, false));
+        Button rest = button("", null);
+        rest.setOnClickListener(v -> {
+            cfg.kidsRestAllowed = !cfg.kidsRestAllowed;
+            rest.setText(restText());
+            cfg.save(this);
+            fillChannels();
+        });
+        rest.setText(restText());
+        root.addView(rest);
+        root.addView(button("Alle Sender zeigen / nur Favoriten und eingestellte", v -> {
+            showAllChannels = !showAllChannels;
+            fillChannels();
+        }));
+        chanBox = new LinearLayout(this);
+        chanBox.setOrientation(LinearLayout.VERTICAL);
+        root.addView(chanBox);
+        fillChannels();
+
+        section("Sperrbegriffe (optional)");
+        root.addView(text("Wörter mit Komma trennen, * am Ende = Wortanfang (horror* passt auf Horrorfilm). Geprüft werden "
+                + "Titel, Folge, Genre und Beschreibung der laufenden Sendung. Der Name einer Interessen-Kategorie "
+                + "(z. B. Krimi) sperrt alle ihre Wörter.", 14, false));
+        kidsBlock = edit(String.join(", ", cfg.kidsBlock), true);
+        root.addView(kidsBlock);
+    }
+
+    private void fillKidsChannels(List<Epg.Channel> list) {
+        int shown = 0;
+        for (Epg.Channel ch : list) {
+            if (!showAllChannels && !ch.favorite && !cfg.kidsChannels.contains(ch.name)
+                    && !cfg.kidsDenied.contains(ch.name)) continue;
+            Button bt = button("", null);
+            bt.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            kidsLabel(bt, ch);
+            bt.setOnClickListener(v -> {
+                if (cfg.kidsChannels.remove(ch.name)) cfg.kidsDenied.add(ch.name);
+                else if (!cfg.kidsDenied.remove(ch.name)) cfg.kidsChannels.add(ch.name);
+                kidsLabel(bt, ch);
+                cfg.save(this);
+            });
+            chanBox.addView(bt);
+            shown++;
+        }
+        chanBox.addView(text(cfg.kidsChannels.size() + " erlaubt, " + cfg.kidsDenied.size() + " gesperrt, " + shown + " von " + list.size()
+                + " Sendern angezeigt", 14, false));
+    }
+
+    private void kidsLabel(Button bt, Epg.Channel ch) {
+        boolean ok = Kinder.allowed(cfg, ch.name);
+        String own = cfg.kidsChannels.contains(ch.name) ? "erlaubt ✓" : cfg.kidsDenied.contains(ch.name) ? "gesperrt ✗"
+                : "wie die übrigen (" + (ok ? "erlaubt" : "gesperrt") + ")";
+        bt.setText(ch.number + "   " + ch.name + "   —   " + own);
+        bt.setAlpha(ok ? 1f : 0.5f);
+    }
+
+    private String restText() {
+        return "Alle übrigen Sender: " + (cfg.kidsRestAllowed ? "erlaubt (nur die gesperrten nicht)" : "gesperrt (nur die erlaubten laufen)");
+    }
+
     private void addCat(Config.Cat c) {
         LinearLayout r = row();
         EditText name = edit(c.name, false);
@@ -348,6 +476,10 @@ public class MainActivity extends Activity {
                     + "Fernseher liefert keine).", 15, false));
             return;
         }
+        if (cfg.kids) {
+            fillKidsChannels(list);
+            return;
+        }
         int shown = 0;
         for (Epg.Channel ch : list) {
             if (!showAllChannels && Config.AUS.equals(cfg.state(ch))) continue;
@@ -375,6 +507,12 @@ public class MainActivity extends Activity {
     }
 
     private void readForm() {
+        if (cfg.kids) {   // im Kinder-Modus gibt es nur dieses Feld; die uebrigen Einstellungen bleiben, wie sie sind
+            if (kidsBlock != null) cfg.kidsBlock = Config.splitList(kidsBlock.getText().toString());
+            readTime();
+            return;
+        }
+        if (never == null) return;   // Seite wurde im Kinder-Modus aufgebaut
         cfg.cats.clear();
         for (View[] c : catRows) {
             Config.Cat cat = new Config.Cat();
@@ -384,8 +522,7 @@ public class MainActivity extends Activity {
             if (!cat.name.isEmpty() || !cat.words.isEmpty()) cfg.cats.add(cat);
         }
         cfg.never = Config.splitList(never.getText().toString());
-        cfg.runMin = Math.max(0, parse(runH.getText().toString(), 0) * 60 + parse(runM.getText().toString(), 0));
-        cfg.dwellMin = Math.max(1, parse(dwell.getText().toString(), 5));
+        readTime();
         cfg.bonus = parse(bonus.getText().toString(), 0);
         cfg.adFree = Config.splitList(adFree.getText().toString());
         cfg.pauseMaxMin = Math.max(1, parse(pauseMax.getText().toString(), 6));
@@ -393,6 +530,12 @@ public class MainActivity extends Activity {
         cfg.fritz = f.isEmpty() ? "fritz.box" : f;
         cfg.tvInput = tvInput.getText().toString().trim();
         cfg.tvApp = tvApp.getText().toString().trim();
+    }
+
+    private void readTime() {
+        if (runH == null) return;
+        cfg.runMin = Math.max(0, parse(runH.getText().toString(), 0) * 60 + parse(runM.getText().toString(), 0));
+        cfg.dwellMin = Math.max(1, parse(dwell.getText().toString(), 5));
     }
 
     private void start(String action, boolean readOnly) {
@@ -446,19 +589,28 @@ public class MainActivity extends Activity {
         status.setText(end > System.currentTimeMillis()
                 ? (end == Long.MAX_VALUE ? "Läuft (bis Stopp)" : "Läuft bis " + hm.format(new Date(end))) + (next > 0 ? ", nächste Prüfung " + hm.format(new Date(next)) : "")
                 : "Steht.");
+        WerbeWaechter w = ZapperService.waechter;
+        if (cfg.kids) {   // Kinder-Seite: nur Status und Protokoll
+            if (w != null) status.append("   " + w.status());
+            return;
+        }
         StringBuilder ps = new StringBuilder("Gemessene Werbepausen: ");
         java.util.Map<String, String> st = PauseStats.summary(this);
         if (st.isEmpty()) ps.append("noch keine");
         for (java.util.Map.Entry<String, String> e : st.entrySet()) ps.append(e.getKey()).append(' ').append(e.getValue()).append("   ");
         pauseStats.setText(ps.toString());
         apiInfo.setText(apiText());
-        WerbeWaechter w = ZapperService.waechter;
         if (w != null) status.append("   " + w.status());
         boolean listings = checkSelfPermission(PERM_LISTINGS) == PackageManager.PERMISSION_GRANTED;
         boolean usage = usageAccess();
         boolean overlay = Settings.canDrawOverlays(this);
         perms.setText("Berechtigungen:  Fernsehprogramm lesen " + mark(listings) + "   Nutzungszugriff (was läuft vorn) "
                 + mark(usage) + "   Über anderen Apps (Umschalten aus dem Hintergrund) " + mark(overlay));
+        showLog();
+    }
+
+    private void showLog() {
+        if (log == null) return;
         List<String> lines = Log.read(this);
         StringBuilder b = new StringBuilder();
         for (int i = lines.size() - 1; i >= Math.max(0, lines.size() - 60); i--) b.append(lines.get(i)).append('\n');

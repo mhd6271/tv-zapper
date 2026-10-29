@@ -26,7 +26,9 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
     static final String ABFRAGEN = "io.github.mhd6271.tvzapper.ABFRAGEN";
     static final String UMSCHALTEN = "io.github.mhd6271.tvzapper.UMSCHALTEN";
     /** --es sender "ProSieben MAXX HD" [--el von <ms>] [--el bis <ms>] [--ez alt true] – siehe PauseStats.delete */
-    /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] [--es umschaltgrund_einblenden true|false] */
+    /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] [--es umschaltgrund_einblenden true|false]
+     *  [--es kinder_modus true|false] [--es kinder_sender "KiKA HD, ..."] [--es kinder_sender_gesperrt "RTL HD, ..."]
+     *  [--es kinder_uebrige_erlaubt true|false] [--es kinder_sperrbegriffe "krimi, horror*"] */
     static final String EINSTELLEN = "io.github.mhd6271.tvzapper.EINSTELLEN";
     static final String PAUSEN_LOESCHEN = "io.github.mhd6271.tvzapper.PAUSEN_LOESCHEN";
     /** [--ez nur_lesen true] – Zapper-Dienst starten wie mit „Start“ in der App, z. B. nach einem Update */
@@ -48,12 +50,26 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             else if (EINSTELLEN.equals(i.getAction())) {
                 Config cfg = Config.load(c);
                 String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen"),
-                        ug = i.getStringExtra("umschaltgrund_einblenden");
-                if (ab == null && wu == null && ug == null) throw new IllegalArgumentException("nichts zu setzen");
+                        ug = i.getStringExtra("umschaltgrund_einblenden"), km = i.getStringExtra("kinder_modus"),
+                        ks = i.getStringExtra("kinder_sender"), kb = i.getStringExtra("kinder_sperrbegriffe"),
+                        kg = i.getStringExtra("kinder_sender_gesperrt"), ku = i.getStringExtra("kinder_uebrige_erlaubt");
+                boolean kid = km != null || ks != null || kb != null || kg != null || ku != null;
+                if (ab == null && wu == null && ug == null && !kid)
+                    throw new IllegalArgumentException("nichts zu setzen");
                 if (ab != null) cfg.dodgePreferred = parseBool(ab);
                 if (wu != null) cfg.avoidAds = parseBool(wu);
                 if (ug != null) cfg.showReason = parseBool(ug);
+                if (km != null) cfg.kids = parseBool(km);
+                if (ks != null) cfg.kidsChannels = Config.splitList(ks);
+                if (kb != null) cfg.kidsBlock = Config.splitList(kb);
+                if (kg != null) cfg.kidsDenied = Config.splitList(kg);
+                if (ku != null) cfg.kidsRestAllowed = parseBool(ku);
                 cfg.save(c);
+                kinderJson(cfg, out);
+                if (kid)
+                    Log.add(c, "Kinder-Modus von außen: " + (cfg.kids ? "an" : "aus") + ", " + cfg.kidsChannels.size()
+                            + " erlaubt, " + cfg.kidsDenied.size() + " gesperrt, übrige " + (cfg.kidsRestAllowed ? "erlaubt" : "gesperrt")
+                            + ", " + cfg.kidsBlock.size() + " Sperrbegriffe");
                 out.put("ok", true);
                 out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
                 out.put("werbung_umgehen", cfg.avoidAds);
@@ -92,6 +108,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("werbung_umgehen", cfg.avoidAds);
         out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
         out.put("umschaltgrund_einblenden", cfg.showReason);
+        if (cfg.kids) kinderJson(cfg, out);
+        else out.put("kinder_modus", false);
         WerbeWaechter w = ZapperService.waechter;
         out.put("werbe_sensor", w == null ? JSONObject.NULL : w.status());
         out.put("werbung", w == null || !w.knowsPause() ? JSONObject.NULL : w.isPause());
@@ -121,6 +139,14 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         }
         if ("logos".equals(was)) out.put("logo_dateien", Logo.export(c));   // fuer logos_sichern.sh (Repo-Sicherung)
         out.put("umschaltungen", Umschaltungen.read(c));
+    }
+
+    private static void kinderJson(Config cfg, JSONObject out) throws Exception {
+        out.put("kinder_modus", cfg.kids);
+        out.put("kinder_sender", new JSONArray(cfg.kidsChannels));
+        out.put("kinder_sender_gesperrt", new JSONArray(cfg.kidsDenied));
+        out.put("kinder_uebrige_erlaubt", cfg.kidsRestAllowed);
+        out.put("kinder_sperrbegriffe", new JSONArray(cfg.kidsBlock));
     }
 
     private static JSONObject channelJson(Context c, Config cfg, Epg.Channel ch, String state) throws Exception {
@@ -156,6 +182,13 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         }
         if (target == null) {
             out.put("fehler", "Sender nicht gefunden: " + (nr != null ? nr : name));
+            return;
+        }
+        Config cfg = Config.load(c);
+        String no = cfg.kids ? Kinder.verbot(c, cfg, target) : null;
+        if (no != null) {
+            Log.add(c, "Von außen nicht umgeschaltet – Kinder-Modus: " + no);
+            out.put("fehler", "Kinder-Modus: " + no);
             return;
         }
         Epg.Channel from = Umschaltungen.channel(c, Epg.currentChannelId(c));

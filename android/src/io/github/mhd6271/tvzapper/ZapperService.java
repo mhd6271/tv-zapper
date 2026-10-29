@@ -140,7 +140,12 @@ public class ZapperService extends Service {
      *  Nur alle 2,5 s geprueft: Wer schnell durchzappt, sieht es nur auf dem Sender, auf dem er kurz bleibt. */
     private void onSwitch() {
         long cur = Epg.currentChannelId(this);
-        if (cur <= 0) return;   // Fernsehbild nicht vorn: alten Sender merken, Rueckkehr zum selben Sender zaehlt nicht
+        if (cur <= 0) {   // Fernsehbild nicht vorn: alten Sender merken, Rueckkehr zum selben Sender zaehlt nicht
+            guardKidsInput();
+            return;
+        }
+        kidsNoChannel = 0;
+        if (guardKids(cur)) return;
         if (lastChannel > 0 && cur != lastChannel && getSystemService(PowerManager.class).isInteractive()) {
             boolean back = isBack(lastChannel, cur);
             android.util.Log.i("TVZapper", "Senderwechsel " + lastChannel + " -> " + cur + ": Maskottchen nach "
@@ -148,6 +153,48 @@ public class ZapperService extends Service {
             Maskottchen.flitzen(this, back);
         }
         lastChannel = cur;
+    }
+
+    private long kidsNoneLogged;
+    private int kidsNoChannel;
+
+    /** Kinder-Modus: Fernseh-App vorn, aber kein Sender (TCL meldet -1) = anderer Eingang wie HDMI, z. B. nach
+     *  "Programm runter" auf dem ersten Sender (am Geraet 29.10.2026: Sender 1 -> HDMI 4). Erst beim zweiten Mal in
+     *  Folge (5 s) wegschalten, damit kurze Luecken beim Umschalten nicht zaehlen. */
+    private void guardKidsInput() {
+        String tv = Epg.tvPackage(this);
+        if (!Config.load(this).kids || tv == null || !tv.equals(foregroundApp(this))
+                || !getSystemService(PowerManager.class).isInteractive()) {
+            kidsNoChannel = 0;
+            return;
+        }
+        if (++kidsNoChannel < 2) return;
+        kidsNoChannel = 0;
+        guardKids(-1);
+    }
+
+    /** Kinder-Modus: laeuft ein nicht erlaubter Sender oder eine Sendung mit Sperrbegriff, sofort auf einen zufaelligen
+     *  erlaubten Sender schalten – auch in "nur lesen" und nach Umschalten von Hand. true = weggeschaltet. */
+    private boolean guardKids(long cur) {
+        Config cfg = Config.load(this);
+        if (!cfg.kids || !getSystemService(PowerManager.class).isInteractive()) return false;
+        Epg.Channel ch = Umschaltungen.channel(this, cur);
+        String why = cur <= 0 ? "anderer Eingang statt Fernsehsender" : Kinder.verbot(this, cfg, ch);
+        if (why == null) return false;
+        Epg.Channel to = Kinder.ersatz(this, cfg, cur);
+        if (to == null) {
+            if (System.currentTimeMillis() - kidsNoneLogged > 60_000) {
+                kidsNoneLogged = System.currentTimeMillis();
+                Log.add(this, "Kinder-Modus: " + why + ", aber kein erlaubter Sender ohne Sperrbegriff da – bleibe");
+                Banner.show(this, "Kinder-Modus: keine erlaubten Sender eingestellt", 6000);
+            }
+            return false;
+        }
+        Log.add(this, "Kinder-Modus: " + why + " – schalte weg auf " + to.number + " " + to.name);
+        Epg.Program p = Epg.current(this, to.id);
+        if (tuneTo(to, "Kinder-Modus: " + why + " – jetzt " + to.name + (p == null ? "" : ": " + p.title),
+                Umschaltungen.KINDER)) lastChannel = to.id;
+        return true;
     }
 
     /** Zurueckgeschaltet? Nach der Stelle in der Senderliste (wie die Programm-Tasten der Fernbedienung); ein Sprung
@@ -226,8 +273,13 @@ public class ZapperService extends Service {
         long curId = Epg.currentChannelId(this);
         // Bevorzugte Sender zuerst, dann die uebrigen eingeschalteten
         List<Epg.Channel> order = new ArrayList<>();
-        for (Epg.Channel ch : all) if (Config.BEVORZUGT.equals(cfg.state(ch))) order.add(ch);
-        for (Epg.Channel ch : all) if (Config.AN.equals(cfg.state(ch))) order.add(ch);
+        if (cfg.kids) {   // Kinder-Modus: nur erlaubte Sender ohne Sperrbegriff, egal ob an/aus
+            for (Epg.Channel ch : all) if (Config.BEVORZUGT.equals(cfg.state(ch)) && Kinder.ok(this, cfg, ch)) order.add(ch);
+            for (Epg.Channel ch : all) if (!Config.BEVORZUGT.equals(cfg.state(ch)) && Kinder.ok(this, cfg, ch)) order.add(ch);
+        } else {
+            for (Epg.Channel ch : all) if (Config.BEVORZUGT.equals(cfg.state(ch))) order.add(ch);
+            for (Epg.Channel ch : all) if (Config.AN.equals(cfg.state(ch))) order.add(ch);
+        }
         List<Scored> scored = new ArrayList<>();
         Scored cur = null, best = null;
         int withProg = 0;
@@ -286,6 +338,12 @@ public class ZapperService extends Service {
 
     /** Auf einen Sender schalten, pruefen, ob der Fernseher ihn meldet, Einblendung zeigen. */
     synchronized boolean tuneTo(Epg.Channel ch, String banner, String reason) {
+        Config kc = Config.load(this);
+        String no = kc.kids ? Kinder.verbot(this, kc, ch) : null;
+        if (no != null) {   // letzte Sperre fuer Zapper-Runde, Werbe-Sensor und Rueckkehr nach der Werbung
+            Log.add(this, "Kinder-Modus: nicht umgeschaltet (" + reason + "), " + no);
+            return false;
+        }
         Epg.Channel from = Umschaltungen.channel(this, Epg.currentChannelId(this));
         Intent i = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUri(ch.id));
         String tvApp = Epg.tvPackage(this);

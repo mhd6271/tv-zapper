@@ -13,10 +13,11 @@ import java.util.Date;
 import java.util.Locale;
 
 /** Die letzten Umschaltungen der App mit Grund in umschaltungen.json – fuer ABFRAGEN (Logbuch in Home Assistant).
- *  Gruende: interesse, werbung, zurueck, zurueck_zeitgrenze, zurueck_fehlalarm, von_aussen. */
+ *  Gruende: interesse, werbung, zurueck, zurueck_zeitgrenze, zurueck_fehlalarm, von_aussen, kinder. */
 final class Umschaltungen {
     static final String INTERESSE = "interesse", WERBUNG = "werbung", ZURUECK = "zurueck",
-            ZURUECK_ZEITGRENZE = "zurueck_zeitgrenze", ZURUECK_FEHLALARM = "zurueck_fehlalarm", VON_AUSSEN = "von_aussen";
+            ZURUECK_ZEITGRENZE = "zurueck_zeitgrenze", ZURUECK_FEHLALARM = "zurueck_fehlalarm", VON_AUSSEN = "von_aussen",
+            KINDER = "kinder";
     private static final int MAX = 20;
     private static long lastId;
 
@@ -105,6 +106,7 @@ final class Umschaltungen {
         else if (ZURUECK_ZEITGRENZE.equals(r)) b.append("Werbepause dauert zu lange (Zeitgrenze) – zurück");
         else if (ZURUECK_FEHLALARM.equals(r)) b.append("doch keine Werbung (neue Logo-Variante) – zurück");
         else if (VON_AUSSEN.equals(r)) b.append("Home Assistant");
+        else if (KINDER.equals(r)) b.append("Kinder-Modus – ").append(from).append(" war nicht erlaubt oder hatte einen Sperrbegriff");
         else b.append(r);
         if (e.has("erklaerung")) {
             for (String line : e.optString("erklaerung").split("\\s*\\|\\s*")) b.append("\n• ").append(line);
