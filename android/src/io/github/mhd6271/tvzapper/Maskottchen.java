@@ -1,6 +1,7 @@
 package io.github.mhd6271.tvzapper;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -44,6 +45,7 @@ final class Maskottchen extends View {
     private final long t0 = SystemClock.uptimeMillis();
     private final float d;
     private final boolean klein;
+    private Bitmap frame;   // nur klein: Einzelbild der gespiegelten Figur
 
     private Maskottchen(Context c, boolean klein) {
         super(c);
@@ -113,18 +115,28 @@ final class Maskottchen extends View {
     @Override
     protected void onDraw(Canvas cv) {
         float tt = (SystemClock.uptimeMillis() - t0) / 1000f;
-        float t = tt, W = getWidth(), H = getHeight();
-        if (klein) {
-            // Gespiegelt und verkleinert in ein Feld der grossen Groesse zeichnen, das von rechts nach links wandert;
-            // die Figur steckt dabei dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase).
-            float f = tt / (FLITZ_MS / 1000f), S = KLEIN, boxW = 360 * d;
-            cv.save();
-            cv.translate(W + boxW * S - f * (W + boxW * S), 0);
-            cv.scale(-S, S);
-            t = tt + RENNEN_AB + 1;
-            W = boxW;
-            H = 300 * d;
+        if (!klein) {
+            drawFigure(cv, tt, getWidth(), getHeight(), tt);
+        } else {
+            // Verkleinert und gespiegelt in eine eigene Bitmap zeichnen, die von rechts nach links wandert; die Figur
+            // steckt dabei dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase).
+            // KOMPAT: Gespiegelt direkt per cv.scale(-S, S) lief sie am TCL sichtbar falsch herum (Max, 29.10.2026),
+            //   deshalb die Spiegelung im Software-Canvas der Bitmap und das Fensterbild nur verschieben.
+            float S = KLEIN, bw = 360 * d * S, bh = 300 * d * S;
+            if (frame == null) frame = Bitmap.createBitmap((int) Math.ceil(bw), (int) Math.ceil(bh), Bitmap.Config.ARGB_8888);
+            frame.eraseColor(Color.TRANSPARENT);
+            Canvas bc = new Canvas(frame);
+            bc.translate(bw, 0);
+            bc.scale(-S, S);
+            drawFigure(bc, tt + RENNEN_AB + 1, 360 * d, 300 * d, tt);
+            float f = tt / (FLITZ_MS / 1000f);
+            cv.drawBitmap(frame, getWidth() - f * (getWidth() + bw), 0, null);
         }
+        if (tt * 1000 < (klein ? FLITZ_MS : DAUER_MS)) postInvalidateOnAnimation();
+    }
+
+    /** Die Figur zur Zeit t (Sekunden des grossen Ablaufs) in ein W x H grosses Feld; tt = echte Laufzeit. */
+    private void drawFigure(Canvas cv, float t, float W, float H, float tt) {
         float run = Math.max(0f, t - RENNEN_AB), runTotal = DAUER_MS / 1000f - RENNEN_AB;
         float alpha = klein ? Math.min(1f, tt / 0.3f) * Math.min(1f, (FLITZ_MS / 1000f - tt) / 0.6f)
                 : Math.min(1f, t / 0.25f) * Math.max(0f, 1f - (float) Math.pow(run / runTotal, 1.4));
@@ -366,8 +378,6 @@ final class Maskottchen extends View {
             cv.restore();
         }
 
-        if (klein) cv.restore();
-        if (tt * 1000 < (klein ? FLITZ_MS : DAUER_MS)) postInvalidateOnAnimation();
     }
 
     /** Arm von der Schulter aus, Winkel in Grad (0 = nach rechts), mit Handschuh-Hand. */
