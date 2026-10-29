@@ -410,6 +410,7 @@ public class MainActivity extends Activity {
     }
 
     private void fillKidsChannels(List<Epg.Channel> list) {
+        TextView count = text("", 14, false);
         int shown = 0;
         for (Epg.Channel ch : list) {
             if (!showAllChannels && !ch.favorite && !cfg.kidsChannels.contains(ch.name)
@@ -421,13 +422,20 @@ public class MainActivity extends Activity {
                 if (cfg.kidsChannels.remove(ch.name)) cfg.kidsDenied.add(ch.name);
                 else if (!cfg.kidsDenied.remove(ch.name)) cfg.kidsChannels.add(ch.name);
                 kidsLabel(bt, ch);
+                kidsCount(count, list.size());
                 cfg.save(this);
             });
             chanBox.addView(bt);
             shown++;
         }
-        chanBox.addView(text(cfg.kidsChannels.size() + " erlaubt, " + cfg.kidsDenied.size() + " gesperrt, " + shown + " von " + list.size()
-                + " Sendern angezeigt", 14, false));
+        count.setTag(shown);
+        kidsCount(count, list.size());
+        chanBox.addView(count);
+    }
+
+    private void kidsCount(TextView count, int all) {
+        count.setText(cfg.kidsChannels.size() + " erlaubt, " + cfg.kidsDenied.size() + " gesperrt, " + count.getTag()
+                + " von " + all + " Sendern angezeigt");
     }
 
     private void kidsLabel(Button bt, Epg.Channel ch) {
