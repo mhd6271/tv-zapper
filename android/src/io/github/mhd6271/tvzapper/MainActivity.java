@@ -399,7 +399,7 @@ public class MainActivity extends Activity {
         readForm();
         cfg.save(this);
         startForegroundService(new Intent(this, ZapperService.class).setAction(action)
-                .putExtra(ZapperService.EXTRA_READ_ONLY, readOnly));
+                .putExtra(ZapperService.EXTRA_READ_ONLY, readOnly).putExtra(ZapperService.EXTRA_GREET, true));
         if (!readOnly) openTv();
     }
 

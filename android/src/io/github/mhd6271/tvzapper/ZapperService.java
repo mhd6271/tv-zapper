@@ -24,6 +24,8 @@ import java.util.List;
 public class ZapperService extends Service {
     static final String ACTION_START = "start", ACTION_ONCE = "once", ACTION_STOP = "stop";
     static final String EXTRA_READ_ONLY = "nurLesen";
+    /** Maskottchen nach dem Start zeigen – nur beim Start aus der App, nicht bei STARTEN von aussen (z. B. nach Updates) */
+    static final String EXTRA_GREET = "gruessen";
     private static final String CHANNEL = "lauf";
     private static final String RUN_PREFS = "lauf";
 
@@ -81,7 +83,7 @@ public class ZapperService extends Service {
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
             wake.acquire(endAt == Long.MAX_VALUE ? 24 * 3600_000L : endAt - System.currentTimeMillis() + 60_000L);
         }
-        if (!once && !resume) greet(0);
+        if (!once && !resume && intent.getBooleanExtra(EXTRA_GREET, false)) greet(0);
         // Beim Start aus der App heraus ist sie selbst noch vorn – kurz warten, bis das Fernsehbild zurueck ist
         handler.postDelayed(this::tick, once ? 0 : 5000);
         // Laufender Zapper: nach einem Beenden durch Android von selbst wieder anlaufen
