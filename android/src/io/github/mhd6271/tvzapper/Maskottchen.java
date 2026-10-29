@@ -24,10 +24,16 @@ import android.view.WindowManager;
  *  Alles gezeichnet, keine Grafikdateien.
  *
  *  Ablauf (Sekunden): 0–0,4 hereinfallen, 0,4–2,6 drei Huepfer mit Strecken/Stauchen, ab 0,6 winken und
- *  Sprechblase, 3,8–6,2 wegrennen mit Speedlines und Staubwoelkchen, dabei verblassen. */
+ *  Sprechblase, 3,8–6,2 wegrennen mit Speedlines und Staubwoelkchen, dabei verblassen.
+ *
+ *  Kleine Fassung ({@link #flitzen}, beim Senderwechsel): ein Viertel so gross, rennt in Hoehe der Senderlogos
+ *  am oberen Bildrand von rechts nach links quer durchs Bild und verschwindet oben links. */
 final class Maskottchen extends View {
     static final long DAUER_MS = 6200;
     static final float RENNEN_AB = 3.8f;
+    static final long FLITZ_MS = 4000;
+    private static final float KLEIN = 0.25f;
+    private static long busyUntil;   // nie zwei Maskottchen gleichzeitig
 
     // Farben
     private static final int GEH_HELL = 0xFFFFC857, GEH_DUNKEL = 0xFFE89A1E, RAND = 0xFF8A4B08, NAVY = 0xFF1B2A49,
@@ -37,37 +43,58 @@ final class Maskottchen extends View {
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final long t0 = SystemClock.uptimeMillis();
     private final float d;
+    private final boolean klein;
 
-    private Maskottchen(Context c) {
+    private Maskottchen(Context c, boolean klein) {
         super(c);
+        this.klein = klein;
         d = c.getResources().getDisplayMetrics().density;
         setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
     static void show(Context ctx) {
+        show(ctx, false);
+    }
+
+    /** Kleine Fassung, die einmal oben quer durchs Bild flitzt (beim Senderwechsel). */
+    static void flitzen(Context ctx) {
+        show(ctx, true);
+    }
+
+    private static void show(Context ctx, boolean klein) {
         Context c = ctx.getApplicationContext();
         if (!Settings.canDrawOverlays(c)) return;
         Handler main = new Handler(Looper.getMainLooper());
         main.post(() -> {
+            long now = SystemClock.uptimeMillis();
+            if (now < busyUntil) return;
+            long ms = klein ? FLITZ_MS : DAUER_MS;
             WindowManager wm = c.getSystemService(WindowManager.class);
-            Maskottchen v = new Maskottchen(c);
+            Maskottchen v = new Maskottchen(c, klein);
             float d = v.d;
             // KOMPAT: Wie Banner: Overlay ueber dem Fernsehbild, nur am TCL gesehen.
-            WindowManager.LayoutParams lp = new WindowManager.LayoutParams((int) (360 * d), (int) (300 * d),
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    klein ? WindowManager.LayoutParams.MATCH_PARENT : (int) (360 * d), (int) (300 * d * (klein ? KLEIN : 1)),
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                     PixelFormat.TRANSLUCENT);
-            lp.gravity = Gravity.BOTTOM | Gravity.END;
-            lp.x = 0;   // am rechten Bildrand, damit er hinausrennen kann
-            lp.y = (int) (16 * d);
+            if (klein) {
+                lp.gravity = Gravity.TOP | Gravity.START;   // oberer Rand, etwa in Hoehe der Senderlogos
+                lp.y = (int) (18 * d);
+            } else {
+                lp.gravity = Gravity.BOTTOM | Gravity.END;
+                lp.x = 0;   // am rechten Bildrand, damit er hinausrennen kann
+                lp.y = (int) (16 * d);
+            }
             try {
                 wm.addView(v, lp);
+                busyUntil = now + ms;
                 main.postDelayed(() -> {
                     try {
                         wm.removeView(v);
                     } catch (Exception ignored) {
                     }
-                }, DAUER_MS);
+                }, ms);
             } catch (Exception e) {
                 Log.add(c, "Maskottchen nicht einblendbar: " + e.getMessage());
             }
@@ -85,10 +112,22 @@ final class Maskottchen extends View {
 
     @Override
     protected void onDraw(Canvas cv) {
-        float t = (SystemClock.uptimeMillis() - t0) / 1000f;
-        float W = getWidth(), H = getHeight();
+        float tt = (SystemClock.uptimeMillis() - t0) / 1000f;
+        float t = tt, W = getWidth(), H = getHeight();
+        if (klein) {
+            // Gespiegelt und verkleinert in ein Feld der grossen Groesse zeichnen, das von rechts nach links wandert;
+            // die Figur steckt dabei dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase).
+            float f = tt / (FLITZ_MS / 1000f), S = KLEIN, boxW = 360 * d;
+            cv.save();
+            cv.translate(W + boxW * S - f * (W + boxW * S), 0);
+            cv.scale(-S, S);
+            t = tt + RENNEN_AB + 1;
+            W = boxW;
+            H = 300 * d;
+        }
         float run = Math.max(0f, t - RENNEN_AB), runTotal = DAUER_MS / 1000f - RENNEN_AB;
-        float alpha = Math.min(1f, t / 0.25f) * Math.max(0f, 1f - (float) Math.pow(run / runTotal, 1.4));
+        float alpha = klein ? Math.min(1f, tt / 0.3f) * Math.min(1f, (FLITZ_MS / 1000f - tt) / 0.6f)
+                : Math.min(1f, t / 0.25f) * Math.max(0f, 1f - (float) Math.pow(run / runTotal, 1.4));
 
         // --- Bewegung ---
         float drop = t < 0.4f ? (1 - ease(t / 0.4f)) * -120 * d : 0;              // faellt von oben herein
@@ -100,7 +139,7 @@ final class Maskottchen extends View {
             stretch = f < 0.12f || f > 0.88f ? 0.9f : 1.06f;                        // stauchen beim Aufkommen
         }
         if (run > 0) hop = Math.abs((float) Math.sin(run * Math.PI * 6)) * 8 * d;   // Huepfen beim Rennen
-        float dx = run * run * 300 * d;
+        float dx = klein ? 0 : run * run * 300 * d;
         float lean = run > 0 ? Math.min(14, run * 40) : 0;
         float wave = t > 0.6f && run == 0 ? (float) Math.sin((t - 0.6f) * Math.PI * 3.2) : 0;
         float swing = run > 0 ? (float) Math.sin(run * Math.PI * 6) : 0;            // Arme/Beine beim Rennen
@@ -277,7 +316,7 @@ final class Maskottchen extends View {
         cv.restore();
 
         // --- Funkelsterne beim Gruessen ---
-        if (t > 0.6f && t < 3.6f) {
+        if (!klein && t > 0.6f && t < 3.6f) {
             for (int i = 0; i < 3; i++) {
                 float ph = (t * 1.6f + i * 0.33f) % 1f;
                 float sx = body.left - 26 * d + i * 30 * d, sy = body.top - 30 * d - ph * 26 * d;
@@ -287,7 +326,7 @@ final class Maskottchen extends View {
         }
 
         // --- Sprechblase (ploppt auf, verschwindet vor dem Rennen) ---
-        if (t > 0.6f && run < 0.3f) {
+        if (!klein && t > 0.6f && run < 0.3f) {
             float pop = t < 0.9f ? ease((t - 0.6f) / 0.3f) : 1f;
             float sc = pop < 1 ? 0.6f + 0.55f * pop - 0.15f * pop * pop : 1f;   // leichtes Ueberschwingen
             float ba = pop * alpha * (1f - run / 0.3f);
@@ -327,7 +366,8 @@ final class Maskottchen extends View {
             cv.restore();
         }
 
-        if (t * 1000 < DAUER_MS) postInvalidateOnAnimation();
+        if (klein) cv.restore();
+        if (tt * 1000 < (klein ? FLITZ_MS : DAUER_MS)) postInvalidateOnAnimation();
     }
 
     /** Arm von der Schulter aus, Winkel in Grad (0 = nach rechts), mit Handschuh-Hand. */

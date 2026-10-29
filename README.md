@@ -487,6 +487,9 @@ Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper
 „Maskottchen“ zum Ausprobieren). Es kommt nur nach „Start“ in der App (ab 0.4.7), nicht bei `STARTEN` von außen
 oder wenn Android den Dienst neu startet. Als Erinnerung kommt es außerdem nach je einer Stunde Fernsehen, solange der
 Zapper läuft (gezählt nur, während das Fernsehbild vorn ist). Einzelbilder: `docs/screenshots/7-maskottchen-gruesst.jpg`, `8-…-rennt-weg.jpg`.
+Bei jedem Senderwechsel (ab 0.4.8, auch von Hand mit der Fernbedienung) flitzt eine kleine Fassung, ein Viertel so groß,
+einmal am oberen Bildrand in Höhe der Senderlogos von rechts nach links durchs Bild und verschwindet oben links (4 s).
+Die App prüft den Sender alle 2,5 s und nur, solange der Zapper läuft. Wer schnell durchzappt, sieht das Männchen nur auf dem Sender, auf dem er kurz bleibt.
 
 **Alle Einstellungen der TV-App im Überblick** (alles in der App, nichts fest im Code, nichts nur per adb):
 

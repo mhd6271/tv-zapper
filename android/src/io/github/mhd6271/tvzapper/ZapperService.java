@@ -40,6 +40,8 @@ public class ZapperService extends Service {
     /** Maskottchen als Erinnerung nach je einer Stunde Fernsehen (gezaehlt nur, solange das Fernsehbild vorn ist) */
     private static final long ERINNERUNG_MS = 60 * 60_000L;
     private long watchedMs, lastWatchTick;
+    /** Zuletzt gesehener Sender: bei jedem Wechsel flitzt das kleine Maskottchen einmal oben durchs Bild */
+    private long lastChannel;
     private HandlerThread adThread;
     private Handler adHandler;
     static volatile WerbeWaechter waechter;
@@ -115,6 +117,7 @@ public class ZapperService extends Service {
                     Log.add(ZapperService.this, "Werbe-Sensor Fehler: " + e);
                 }
                 remind();
+                onSwitch();
                 adHandler.postDelayed(this, 2500);
             }
         });
@@ -131,6 +134,16 @@ public class ZapperService extends Service {
             watchedMs = 0;
             Maskottchen.show(this);
         }
+    }
+
+    /** Senderwechsel bemerken (auch von Hand mit der Fernbedienung) und das kleine Maskottchen flitzen lassen.
+     *  Nur alle 2,5 s geprueft: Wer schnell durchzappt, sieht es nur auf dem Sender, auf dem er kurz bleibt. */
+    private void onSwitch() {
+        long cur = Epg.currentChannelId(this);
+        if (cur <= 0) return;   // Fernsehbild nicht vorn: alten Sender merken, Rueckkehr zum selben Sender zaehlt nicht
+        if (lastChannel > 0 && cur != lastChannel && getSystemService(PowerManager.class).isInteractive())
+            Maskottchen.flitzen(this);
+        lastChannel = cur;
     }
 
     /** Maskottchen gruessen lassen, sobald das Fernsehbild vorn ist (hoechstens 15 s warten). */
