@@ -556,7 +556,7 @@ gemessenen Pausen je Sender zeigt die App an (`werbepausen.json`). Öffentliche 
 es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
 kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
 5 min und speichert sie (erst ab 0.4.6 wirklich: vorher ging ein frisch gelerntes Logo beim nächsten Neustart der App
-verloren). Beim Lernen und danach blendet sie „Logo von X wird gelernt“ bzw. „… gelernt – n von N Sendern erkannt“ ein.
+verloren). Bis 0.4.10 blendete sie beim Lernen „Logo von X wird gelernt“ bzw. „… gelernt – n von N Sendern erkannt“ ein; seit 0.4.11 nicht mehr (alle 27 Logos gelernt, Schalter `LERN_HINWEISE` in `WerbeWaechter.java`). Gelernt wird weiter still, z. B. ein Sender, der im TV-Zapper aus ist, aber gerade läuft; Log und ABFRAGEN melden es.
 **Logos sichern:** `android/logos_sichern.sh` holt die gelernten Logos vom Fernseher nach `android/assets/logos/`
 (ab 0.4.7); committet, bringt die nächste Fassung sie mit. Stand der Logos je Sender: [docs/logo-anlernen.md](docs/logo-anlernen.md).
 

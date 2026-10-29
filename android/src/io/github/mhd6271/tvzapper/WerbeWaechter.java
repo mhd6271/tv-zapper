@@ -44,6 +44,10 @@ final class WerbeWaechter implements Sensor.Frames {
     private long secStart;
     private int learnShown = -1, failedShown;
     private String noFritzShown;
+    /** Hinweise beim Logo-Lernen (wird gelernt / gelernt / noch nicht eindeutig) am Bildschirm zeigen. Aus seit 0.4.11:
+     *  alle 27 Logos sind gelernt (Max, 29.10.2026). Gelernt und gespeichert wird weiter, nur ohne Einblendung; das Log
+     *  und ABFRAGEN (werbe_sensor, logos) melden es wie bisher. */
+    private static final boolean LERN_HINWEISE = false;
     private long lastFrame, lastReport, watchStart;
     private boolean gotFrame, paused;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
@@ -220,7 +224,7 @@ final class WerbeWaechter implements Sensor.Frames {
         gotFrame = false;
         Log.add(c, "Werbe-Sensor beobachtet " + home.name + " (FRITZ!Box: " + fritz.fritzName(home.name) + ")"
                 + (logo.ready() ? "" : " – Logo wird gelernt, etwa 5 min"));
-        if (!logo.ready()) Banner.show(c, "Logo von " + home.name + " wird gelernt, etwa 5 min" + countText(), 8000);
+        if (LERN_HINWEISE && !logo.ready()) Banner.show(c, "Logo von " + home.name + " wird gelernt, etwa 5 min" + countText(), 8000);
         sensor = new Sensor(url, this);
         sensor.start();
     }
@@ -249,13 +253,13 @@ final class WerbeWaechter implements Sensor.Frames {
         if (!wasReady && logo.ready()) {
             logo.save(c, homeKey);
             Log.add(c, "Logo von " + home.name + " gelernt (" + logo.points + " Punkte) – Werbeerkennung aktiv");
-            Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv" + countText(), 8000);
+            if (LERN_HINWEISE) Banner.show(c, "Logo von " + home.name + " gelernt – Werbeerkennung aktiv" + countText(), 8000);
         }
         if (v < 0) {
             if (logo.failedRounds > failedShown) {
                 failedShown = logo.failedRounds;
                 Log.add(c, "Logo von " + home.name + ": kein eindeutiges Logo gefunden – lerne noch einmal");
-                Banner.show(c, "Logo von " + home.name + ": noch nicht eindeutig – lerne noch einmal", 6000);
+                if (LERN_HINWEISE) Banner.show(c, "Logo von " + home.name + ": noch nicht eindeutig – lerne noch einmal", 6000);
             }
             int pct = logo.learnPercent() / 25 * 25;
             if (pct != learnShown) {
