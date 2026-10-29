@@ -86,7 +86,7 @@ final class Maskottchen extends View {
                     PixelFormat.TRANSLUCENT);
             if (klein) {
                 lp.gravity = Gravity.TOP | Gravity.START;   // oberer Rand, etwa in Hoehe der Senderlogos
-                lp.y = (int) (18 * d);
+                lp.y = (int) (8 * d);   // Max: minimal hoeher als die ersten 18
             } else {
                 lp.gravity = Gravity.BOTTOM | Gravity.END;
                 lp.x = 0;   // am rechten Bildrand, damit er hinausrennen kann
