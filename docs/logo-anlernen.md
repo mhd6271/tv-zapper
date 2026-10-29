@@ -5,6 +5,9 @@ Stand 28.10.2026, 17:58, nach der App selbst (ABFRAGEN `logos`, Fassung 0.4.6). 
 **Zahlen:** 377 Sender am Fernseher, 36 eingeschaltet. Davon beobachtet der Werbe-Sensor **29**,
 **7** haben ein Logo, **22** sind offen.
 
+**Stand 29.10.2026, 07:30:** Im Repo liegen 25 Logos (`android/assets/logos/`), das sind 25 von 27. Offen sind nur noch
+**WELT HD** und **Das Erste HD**. Der Lauf endete am 28.10. nach VOXup (20:59); der Fernseher war am Morgen aus.
+
 **Zählweise:** Die Tabelle zählt Sender, die App zählt Logos. RTL HD und RTL UHD teilen sich ein Logo, ebenso NITRO HD
 und RTLNITRO. Aus 29 Sendern werden so 27 Logos. Bis 18:50 zählte die App je Sender, RTL also doppelt. Ab der
 berichtigten Fassung 0.4.7 meldet sie „x von 27“.
@@ -39,12 +42,12 @@ SPORT 1, TELE 5, DMAX und N24 DOKU waren deshalb nur im Speicher gelernt und mü
 | [x] | 141 | N24 DOKU ★ | gelernt | Lauf 28.10. 19:55 nach 11 min |
 | [x] | 155 | NITRO HD | gelernt | Lauf 28.10. 20:03 nach 5 min |
 | [x] | 157 | ntv HD | gelernt | Lauf 28.10. 20:10 nach 6 min |
-| [ ] | 183 | RTL UHD | offen | |
+| [x] | 183 | RTL UHD | gelernt | nutzt das Logo von RTL HD |
 | [x] | 184 | RTLNITRO | gelernt | Lauf 28.10. 20:04 nach 0 min |
 | [x] | 187 | RTLZWEI HD | gelernt | Lauf 28.10. 20:16 nach 6 min |
 | [x] | 237 | TELE 5 HD | gelernt | Lauf 28.10. 20:22 nach 6 min |
 | [x] | 244 | TLC HD | gelernt | Lauf 28.10. 20:28 nach 6 min |
-| [ ] | 260 | VOXup HD | offen | nach 30 min nicht gelernt |
+| [x] | 260 | VOXup HD | gelernt | nach über 30 min, Logo-Datei am 28.10. 20:59 gesichert |
 | [ ] | 268 | WELT HD | offen | |
 
 ## Nicht beobachtet (7)
