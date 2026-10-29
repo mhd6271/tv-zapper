@@ -37,6 +37,9 @@ public class ZapperService extends Service {
     private Handler handler;
     private PowerManager.WakeLock wake;
     private boolean once, readOnly;
+    /** Maskottchen als Erinnerung nach je einer Stunde Fernsehen (gezaehlt nur, solange das Fernsehbild vorn ist) */
+    private static final long ERINNERUNG_MS = 60 * 60_000L;
+    private long watchedMs, lastWatchTick;
     private HandlerThread adThread;
     private Handler adHandler;
     static volatile WerbeWaechter waechter;
@@ -111,9 +114,23 @@ public class ZapperService extends Service {
                 } catch (Exception e) {
                     Log.add(ZapperService.this, "Werbe-Sensor Fehler: " + e);
                 }
+                remind();
                 adHandler.postDelayed(this, 2500);
             }
         });
+    }
+
+    private void remind() {
+        long now = System.currentTimeMillis();
+        long step = lastWatchTick == 0 ? 0 : Math.min(now - lastWatchTick, 10_000);   // Pausen des Threads nicht mitzaehlen
+        lastWatchTick = now;
+        String tv = Epg.tvPackage(this);
+        if (!getSystemService(PowerManager.class).isInteractive() || tv == null || !tv.equals(foregroundApp(this))) return;
+        watchedMs += step;
+        if (watchedMs >= ERINNERUNG_MS) {
+            watchedMs = 0;
+            Maskottchen.show(this);
+        }
     }
 
     /** Maskottchen gruessen lassen, sobald das Fernsehbild vorn ist (hoechstens 15 s warten). */

@@ -485,7 +485,8 @@ Debug-Schlüssel `~/.android/debug.keystore`. Protokoll: `adb logcat -s TVZapper
 **Maskottchen:** Etwa 3 s nach „Start“ hüpft unten rechts ein kleiner Comic-Fernseher ins Bild, winkt, sagt
 „Hallo! TV-Zapper läuft“ und rennt dann verblassend nach rechts hinaus (gezeichnet, keine Grafikdateien; Knopf
 „Maskottchen“ zum Ausprobieren). Es kommt nur nach „Start“ in der App (ab 0.4.7), nicht bei `STARTEN` von außen
-oder wenn Android den Dienst neu startet. Einzelbilder: `docs/screenshots/7-maskottchen-gruesst.jpg`, `8-…-rennt-weg.jpg`.
+oder wenn Android den Dienst neu startet. Als Erinnerung kommt es außerdem nach je einer Stunde Fernsehen, solange der
+Zapper läuft (gezählt nur, während das Fernsehbild vorn ist). Einzelbilder: `docs/screenshots/7-maskottchen-gruesst.jpg`, `8-…-rennt-weg.jpg`.
 
 **Alle Einstellungen der TV-App im Überblick** (alles in der App, nichts fest im Code, nichts nur per adb):
 
