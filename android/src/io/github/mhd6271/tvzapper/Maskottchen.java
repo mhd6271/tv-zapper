@@ -118,16 +118,16 @@ final class Maskottchen extends View {
         if (!klein) {
             drawFigure(cv, tt, getWidth(), getHeight(), tt);
         } else {
-            // Verkleinert und gespiegelt in eine eigene Bitmap zeichnen, die von rechts nach links wandert; die Figur
-            // steckt dabei dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase).
-            // KOMPAT: Gespiegelt direkt per cv.scale(-S, S) lief sie am TCL sichtbar falsch herum (Max, 29.10.2026),
-            //   deshalb die Spiegelung im Software-Canvas der Bitmap und das Fensterbild nur verschieben.
+            // Verkleinert in eine eigene Bitmap zeichnen, die von rechts nach links wandert; die Figur steckt dabei
+            // dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase). Gespiegelt wird nur der Schweif (in
+            // drawFigure), die Figur selbst nicht: Max hat am 29.10.2026 aus vier Varianten diese als richtig
+            // herum gewaehlt; ganz gespiegelt (0.4.8/0.4.9) lief sie fuer ihn falsch herum.
             float S = KLEIN, bw = 360 * d * S, bh = 300 * d * S;
             if (frame == null) frame = Bitmap.createBitmap((int) Math.ceil(bw), (int) Math.ceil(bh), Bitmap.Config.ARGB_8888);
             frame.eraseColor(Color.TRANSPARENT);
             Canvas bc = new Canvas(frame);
-            bc.translate(bw, 0);
-            bc.scale(-S, S);
+            bc.scale(S, S);
+            bc.translate(-70 * d, 0);   // links ist ohne Schweif Platz frei, rechts braucht ihn der gespiegelte Schweif
             drawFigure(bc, tt + RENNEN_AB + 1, 360 * d, 300 * d, tt);
             float f = tt / (FLITZ_MS / 1000f);
             cv.drawBitmap(frame, getWidth() - f * (getWidth() + bw), 0, null);
@@ -163,8 +163,11 @@ final class Maskottchen extends View {
         float bwS = bw / stretch;   // gestaucht = breiter
         RectF body = new RectF(cx - bwS / 2, bottom - bh, cx + bwS / 2, bottom);
 
-        // Staubwoelkchen und Speedlines beim Rennen (nicht mit dem Koerper geneigt)
+        // Staubwoelkchen und Speedlines beim Rennen (nicht mit dem Koerper geneigt); klein: gespiegelt, also rechts
+        // hinter der nach links laufenden Figur
         if (run > 0) {
+            cv.save();
+            if (klein) cv.scale(-1, 1, cx, 0);
             for (int i = 0; i < 4; i++) {
                 float age = (run * 6 + i * 0.25f) % 1f;
                 float px = cx + dx - 70 * d - age * 90 * d, py = ground - 6 * d - age * 14 * d;
@@ -179,6 +182,7 @@ final class Maskottchen extends View {
                 p.setColor(a(WEISS, alpha * 0.55f));
                 cv.drawLine(body.left + dx - 20 * d - len, y, body.left + dx - 20 * d, y, p);
             }
+            cv.restore();
         }
 
         // Schatten (schrumpft beim Huepfen)
