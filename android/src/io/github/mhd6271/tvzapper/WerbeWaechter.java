@@ -29,6 +29,10 @@ final class WerbeWaechter implements Sensor.Frames {
     private final Context c;
     private FritzTv fritz;
     private long fritzLoaded, retryAt;
+    /** Fuer welchen Sender retryAt gilt (-1 = fuer alle, z. B. FRITZ!Box-Liste nicht lesbar). Bis 0.4.15 galt die
+     *  Minute nach einem Sender ohne FRITZ!Box-Eintrag fuer alle: der naechste Sender blieb bis zu 60 s unbeobachtet
+     *  (am TCL nachgestellt 29.10.2026: Pro7Sat.1 UHD -> VOX HD, 49 s ohne Werbeerkennung). */
+    private long retryFor = -1;
 
     // Zustand (nur im Waechter-Thread bzw. synchronisiert)
     private Epg.Channel home;          // beobachteter Sender
@@ -141,7 +145,8 @@ final class WerbeWaechter implements Sensor.Frames {
             Log.add(c, "Werbung: selbst umgeschaltet – folge dem neuen Sender");
             away = false;
         }
-        if (!away && (home == null || home.id != cur) && System.currentTimeMillis() >= retryAt) watch(cur);
+        if (!away && (home == null || home.id != cur)
+                && (System.currentTimeMillis() >= retryAt || (retryFor >= 0 && cur != retryFor))) watch(cur);
         if (sensor != null && System.currentTimeMillis() - lastFrame > 20_000) {
             if (!gotFrame && fritz.next(home.name)) {
                 Log.add(c, "Werbe-Sensor: FRITZ!Box liefert für " + home.name + " kein Bild – versuche den nächsten Eintrag ("
@@ -202,6 +207,7 @@ final class WerbeWaechter implements Sensor.Frames {
         } catch (Exception e) {
             Log.add(c, "FRITZ!Box-Senderliste nicht lesbar: " + e.getMessage());
             retryAt = System.currentTimeMillis() + 60_000;
+            retryFor = -1;
             return;
         }
         String url = fritz.urlFor(home.name);
@@ -212,6 +218,7 @@ final class WerbeWaechter implements Sensor.Frames {
                 Banner.show(c, home.name + ": keine Werbeerkennung – Sender gibt es nicht bei der FRITZ!Box", 8000);
             }
             retryAt = System.currentTimeMillis() + 60_000;
+            retryFor = home.id;
             return;
         }
         homeKey = FritzTv.norm(home.name);
