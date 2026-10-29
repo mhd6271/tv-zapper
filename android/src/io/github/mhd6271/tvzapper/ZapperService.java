@@ -141,9 +141,28 @@ public class ZapperService extends Service {
     private void onSwitch() {
         long cur = Epg.currentChannelId(this);
         if (cur <= 0) return;   // Fernsehbild nicht vorn: alten Sender merken, Rueckkehr zum selben Sender zaehlt nicht
-        if (lastChannel > 0 && cur != lastChannel && getSystemService(PowerManager.class).isInteractive())
-            Maskottchen.flitzen(this);
+        if (lastChannel > 0 && cur != lastChannel && getSystemService(PowerManager.class).isInteractive()) {
+            boolean back = isBack(lastChannel, cur);
+            android.util.Log.i("TVZapper", "Senderwechsel " + lastChannel + " -> " + cur + ": Maskottchen nach "
+                    + (back ? "rechts" : "links"));   // nur logcat, nicht ins App-Log (sonst jeder Wechsel)
+            Maskottchen.flitzen(this, back);
+        }
         lastChannel = cur;
+    }
+
+    /** Zurueckgeschaltet? Nach der Stelle in der Senderliste (wie die Programm-Tasten der Fernbedienung); ein Sprung
+     *  ueber mehr als die halbe Liste gilt als Ueberlauf (vom letzten auf den ersten Sender = vorwaerts). */
+    private boolean isBack(long from, long to) {
+        List<Long> ids = new ArrayList<>();
+        List<Epg.Channel> all = new ArrayList<>(Epg.channels(this));
+        all.sort((a, b) -> Long.compare(Epg.num(a.number), Epg.num(b.number)));
+        for (Epg.Channel ch : all) if (ch.browsable || ch.id == from || ch.id == to) ids.add(ch.id);
+        int i = ids.indexOf(from), j = ids.indexOf(to), n = ids.size();
+        if (i < 0 || j < 0) return false;
+        int step = j - i;
+        if (step > n / 2) step -= n;
+        else if (step < -n / 2) step += n;
+        return step < 0;
     }
 
     /** Maskottchen gruessen lassen, sobald das Fernsehbild vorn ist (hoechstens 15 s warten). */

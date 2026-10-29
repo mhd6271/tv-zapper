@@ -44,26 +44,30 @@ final class Maskottchen extends View {
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final long t0 = SystemClock.uptimeMillis();
     private final float d;
-    private final boolean klein;
+    private final boolean klein, rechts;
+    /** Klein nach rechts: Figur spiegeln (R2) oder nicht (R1) – Max hat am 29.10.2026 in der Browser-Vorschau R2 gewaehlt. */
+    private static final boolean FIGUR_SPIEGELN_NACH_RECHTS = true;
     private Bitmap frame;   // nur klein: Einzelbild der gespiegelten Figur
 
-    private Maskottchen(Context c, boolean klein) {
+    private Maskottchen(Context c, boolean klein, boolean rechts) {
         super(c);
         this.klein = klein;
+        this.rechts = rechts;
         d = c.getResources().getDisplayMetrics().density;
         setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
     static void show(Context ctx) {
-        show(ctx, false);
+        show(ctx, false, false);
     }
 
-    /** Kleine Fassung, die einmal oben quer durchs Bild flitzt (beim Senderwechsel). */
-    static void flitzen(Context ctx) {
-        show(ctx, true);
+    /** Kleine Fassung, die einmal oben quer durchs Bild flitzt (beim Senderwechsel): vorwaerts geschaltet nach links,
+     *  zurueck nach rechts. */
+    static void flitzen(Context ctx, boolean nachRechts) {
+        show(ctx, true, nachRechts);
     }
 
-    private static void show(Context ctx, boolean klein) {
+    private static void show(Context ctx, boolean klein, boolean rechts) {
         Context c = ctx.getApplicationContext();
         if (!Settings.canDrawOverlays(c)) return;
         Handler main = new Handler(Looper.getMainLooper());
@@ -72,7 +76,7 @@ final class Maskottchen extends View {
             if (now < busyUntil) return;
             long ms = klein ? FLITZ_MS : DAUER_MS;
             WindowManager wm = c.getSystemService(WindowManager.class);
-            Maskottchen v = new Maskottchen(c, klein);
+            Maskottchen v = new Maskottchen(c, klein, rechts);
             float d = v.d;
             // KOMPAT: Wie Banner: Overlay ueber dem Fernsehbild, nur am TCL gesehen.
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
@@ -118,19 +122,20 @@ final class Maskottchen extends View {
         if (!klein) {
             drawFigure(cv, tt, getWidth(), getHeight(), tt);
         } else {
-            // Verkleinert in eine eigene Bitmap zeichnen, die von rechts nach links wandert; die Figur steckt dabei
-            // dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase). Gespiegelt wird nur der Schweif (in
-            // drawFigure), die Figur selbst nicht: Max hat am 29.10.2026 aus vier Varianten diese als richtig
-            // herum gewaehlt; ganz gespiegelt (0.4.8/0.4.9) lief sie fuer ihn falsch herum.
+            // Verkleinert in eine eigene Bitmap zeichnen, die quer durchs Bild wandert; die Figur steckt dabei
+            // dauerhaft mitten im Rennen (ohne Gruss, ohne Sprechblase). Nach links wird nur der Schweif gespiegelt
+            // (in drawFigure), die Figur selbst nicht: Max hat am 29.10.2026 aus vier Varianten diese als richtig
+            // herum gewaehlt; ganz gespiegelt (0.4.8/0.4.9) lief sie fuer ihn falsch herum. Der Schweif liegt immer hinten.
             float S = KLEIN, bw = 360 * d * S, bh = 300 * d * S;
             if (frame == null) frame = Bitmap.createBitmap((int) Math.ceil(bw), (int) Math.ceil(bh), Bitmap.Config.ARGB_8888);
             frame.eraseColor(Color.TRANSPARENT);
             Canvas bc = new Canvas(frame);
             bc.scale(S, S);
-            bc.translate(-70 * d, 0);   // links ist ohne Schweif Platz frei, rechts braucht ihn der gespiegelte Schweif
+            if (!rechts) bc.translate(-70 * d, 0);   // links ist ohne Schweif Platz frei, rechts braucht ihn der gespiegelte Schweif
             drawFigure(bc, tt + RENNEN_AB + 1, 360 * d, 300 * d, tt);
             float f = tt / (FLITZ_MS / 1000f);
-            cv.drawBitmap(frame, getWidth() - f * (getWidth() + bw), 0, null);
+            float x = rechts ? -bw + f * (getWidth() + bw) : getWidth() - f * (getWidth() + bw);
+            cv.drawBitmap(frame, x, 0, null);
         }
         if (tt * 1000 < (klein ? FLITZ_MS : DAUER_MS)) postInvalidateOnAnimation();
     }
@@ -167,7 +172,7 @@ final class Maskottchen extends View {
         // hinter der nach links laufenden Figur
         if (run > 0) {
             cv.save();
-            if (klein) cv.scale(-1, 1, cx, 0);
+            if (klein && !rechts) cv.scale(-1, 1, cx, 0);
             for (int i = 0; i < 4; i++) {
                 float age = (run * 6 + i * 0.25f) % 1f;
                 float px = cx + dx - 70 * d - age * 90 * d, py = ground - 6 * d - age * 14 * d;
@@ -193,6 +198,7 @@ final class Maskottchen extends View {
         p.setShader(null);
 
         cv.save();
+        if (klein && rechts && FIGUR_SPIEGELN_NACH_RECHTS) cv.scale(-1, 1, cx, 0);
         cv.translate(dx, 0);
         cv.rotate(lean, cx, ground);
 
