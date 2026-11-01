@@ -266,7 +266,7 @@ final class Logo {
         try {
             File f = file(c, key);
             if (f.exists()) txt = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
-            // KOMPAT: Mitgelieferte Logos stammen aus SD-Aufnahmen aus Vodafone-Kabel (Okt. 2026); bei anderer Aufloesung oder
+            // KOMPAT: Mitgelieferte Logos stammen aus SD-Aufnahmen aus PŸUR-Kabel (Okt. 2026); bei anderer Aufloesung oder
             //   Logoform passen sie nicht (Fehlalarm, nach 12 min neu lernen).
             else try (InputStream in = c.getAssets().open("logos/" + key + ".txt")) {
                 txt = new String(Config.readAll(in), StandardCharsets.UTF_8);

@@ -59,7 +59,7 @@ final class FritzTv {
     static String norm(String s) {
         s = s.toLowerCase(Locale.GERMAN).trim();
         s = s.replaceAll("(^|\\s)(hd|uhd|sd)(?=\\s|$)", " ").trim();   // auch mittendrin: "WDR HD Köln" = "WDR Köln"
-        // KOMPAT: Angleichungen fuer TCL-Namen gegen Vodafone-Kabel-Namen (BW). Andere Fernseher, Netze oder Satellit
+        // KOMPAT: Angleichungen fuer TCL-Namen gegen PŸUR-Kabel-Namen (Tele Columbus). Andere Fernseher, Netze oder Satellit
         //   schreiben Namen anders -> "gibt es nicht bei der FRITZ!Box".
         if (s.equals("nitro")) s = "rtlnitro";
         if (s.equals("swr bw")) s = "swr fernsehen bw";
