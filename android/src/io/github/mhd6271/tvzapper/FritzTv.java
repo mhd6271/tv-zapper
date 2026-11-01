@@ -88,6 +88,13 @@ final class FritzTv {
         return i == null ? 0 : i;
     }
 
+    /** Den Eintrag mit dieser Adresse nehmen, wenn es ihn noch gibt (zuletzt funktionierender, ab 0.4.19). */
+    void prefer(String tvName, String url) {
+        List<String> l = urls.get(norm(tvName));
+        int i = l == null || url == null ? -1 : l.indexOf(url);
+        if (i >= 0) pick.put(norm(tvName), i);
+    }
+
     /** Wieder beim ersten Eintrag anfangen (nach der Wartezeit, wenn keiner ging). */
     void reset(String tvName) {
         pick.remove(norm(tvName));

@@ -35,9 +35,13 @@ final class PauseStats {
         Files.write(file(c).toPath(), o.toString(2).getBytes(StandardCharsets.UTF_8));
     }
 
-    /** Nur Pausen zwischen 30 s und 15 min zaehlen (kuerzer = Trailer/Fehlalarm, laenger = Logo falsch). */
+    /** Kuerzer = Trailer oder Fehlalarm. Bis 0.4.18 galten 30 s; am TCL waren 38 von 113 Pausen kuerzer als 90 s,
+     *  auf den Kontrollbildern teils mit sichtbarem Logo (ProSieben 30.10.2026), und drueckten die Zeitgrenze. */
+    static final int MIN_S = 90;
+
+    /** Nur Pausen zwischen 90 s und 15 min zaehlen (kuerzer = Trailer/Fehlalarm, laenger = Logo falsch). */
     static synchronized void add(Context c, String channel, long secs) {
-        if (secs < 30 || secs > 900) return;
+        if (secs < MIN_S || secs > 900) return;
         try {
             JSONObject o = read(c);
             JSONObject e = o.optJSONObject(channel);
@@ -77,6 +81,24 @@ final class PauseStats {
         if (e == null) return 0;
         long[] t = totals(e);
         return t[0] == 0 ? 0 : t[1] / t[0];
+    }
+
+    /** Typische Pausenlaenge in s: Median der Einzelpausen ab MIN_S (aeltere, kuerzere Messungen zaehlen nicht mit;
+     *  der Median laesst einzelne Ausreisser aus). Nur alte Sammelwerte ohne Einzelpausen: deren Durchschnitt.
+     *  0 ohne brauchbare Messung. */
+    static long typicalSec(Context c, String channel) {
+        JSONObject e = read(c).optJSONObject(channel);
+        if (e == null) return 0;
+        JSONArray list = e.optJSONArray("pausen");
+        java.util.List<Long> s = new java.util.ArrayList<>();
+        for (int i = 0; list != null && i < list.length(); i++) {
+            JSONObject p = list.optJSONObject(i);
+            if (p != null && p.optLong("s") >= MIN_S) s.add(p.optLong("s"));
+        }
+        if (s.isEmpty()) return list == null || list.length() == 0 ? averageSec(c, channel) : 0;
+        java.util.Collections.sort(s);
+        int n = s.size();
+        return n % 2 == 1 ? s.get(n / 2) : (s.get(n / 2 - 1) + s.get(n / 2)) / 2;
     }
 
     static Map<String, String> summary(Context c) {

@@ -53,6 +53,7 @@ final class Logo {
             for (int k = 0; k < variantMask.size(); k++)
                 best = Math.max(best, score(top, bottom, w, variantCorner.get(k)[0], variantMask.get(k),
                         variantCorner.get(k)[1]));
+            if (best < WerbeWaechter.HI) best = Math.max(best, letterbox(top, w));
             return best;
         }
         for (int c = 0; c < 4; c++) {
@@ -67,6 +68,52 @@ final class Logo {
         boolean[] e = edges(crop(top, bottom, w, corner));
         int hit = 0;
         for (int i = 0; i < e.length; i++) if (m[i] && e[i]) hit++;
+        return hit / (float) pts;
+    }
+
+    /** Kinofilm mit schwarzem Balken oben: manche Sender (RTL, Kabel Eins) setzen das Logo dann tiefer ins Bild, die
+     *  Maske trifft nicht mehr (am TCL 01.11.2026: RTL/Harry Potter Logo-Wert 0,00, Fehlalarm). Dann die oberen Masken
+     *  um bis zur Balkenhoehe nach unten verschoben pruefen. Zaehlt nur ein klarer Treffer (>= HI), sonst 0.
+     *  Nur bei Balken, weil die Suche ueber viele Verschiebungen sonst in Werbung zufaellig Logos findet. Am Mac
+     *  nachgebildet an 1847 Kontrollbildern (180x144, hochgerechnet, daher nur ungefaehr): RTL-Film 0,00 -> 0,83,
+     *  Kabel-Eins-Fehlalarm vom 01.11. waere ausgeblieben; sonst nur 2 Einzelbilder eines Trailers mit Balken ueber
+     *  0,7 (bei 80 % von 30 s ohne Wirkung). */
+    private float letterbox(byte[] top, int w) {
+        int bar = topBar(top, w);
+        if (bar < 10) return 0;
+        float best = 0;
+        for (int k = -1; k < variantMask.size(); k++) {
+            int c = k < 0 ? corner : variantCorner.get(k)[0];
+            if (c > 1) continue;
+            boolean[] m = k < 0 ? mask : variantMask.get(k);
+            int pts = k < 0 ? points : variantCorner.get(k)[1];
+            boolean[] e = edges(crop(top, null, w, c));
+            for (int dy = 1; dy <= Math.min(bar, 48); dy++) best = Math.max(best, shifted(e, m, pts, dy));
+        }
+        return best >= WerbeWaechter.HI ? best : 0;
+    }
+
+    /** Hoehe des schwarzen Balkens oben in Zeilen (Zeile schwarz: Mittel < 24, hellster Punkt < 48). */
+    static int topBar(byte[] top, int w) {
+        int rows = top.length / w, bar = 0;
+        for (int y = 0; y < rows; y++) {
+            int sum = 0, max = 0;
+            for (int x = 0; x < w; x++) {
+                int v = top[y * w + x] & 0xff;
+                sum += v;
+                if (v > max) max = v;
+            }
+            if (sum < 24 * w && max < 48) bar = y + 1;
+            else break;
+        }
+        return bar;
+    }
+
+    /** Anteil der Maskenpunkte, die dy Zeilen tiefer eine Kante haben. */
+    private static float shifted(boolean[] e, boolean[] m, int pts, int dy) {
+        int hit = 0;
+        for (int y = 0; y + dy < CH; y++)
+            for (int x = 0; x < CW; x++) if (m[y * CW + x] && e[(y + dy) * CW + x]) hit++;
         return hit / (float) pts;
     }
 
@@ -282,7 +329,9 @@ final class Logo {
                 } catch (NumberFormatException e) {
                     break;   // kaputte Datei: Rest ignorieren, Logo wird notfalls neu gelernt
                 }
-                if (corner < 0 || corner > 1) break;
+                // Untere Ecken (2, 3) lernt finishLearning, wenn oben kein Logo ist (ntv, WELT: Logo im Laufband).
+                // Bis 0.4.18 brach das Laden hier ab: diese Logos wurden bei jedem Besuch 5 min neu gelernt.
+                if (corner < 0 || corner > 3) break;
                 boolean[] m = new boolean[CW * CH];
                 int n = 0;
                 for (int y = 0; y < CH && at + 1 + y < lines.length; y++)

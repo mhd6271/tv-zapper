@@ -9,6 +9,18 @@ Stand 28.10.2026, 17:58, nach der App selbst (ABFRAGEN `logos`, Fassung 0.4.6). 
 Die App meldet `"gelernt":27,"beobachtet":27,"ohne_logo":[]`. WELT HD (08:28) und Das Erste HD (08:34) kamen zuletzt dazu,
 beide nach 6 min. Ab 0.4.7 bringt die App alle 27 mit.
 
+**Nachtrag 01.11.2026 (Live-Prüfung von 16 Sendern, Kontrollbilder angesehen):** „gelernt“ hieß nicht „tauglich“.
+- ntv HD und WELT HD: Masken liegen in einer unteren Ecke und wurden bis 0.4.18 beim Laden verworfen, also bei jedem
+  Besuch neu gelernt. Ab 0.4.19 geladen (ntv am TCL sofort 0,90–0,92).
+- DOKUSAT und MTV HD: Fehlalarm, obwohl das Logo im Bild steht (Logo-Wert 0,00–0,45); auch mit 0.4.19 noch so
+  (DOKUSAT 01.11. 18:18). Masken neu lernen.
+- NITRO HD und RTLNITRO (gemeinsames Logo): Logo-Wert in der Sendung nur 0,50; das Ende einer Pause (über 0,7) wird
+  so nie erkannt. Maske neu lernen.
+- Kabel Eins HD und RTLZWEI HD: Fehlalarm, nach gut 2 min selbst eine neue Variante gelernt. RTL HD bei Kinofilm mit
+  Balken: Logo tiefer, ab 0.4.19 verschoben gesucht.
+- Richtig erkannt: VOX, ProSieben MAXX, Eurosport 1, RTL (Werbung 18:15). Logo in der Sendung sicher: sixx, SPORT 1,
+  Deluxe Music, Euronews; HGTV schwankt (0,58–0,99).
+
 **Zählweise:** Die Tabelle zählt Sender, die App zählt Logos. RTL HD und RTL UHD teilen sich ein Logo, ebenso NITRO HD
 und RTLNITRO. Aus 29 Sendern werden so 27 Logos. Bis 18:50 zählte die App je Sender, RTL also doppelt. Ab der
 berichtigten Fassung 0.4.7 meldet sie „x von 27“.

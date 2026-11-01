@@ -24,6 +24,8 @@ final class WerbeWaechter implements Sensor.Frames {
     static final float LO = .35f, HI = .7f;
     /** Laenger als so lange "Werbung" = eher falsches Logo: neu lernen und Hauptsender aufgeben. */
     static final long MAX_PAUSE_MS = 12 * 60_000L;
+    /** Je Sender (FritzTv.norm) die zuletzt funktionierende rtsp-Adresse, wenn die FRITZ!Box mehrere Eintraege hat. */
+    static final String FRITZ_PREFS = "fritz_eintraege";
 
     private final ZapperService svc;
     private final Context c;
@@ -210,6 +212,10 @@ final class WerbeWaechter implements Sensor.Frames {
             retryFor = -1;
             return;
         }
+        // Zuletzt funktionierenden Eintrag zuerst: bis 0.4.18 nach jedem Neustart wieder Eintrag 1, am 01.11.2026 bei
+        // DOKUSAT, Eurosport 1 und MTV je 20 s ohne Bild (alte 562-MHz-Eintraege der FRITZ!Box)
+        fritz.prefer(home.name, c.getSharedPreferences(FRITZ_PREFS, Context.MODE_PRIVATE)
+                .getString(FritzTv.norm(home.name), null));
         String url = fritz.urlFor(home.name);
         if (url == null) {
             Log.add(c, "Werbe-Sensor: " + home.name + " gibt es nicht bei der FRITZ!Box");
@@ -252,6 +258,8 @@ final class WerbeWaechter implements Sensor.Frames {
     public synchronized void frame(byte[] top, byte[] bottom, int w, int h) {
         if (logo == null || home == null) return;
         lastFrame = System.currentTimeMillis();
+        if (!gotFrame && fritz != null && fritz.urls.containsKey(homeKey) && fritz.urls.get(homeKey).size() > 1)
+            c.getSharedPreferences(FRITZ_PREFS, Context.MODE_PRIVATE).edit().putString(homeKey, fritz.urlFor(home.name)).apply();
         gotFrame = true;
         framesSinceReport++;
         boolean wasReady = logo.ready();
@@ -377,8 +385,8 @@ final class WerbeWaechter implements Sensor.Frames {
             pause = true;
             pauseSince = System.currentTimeMillis();
             logo.resetVariant();
-            long avg = PauseStats.averageSec(c, home.name);
-            adUntil.put(home.name, pauseSince + (avg > 0 ? avg * 1000 : Config.load(c).pauseMaxMin * 60_000L));
+            long typ = PauseStats.typicalSec(c, home.name);
+            adUntil.put(home.name, pauseSince + (typ > 0 ? typ * 1000 : Config.load(c).pauseMaxMin * 60_000L));
             Log.add(c, "WERBUNG auf " + home.name + (fresh ? " (gleich beim Hineinschalten)" : ""));
             dump("werbung_" + homeKey);
             if (!Config.load(c).avoidAds) return;
@@ -404,11 +412,13 @@ final class WerbeWaechter implements Sensor.Frames {
         }
     }
 
-    /** Zeitgrenze fuer das Ausweichen: gemessener Durchschnitt des Senders + 1 min, sonst die Einstellung. */
+    /** Zeitgrenze fuer das Ausweichen: typische Pause des Senders + 1 min, mindestens die Einstellung, hoechstens das
+     *  Doppelte. Bis 0.4.18 Durchschnitt + 1 min ohne Untergrenze: kurze Fehlalarme drueckten ihn, am 31.10.2026 kam
+     *  ProSieben zweimal nach 232/278 s zurueck, die Pausen dauerten 392/427 s. */
     private long maxAwayMs() {
-        long avg = PauseStats.averageSec(c, home.name);
+        long typ = PauseStats.typicalSec(c, home.name);
         long cfgMs = Config.load(c).pauseMaxMin * 60_000L;
-        return avg > 0 ? Math.min(cfgMs * 2, avg * 1000 + 60_000) : cfgMs;
+        return typ > 0 ? Math.min(cfgMs * 2, Math.max(cfgMs, typ * 1000 + 60_000)) : cfgMs;
     }
 
     /** Anteil der letzten n Sekunden mit (logo=true) bzw. ohne Logo. */

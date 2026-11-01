@@ -574,9 +574,17 @@ Dann schaltet sie auf den besten **werbefreien Ausweichsender** (Vorgabe ZDFinfo
 Schaltet man selbst um, wird der neue Sender beobachtet. Wer mitten in eine Pause hineinschaltet (selbst oder durch den Zapper), wartet nicht
 10 s: In den ersten 30 s nach dem Hineinschalten genügen 4 von 5 Sekunden ohne Logo – nur bei Sendern mit fertiger
 Logo-Maske, ohne Maske wird gelernt statt geraten (nicht jede Szene ohne Logo ist Werbung). Sender mit gerade
-erkannter Werbung meidet der Zapper bis zum erwarteten Pausenende (gemessener Durchschnitt, sonst 6 min); nach dem
+erkannter Werbung meidet der Zapper bis zum erwarteten Pausenende (typische Pause des Senders, sonst 6 min); nach dem
 Zurückschalten weicht die App frühestens nach 3 min wieder aus (kein Hin und Her). Spätestens nach einer Zeitgrenze geht es auf jeden Fall
-zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind: deren Durchschnitt + 1 min). Die
+zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind: typische Pause + 1 min, mindestens die
+Vorgabe, höchstens das Doppelte). „Typisch“ ist seit 0.4.19 der Median der Pausen ab 90 s; kürzere werden nicht mehr
+gespeichert. Bis 0.4.18 galt der Durchschnitt ab 30 s ohne Untergrenze: Kurze Fehlalarme drückten ihn, am 31.10.2026
+kam der Zapper bei ProSieben zweimal nach knapp 4 min mitten in der Werbung zurück (Pausen 392 und 427 s).
+**Kinofilme mit schwarzem Balken (ab 0.4.19):** RTL und Kabel Eins setzen ihr Logo dann tiefer ins Bild, die Maske
+traf nicht mehr (01.11.2026: Harry Potter auf RTL, Logo-Wert 0,00, Fehlalarm). Ist oben ein schwarzer Balken, sucht
+die App die Maske zusätzlich bis zur Balkenhöhe nach unten verschoben; das zählt nur bei einem klaren Treffer. Am Mac
+an 1847 Kontrollbildern nachgestellt (RTL-Film 0,00 → 0,78, in Werbung kein Treffer); am Fernseher noch nicht mit
+einem Film erlebt. Die
 gemessenen Pausen je Sender zeigt die App an (`werbepausen.json`). Öffentliche Zahlen zur Blocklänge je Sender gibt
 es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
 kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
@@ -597,14 +605,18 @@ Kontrollbilder ab: `adb pull /sdcard/Android/data/io.github.mhd6271.tvzapper/fil
 ProSieben 18:14:56 erkannt (2 s vor dem „WERBUNG“-Trenner, Simpsons-Abspann ohne Logo), Wechsel zu ZDFinfo,
 18:20:58 zurück über die 6-min-Grenze, Logo kam fast gleichzeitig zurück (Pause 410 s).
 Logos werden nur in den oberen Ecken gesucht, solange dort eines ist: Unten lernte das Verfahren am Mac sonst
-Sendungslogos (SAT.1 „Auf Streife“), Spielstände (RTL Fußball) oder Laufbänder (n-tv). Der Sensor ruht, solange
+Sendungslogos (SAT.1 „Auf Streife“), Spielstände (RTL Fußball) oder Laufbänder (n-tv). Bei ntv und WELT ist oben
+nichts, ihre Masken liegen unten (Logo mit Laufband-Rahmen). Bis 0.4.18 verwarf das Laden solche Masken, beide Sender
+wurden bei jedem Besuch 5 min neu gelernt und hatten nie Werbeerkennung; ab 0.4.19 geladen (am TCL: ntv Logo-Wert
+0,90–0,92 sofort). Der Sensor ruht, solange
 etwas anderes als das Fernsehbild vorn ist, und läuft danach für denselben Sender weiter.
 
 **Grenzen:**
 - Liefert ein Sender bei der FRITZ!Box kein Bild, ist oft ihre Senderliste veraltet: Am 28.10.2026 lagen auf 562 MHz nur
   noch Sky-Sender; Comedy Central, MTV, Eurosport 1 und DOKUSAT waren auf 418 MHz umgezogen. Abhilfe: in der FRITZ!Box
   unter DVB-C einen Sendersuchlauf starten. Behält die Box danach alte Einträge, probiert die App (ab 0.4.2) nach 20 s
-  ohne Bild den nächsten Eintrag desselben Senders.
+  ohne Bild den nächsten Eintrag desselben Senders. Ab 0.4.19 merkt sie sich den funktionierenden Eintrag auch über
+  einen Neustart hinweg (am TCL geprüft: DOKUSAT danach gleich Eintrag 2/3 statt 20 s ohne Bild).
   Abgleich aller Sender mit der FRITZ!Box nach dem Suchlauf: [docs/fritzbox-senderabgleich.md](docs/fritzbox-senderabgleich.md).
 - Ein Stream je Gerät: Ein zweites Gerät (z. B. der Mac) daneben lief bei uns nur ~3 min.
 - Sender ohne Logo-Ausblendung in der Werbung werden nicht erkannt; Senderwerbung/Trailer ohne Logo gelten als
