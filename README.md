@@ -644,5 +644,7 @@ Stand – dann den Schalter in der App benutzen.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
 Ohne die App nach vorn zu holen (ab 0.4.6): `ABFRAGEN`-Empfänger mit `-a io.github.mhd6271.tvzapper.STARTEN`, mit
-`--ez nur_lesen true` beobachtet der Zapper nur (Werbe-Sensor läuft, keine Zapper-Runden). Mit `--es was logos` (ab 0.4.7)
+`--ez nur_lesen true` beobachtet der Zapper nur (Werbe-Sensor läuft, keine Zapper-Runden). Am TCL verweigert die Firmware dem
+so gestarteten Dienst den Vordergrund-Status (logcat 01.11.2026). Er läuft trotzdem, kann aber leichter beendet werden,
+siehe `docs/kompatibilitaet.md`. Mit `--es was logos` (ab 0.4.7)
 liefert `ABFRAGEN` zusätzlich `logo_dateien` = alle gelernten Logo-Masken (`logos_sichern.sh` nutzt das).
