@@ -32,8 +32,8 @@ cp ../interessen.json $OUT/assets/interessen.json
   --java $OUT/gen $OUT/res.zip
 javac -source 11 -target 11 -Xlint:-options -encoding UTF-8 -classpath "$JAR" -d $OUT/classes \
   $(find src $OUT/gen -name '*.java')
-# KOMPAT: d8 ersetzt hier keine fehlenden Bibliotheksmethoden (kein core library desugaring): InputStream.readAllBytes
-#   bleibt ein direkter Aufruf (im dex nachgesehen 28.10.2026) und fehlt unter Android 13.
+# KOMPAT: d8 ersetzt hier keine fehlenden Bibliotheksmethoden (kein core library desugaring): Methoden ueber API 26
+#   nur hinter einer SDK_INT-Abfrage aufrufen (z. B. InputStream.readAllBytes erst ab 33, deshalb Config.readAll).
 "$BT/d8" --min-api 26 --lib "$JAR" --output $OUT/dex $(find $OUT/classes -name '*.class')
 (cd $OUT/dex && zip -q ../unsigned.apk classes.dex)
 "$BT/zipalign" -f 4 $OUT/unsigned.apk $OUT/aligned.apk

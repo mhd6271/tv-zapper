@@ -6,8 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -79,6 +81,14 @@ final class Config {
         return new File(c.getFilesDir(), "einstellungen.json");
     }
 
+    /** Liest einen Stream ganz – wie InputStream.readAllBytes(), das es erst ab Android 13 gibt (minSdk ist 26). */
+    static byte[] readAll(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+        return out.toByteArray();
+    }
+
     static Config load(Context c) {
         try {
             File f = file(c);
@@ -87,9 +97,8 @@ final class Config {
                 json = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
             } else {
                 try (InputStream in = c.getAssets().open("interessen.json")) {
-                    // KOMPAT: readAllBytes() erst ab Android 13: beim ersten Start (noch keine Einstellungsdatei) stuerzt die App auf
-                    //   Android 8 bis 12 ab – NoSuchMethodError faengt catch (Exception) nicht.
-                    json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                    // InputStream.readAllBytes() gibt es erst ab Android 13, deshalb readAll (ab 0.4.18).
+                    json = new String(readAll(in), StandardCharsets.UTF_8);
                 }
             }
             return parse(new JSONObject(json));

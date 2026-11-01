@@ -268,9 +268,8 @@ final class Logo {
             if (f.exists()) txt = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
             // KOMPAT: Mitgelieferte Logos stammen aus SD-Aufnahmen aus Vodafone-Kabel (Okt. 2026); bei anderer Aufloesung oder
             //   Logoform passen sie nicht (Fehlalarm, nach 12 min neu lernen).
-            //   readAllBytes() gibt es erst ab Android 13 – darunter NoSuchMethodError (wird von catch (Exception) nicht gefangen).
             else try (InputStream in = c.getAssets().open("logos/" + key + ".txt")) {
-                txt = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                txt = new String(Config.readAll(in), StandardCharsets.UTF_8);
             }
         } catch (Exception ignored) {
         }

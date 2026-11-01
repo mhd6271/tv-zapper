@@ -67,9 +67,11 @@ public class ZapperService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        // KOMPAT: startForeground mit Typ gibt es erst ab API 29 (Android 8/9: NoSuchMethodError, Dienst stuerzt);
-        //   der Typ SPECIAL_USE erst ab 34 – auf 29 bis 33 ungeprueft.
-        startForeground(1, notification("Läuft"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        // KOMPAT: startForeground mit Typ gibt es erst ab API 29, den Typ SPECIAL_USE erst ab 34 (Pflicht bei targetSdk 34).
+        //   Darunter ohne Typ (ab 0.4.18); geprueft nur Android 14.
+        if (android.os.Build.VERSION.SDK_INT >= 34)
+            startForeground(1, notification("Läuft"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        else startForeground(1, notification("Läuft"));
         handler.removeCallbacksAndMessages(null);
         once = ACTION_ONCE.equals(action);
         if (!once && waechter == null) startWaechter();

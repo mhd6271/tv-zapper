@@ -150,13 +150,15 @@ Risiko: **hoch** = geht dort sicher oder sehr wahrscheinlich nicht, **mittel** =
 
 ### Android-Version (minSdk 26, geprüft nur 34)
 
+Nachtrag 01.11.2026 (0.4.18): Die vier Absturzstellen für Android 8 bis 12 sind behoben, siehe die ersten Zeilen der Tabelle.
+
 | Datei:Zeile | Abhängigkeit | Risiko | Folge auf anderen Geräten | Möglicher Weg später |
 |---|---|---|---|---|
-| `AndroidManifest.xml:7` | `minSdk 26` zugesagt, der Code braucht aber API 29 bzw. 33 | hoch | Android 8 bis 12 stürzen ab (Zeilen unten) | minSdk ehrlich auf 33 setzen oder die drei Stellen unten ersetzen |
-| `Config.java:83` | `InputStream.readAllBytes()` (API 33), direkt im dex | hoch | Android 8 bis 12: Absturz beim ersten Start (noch keine Einstellungsdatei); `NoSuchMethodError` fängt `catch (Exception)` nicht | Eigene Leseschleife mit `ByteArrayOutputStream` |
-| `Logo.java:245` | dasselbe für die mitgelieferten Logos | hoch | Android 8 bis 12: Werbe-Thread stürzt ab, sobald ein Sender mit mitgeliefertem Logo beobachtet wird | wie oben |
-| `ZapperService.java:63` | `startForeground(id, n, typ)` (API 29), Typ `SPECIAL_USE` (API 34) | hoch (8/9), mittel (10 bis 13) | Android 8/9: Dienst stürzt beim Start ab. 10 bis 13: unbekannter Typ, Verhalten ungeprüft | Nach `Build.VERSION.SDK_INT` verzweigen: unter 29 ohne Typ, unter 34 Typ 0 oder dataSync |
-| `MainActivity.java:506` | `unsafeCheckOpNoThrow` (API 29) | hoch | Android 8/9: Oberfläche stürzt beim Anzeigen ab | Unter 29 `checkOpNoThrow` |
+| `AndroidManifest.xml:7` | `minSdk 26` zugesagt; bis 0.4.17 brauchte der Code API 29 bzw. 33 | behoben in 0.4.18 | Bis 0.4.17 stürzten Android 8 bis 12 ab (Zeilen unten). Seit 0.4.18 steht im dex kein Framework-Aufruf über API 26 mehr ohne `SDK_INT`-Abfrage (am 01.11.2026 mit `dexdump` gegen `api-versions.xml` von platform 35 geprüft). Auf einem Gerät mit Android 8 bis 13 läuft die App noch nicht | Am Emulator mit Android 8 testen (kein Image vorhanden) |
+| `Config.java:101` | bis 0.4.17 `InputStream.readAllBytes()` (API 33) | behoben in 0.4.18 | Eigene Leseschleife `Config.readAll` | – |
+| `Logo.java:272` | dasselbe für die mitgelieferten Logos | behoben in 0.4.18 | `Config.readAll` | – |
+| `ZapperService.java:72` | `startForeground(id, n, typ)` (API 29), Typ `SPECIAL_USE` (API 34) | niedrig (8/9), mittel (10 bis 13) | Seit 0.4.18 ab API 34 mit Typ, darunter ohne Typ: kein Absturz mehr auf 8/9. Auf 10 bis 13 nimmt Android dann die Typen aus dem Manifest, wo `specialUse` unbekannt ist; Verhalten ungeprüft | Unter 34 ggf. `dataSync` ins Manifest |
+| `MainActivity.java:667` | `unsafeCheckOpNoThrow` (API 29) | behoben in 0.4.18 | Unter 29 `checkOpNoThrow` | – |
 | `AndroidManifest.xml:87` | Dienst-Typ `specialUse` | mittel | Google Play verlangt eine Begründung. Ältere Android-Versionen kennen den Typ nicht (ungeprüft) | Bei Store-Einreichung begründen |
 | `ZapperService.java:244` | Start einer Aktivität aus dem Hintergrund nur dank `SYSTEM_ALERT_WINDOW` (Sperre seit Android 10) | mittel | Künftige Android-Versionen (15+) oder Hersteller schränken das evtl. weiter ein (ungeprüft) | Bei neuer Android-Version am Gerät testen |
 | `ZapperService.java:292` | `ACTIVITY_RESUMED` (API 29) | niedrig | Wert 1 = altes `MOVE_TO_FOREGROUND`, wird eingebaut, geht also auch darunter. Zeigt die TV-App das Bild über ein anderes Paket, passt der Vergleich nicht | – |

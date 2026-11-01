@@ -663,10 +663,11 @@ public class MainActivity extends Activity {
 
     private boolean usageAccess() {
         AppOpsManager ao = getSystemService(AppOpsManager.class);
-        // KOMPAT: unsafeCheckOpNoThrow gibt es erst ab API 29: auf Android 8/9 stuerzt die Oberflaeche beim Anzeigen ab
-        //   (checkOpNoThrow waere der aeltere Weg).
-        return ao.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), getPackageName())
-                == AppOpsManager.MODE_ALLOWED;
+        // unsafeCheckOpNoThrow gibt es erst ab API 29, darunter der aeltere checkOpNoThrow (ab 0.4.18).
+        int mode = android.os.Build.VERSION.SDK_INT >= 29
+                ? ao.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), getPackageName())
+                : ao.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
     }
 
     private void openSettings(Intent i) {

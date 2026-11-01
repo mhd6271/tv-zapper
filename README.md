@@ -50,7 +50,7 @@ nicht fotografieren, es bleibt wegen des Kopierschutzes schwarz.
 
 | | |
 |---|---|
-| **Fernseher** | Google TV oder Android TV ab Android 8 mit **eingebautem Tuner**, dessen Sender in der Programmdatenbank von Android TV landen. Getestet nur auf einem TCL Smart TV Pro (Android 14). Andere Marken sollten gehen, sind aber nicht ausprobiert. Streaming-Sticks und -Boxen ohne Tuner gehen nicht. |
+| **Fernseher** | Google TV oder Android TV ab Android 8 mit **eingebautem Tuner**, dessen Sender in der Programmdatenbank von Android TV landen. Getestet nur auf einem TCL Smart TV Pro (Android 14). Bis 0.4.17 rief die App Funktionen auf, die es erst ab Android 10 bzw. 13 gibt; auf älteren Geräten wäre sie vermutlich abgestürzt. Ab 0.4.18 ist das im Code behoben, an einem älteren Gerät aber nicht ausprobiert. Andere Marken sollten gehen, sind aber nicht ausprobiert. Streaming-Sticks und -Boxen ohne Tuner gehen nicht. |
 | **FRITZ!Box** (nur für die Werbeerkennung) | Eine FRITZ!Box Cable mit eingebautem TV-Tuner, die Kabelfernsehen ins Heimnetz streamt (Menüpunkt „DVB-C“). Getestet mit der **FRITZ!Box 6660 Cable an einem Kabelanschluss von PŸUR (Tele Columbus)**, dort ohne Zusatzgerät. Laut Hersteller können das auch die 6690, 6670, 6591, 6590 und 6490 Cable. Ob der Menüpunkt da ist, hängt vom Kabelanbieter ab. Erkannt werden nur unverschlüsselte Sender. |
 | **Home Assistant** (optional) | Für die Integration: Zugriff auf den Ordner `config` (zum Beispiel über das Add-on „Samba share“) und ADB über das Netzwerk am Fernseher. Die Integration ist derzeit auf **TCL-Fernseher** zugeschnitten. |
 
