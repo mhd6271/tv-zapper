@@ -176,6 +176,21 @@ async def test_adresse_aendern(hass: HomeAssistant):
     assert entry.options["favorit"] == "Favorit1"
 
 
+async def test_adresse_eines_anderen_eintrags(hass: HomeAssistant):
+    """Neu konfigurieren auf host:port eines anderen Eintrags bricht ab statt eine doppelte unique_id anzulegen."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    anderer = MockConfigEntry(domain=DOMAIN, unique_id="192.0.2.99:5555", data={"host": "192.0.2.99", "port": 5555})
+    anderer.add_to_hass(hass)
+    entry = await _einrichten(hass)
+    with patch("custom_components.tv_zapper.tv.Fernseher.verbinden", AsyncMock()), \
+         patch("custom_components.tv_zapper.tv.Fernseher.sh", AsyncMock(return_value="tvz-ok\n")):
+        r = await hass.config_entries.flow.async_init(
+            "tv_zapper", context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": entry.entry_id})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"host": "192.0.2.99", "port": 5555})
+    assert r["type"] is FlowResultType.ABORT and r["reason"] == "already_configured"
+    assert entry.unique_id != "192.0.2.99:5555"
+
+
 async def test_ausweichen_bevorzugt(hass: HomeAssistant):
     entry = await _einrichten(hass)
     st = entry.runtime_data

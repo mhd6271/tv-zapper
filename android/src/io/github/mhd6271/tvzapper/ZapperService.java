@@ -101,6 +101,7 @@ public class ZapperService extends Service {
             PowerManager pm = getSystemService(PowerManager.class);
             if (wake != null && wake.isHeld()) wake.release();
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tvzapper:lauf");
+            wake.setReferenceCounted(false);   // acquire() in tick() verlaengert nur, zaehlt nicht hoch
             wake.acquire(endAt == Long.MAX_VALUE ? 24 * 3600_000L : endAt - System.currentTimeMillis() + 60_000L);
         }
         if (!once && !resume && intent.getBooleanExtra(EXTRA_GREET, false)) greet(0);
@@ -256,6 +257,8 @@ public class ZapperService extends Service {
             return;
         }
         nextAt = next;
+        // Ohne Ende: Wakelock vor Ablauf der 24 h verlaengern (bis 0.4.19 nur beim Neustart des Dienstes)
+        if (endAt == Long.MAX_VALUE && wake != null) wake.acquire(24 * 3600_000L);
         handler.postDelayed(this::tick, next - System.currentTimeMillis());
     }
 

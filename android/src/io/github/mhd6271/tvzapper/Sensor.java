@@ -50,6 +50,11 @@ final class Sensor {
         thread.start();
     }
 
+    /** Laeuft der Aufrufer im Thread dieses Sensors? (Bilder eines schon gestoppten Sensors verwerfen) */
+    boolean isOwnThread() {
+        return Thread.currentThread() == thread;
+    }
+
     void stop() {
         running = false;
         if (thread != null) thread.interrupt();
@@ -79,7 +84,10 @@ final class Sensor {
         }
         String resp = b.toString("US-ASCII");
         Matcher len = Pattern.compile("(?i)Content-Length:\\s*(\\d+)").matcher(resp);
-        if (len.find()) in.skip(Math.min(65_536, Long.parseLong(len.group(1))));
+        if (len.find()) {   // Rumpf ganz lesen; skip() ueberspringt evtl. weniger, der Rest verdarb die naechste Antwort
+            long left = Math.min(65_536, Long.parseLong(len.group(1)));
+            while (left > 0 && in.read() >= 0) left--;
+        }
         if (!resp.startsWith("RTSP/1.0 200")) throw new Exception(method + ": " + resp.split("\r\n")[0]);
         return resp;
     }

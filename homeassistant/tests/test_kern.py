@@ -398,3 +398,9 @@ def test_ereignis_daten_gekuerzt():
     assert len(d["treffer"]) == EREIGNIS_TREFFER and d["treffer_gesamt"] == 40
     assert all(len(x["info"]) == EREIGNIS_INFO for x in d["treffer"]) and len(d["vorher"]["info"]) == EREIGNIS_INFO
     assert len(json.dumps(d)) < 32768 and len(erg["treffer"]) == 40 and len(erg["treffer"][0]["info"]) == 2000
+
+
+def test_app_sendung_falsche_typen():
+    """Daten vom Fernseher: Zahl oder Liste statt Text darf den Durchgang nicht scheitern lassen."""
+    b = tv.app_sendung({"nr": 5, "sender": 7, "sendung": ["x"], "folge": None, "beschreibung": {"a": 1}}, CFG)
+    assert b["nr"] == 5 and b["sender"] == ""

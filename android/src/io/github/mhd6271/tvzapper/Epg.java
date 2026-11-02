@@ -14,7 +14,7 @@ import java.util.List;
  *  Geprueft auf einem TCL Google TV; Eingang und Fernseh-App werden erkannt, nicht fest vorgegeben. */
 final class Epg {
     private static String input, tvApp;
-    private static boolean tvAppResolved;
+    private static long tvAppTried;
 
     /** Tuner-Eingang: Einstellung "tv_eingang", sonst der Tuner-Eingang (TYPE_TUNER) mit den meisten Sendern,
      *  sonst der Eingang mit den meisten Sendern ueberhaupt. Am TCL: com.tcl.tvinput/.TunerInputService/HW2. */
@@ -55,7 +55,9 @@ final class Epg {
     static synchronized String tvPackage(Context c) {
         String cfg = Config.load(c).tvApp;
         if (!cfg.isEmpty()) return cfg;
-        if (tvAppResolved) return tvApp;
+        // Gefunden: fuer immer; nicht gefunden (z. B. Auswahldialog, keine Standard-TV-App): nach 60 s neu suchen.
+        // Bis 0.4.19 blieb auch "nicht gefunden" bis zum Neustart der App, der Zapper schaltete nie.
+        if (tvApp != null || System.currentTimeMillis() - tvAppTried < 60_000) return tvApp;
         List<Channel> chs = channels(c);
         if (chs.isEmpty()) return null;
         android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW,
@@ -63,7 +65,7 @@ final class Epg {
         android.content.pm.ResolveInfo ri = c.getPackageManager().resolveActivity(i, 0);
         if (ri != null && ri.activityInfo != null && !"android".equals(ri.activityInfo.packageName))
             tvApp = ri.activityInfo.packageName;
-        tvAppResolved = true;
+        tvAppTried = System.currentTimeMillis();
         return tvApp;
     }
 

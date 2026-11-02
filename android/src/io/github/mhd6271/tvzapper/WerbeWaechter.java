@@ -113,7 +113,11 @@ final class WerbeWaechter implements Sensor.Frames {
         }
     }
 
+    /** Aus dem UI-Thread ohne Sperre (tick() haelt sie bis zu Sekunden): Felder einmal lesen, sonst NPE moeglich. */
     String status() {
+        Epg.Channel home = this.home;
+        Sensor sensor = this.sensor;
+        Logo logo = this.logo;
         if (home == null) return "Werbe-Sensor: wartet";
         if (paused) return "Werbe-Sensor: " + home.name + " – ruht, solange das Fernsehbild nicht vorn ist";
         if (sensor == null) return "Werbe-Sensor: " + home.name + " wird nicht beobachtet";
@@ -271,7 +275,9 @@ final class WerbeWaechter implements Sensor.Frames {
 
     @Override
     public synchronized void frame(byte[] top, byte[] bottom, int w, int h) {
-        if (logo == null || home == null) return;
+        // Bilder eines eben gestoppten Sensors (alter Sender) verwerfen: bis 0.4.19 konnten sie nach dem Umschalten
+        // noch in die Maske des neuen Senders laufen und dessen noch ungeprueften FRITZ!Box-Eintrag als "geht" merken
+        if (logo == null || home == null || sensor == null || !sensor.isOwnThread()) return;
         lastFrame = System.currentTimeMillis();
         if (!gotFrame && fritz != null && fritz.urls.containsKey(homeKey) && fritz.urls.get(homeKey).size() > 1)
             c.getSharedPreferences(FRITZ_PREFS, Context.MODE_PRIVATE).edit().putString(homeKey, fritz.urlFor(home.name)).apply();
@@ -339,6 +345,7 @@ final class WerbeWaechter implements Sensor.Frames {
 
     @Override
     public synchronized void thumb(byte[] g, int w, int h) {
+        if (sensor == null || !sensor.isOwnThread()) return;
         long now = System.currentTimeMillis();
         thumbs.addLast(new Object[]{now, g, w, h});
         while (thumbs.size() > 30) thumbs.removeFirst();

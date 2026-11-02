@@ -111,6 +111,10 @@ class TvZapperConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_HOST] = "host_ungueltig"
             else:
                 await self._verbindung_pruefen(host, port, errors, platzhalter)
+            # Adresse eines anderen Eintrags: sonst zwei Eintraege mit derselben unique_id (bis 0.4.6)
+            if not errors and any(e.unique_id == f"{host}:{port}" and e.entry_id != entry.entry_id
+                                  for e in self._async_current_entries()):
+                return self.async_abort(reason="already_configured")
             if not errors:
                 return self.async_update_reload_and_abort(
                     entry, unique_id=f"{host}:{port}", title=f"TV-Zapper {host}",

@@ -128,8 +128,11 @@ def app_sendung(x: dict, cfg) -> dict:
     # DVB-Code beim TCL, Folge, Beschreibung), ist unterschiedlich. Fehlt die Beschreibung, gibt es weniger Treffer.
     """Ein Sender aus der TV-App wie eine Zeile der Programmzeitschrift bewerten. genre ist bei TCL ein
     DVB-Zahlencode und wird nicht mitbewertet; Folge und Beschreibung zaehlen wie die Info im Kopf."""
-    info = " ".join(t for t in (x.get("folge"), x.get("beschreibung")) if t)
-    b = bewerte_sendung(int(x["nr"]), x.get("sender", ""), x.get("sendung") or None, {"info": info}, cfg)
+    def text(k):   # nur Zeichenketten; bis 0.4.6 liess eine Zahl oder Liste hier den Durchgang scheitern
+        v = x.get(k)
+        return v if isinstance(v, str) else ""
+    info = " ".join(t for t in (text("folge"), text("beschreibung")) if t)
+    b = bewerte_sendung(int(x["nr"]), text("sender"), text("sendung") or None, {"info": info}, cfg)
     b.update(id=x.get("id"), start=x.get("start"), ende=x.get("ende"))
     return b
 

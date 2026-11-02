@@ -236,7 +236,8 @@ final class Logo {
         //   rechts liegen dann ausserhalb. Betrifft auch das eigene Setup, sobald ein HD-Eintrag der FRITZ!Box genommen wird.
         int x0 = (c % 2 == 0) ? 0 : (int) (w * .7);
         byte[] r = new byte[CW * CH];
-        for (int y = 0; y < CH; y++)
+        // Streifen mit weniger als CH Zeilen (Video unter 576 Zeilen): bis 0.4.19 ArrayIndexOutOfBounds im Sensor-Thread
+        for (int y = 0; y < CH && (y + 1) * w <= src.length; y++)
             for (int x = 0; x < CW && x0 + x < w; x++) r[y * CW + x] = src[y * w + x0 + x];
         return r;
     }
