@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         cfg = Config.load(this);
+        cfgStamp = Config.file(this).lastModified();
         ScrollView scroll = new ScrollView(this);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -82,6 +83,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        reloadIfChanged();
         ui.post(refresher);
         if (setupRunning) ui.postDelayed(this::setupNext, 400);   // zurueck aus einer Einstellungsseite
     }
@@ -141,8 +143,35 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         ui.removeCallbacks(refresher);
+        if (changedOutside()) {   // z. B. Kinder-Modus aus Home Assistant: nicht mit dem alten Formular ueberschreiben
+            Log.add(this, "Einstellungen wurden von außen geändert – Eingaben in der App nicht gespeichert");
+            return;
+        }
         readForm();
+        saveCfg();
+    }
+
+    /** Stand der Einstellungsdatei beim letzten eigenen Laden/Speichern. Bis 0.4.19 lud die App nur in onCreate und
+     *  speicherte bei jedem onPause: eine Aenderung per EINSTELLEN (Kinder-Modus) wurde so wieder zurueckgesetzt. */
+    private long cfgStamp;
+
+    private void saveCfg() {
         cfg.save(this);
+        cfgStamp = Config.file(this).lastModified();
+    }
+
+    private boolean changedOutside() {
+        return Config.file(this).lastModified() != cfgStamp;
+    }
+
+    /** Neu laden und Seite neu aufbauen, wenn sich die Datei inzwischen geaendert hat. */
+    private void reloadIfChanged() {
+        if (!changedOutside()) return;
+        cfg = Config.load(this);
+        cfgStamp = Config.file(this).lastModified();
+        catRows.clear();
+        root.removeAllViews();
+        build();
     }
 
     @Override
@@ -206,6 +235,7 @@ public class MainActivity extends Activity {
             Config.file(this).delete();
             Log.add(this, "Grundeinstellung geladen");
             cfg = Config.load(this);
+            cfgStamp = Config.file(this).lastModified();
             catRows.clear();
             root.removeAllViews();
             build();
@@ -242,14 +272,14 @@ public class MainActivity extends Activity {
         adToggle = button("", v -> {
             cfg.avoidAds = !cfg.avoidAds;
             adToggle.setText("Werbung umgehen: " + (cfg.avoidAds ? "an" : "aus"));
-            cfg.save(this);
+            saveCfg();
         });
         adToggle.setText("Werbung umgehen: " + (cfg.avoidAds ? "an" : "aus"));
         root.addView(adToggle);
         prefToggle = button("", v -> {
             cfg.dodgePreferred = !cfg.dodgePreferred;
             prefToggle.setText("Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen: " + (cfg.dodgePreferred ? "an" : "aus"));
-            cfg.save(this);
+            saveCfg();
         });
         prefToggle.setText("Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen: " + (cfg.dodgePreferred ? "an" : "aus"));
         root.addView(prefToggle);
@@ -298,7 +328,7 @@ public class MainActivity extends Activity {
         reasonToggle = button("", v -> {
             cfg.showReason = !cfg.showReason;
             reasonToggle.setText("Umschaltgrund einblenden: " + (cfg.showReason ? "an" : "aus"));
-            cfg.save(this);
+            saveCfg();
         });
         reasonToggle.setText("Umschaltgrund einblenden: " + (cfg.showReason ? "an" : "aus"));
         root.addView(reasonToggle);
@@ -330,7 +360,7 @@ public class MainActivity extends Activity {
         Button b = button(cfg.kids ? "Kinder-Modus: AN  –  zum Ausschalten drücken" : "Kinder-Modus einschalten", v -> {
             readForm();
             cfg.kids = !cfg.kids;
-            cfg.save(this);
+            saveCfg();
             Log.add(this, "Kinder-Modus " + (cfg.kids ? "an" : "aus"));
             catRows.clear();
             root.removeAllViews();
@@ -387,7 +417,7 @@ public class MainActivity extends Activity {
         rest.setOnClickListener(v -> {
             cfg.kidsRestAllowed = !cfg.kidsRestAllowed;
             rest.setText(restText());
-            cfg.save(this);
+            saveCfg();
             fillChannels();
         });
         rest.setText(restText());
@@ -423,7 +453,7 @@ public class MainActivity extends Activity {
                 else if (!cfg.kidsDenied.remove(ch.name)) cfg.kidsChannels.add(ch.name);
                 kidsLabel(bt, ch);
                 kidsCount(count, list.size());
-                cfg.save(this);
+                saveCfg();
             });
             chanBox.addView(bt);
             shown++;
@@ -499,7 +529,7 @@ public class MainActivity extends Activity {
                 cfg.channels.put(ch.name, Config.AN.equals(s) ? Config.BEVORZUGT
                         : Config.BEVORZUGT.equals(s) ? Config.AUS : Config.AN);
                 label(bt, ch);
-                cfg.save(this);
+                saveCfg();
             });
             chanBox.addView(bt);
             shown++;
@@ -548,7 +578,7 @@ public class MainActivity extends Activity {
 
     private void start(String action, boolean readOnly) {
         readForm();
-        cfg.save(this);
+        saveCfg();
         startForegroundService(new Intent(this, ZapperService.class).setAction(action)
                 .putExtra(ZapperService.EXTRA_READ_ONLY, readOnly).putExtra(ZapperService.EXTRA_GREET, true));
         if (!readOnly) openTv();

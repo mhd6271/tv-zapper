@@ -89,7 +89,16 @@ final class Config {
         return out.toByteArray();
     }
 
+    /** Laden und Speichern laufen aus mehreren Threads (Werbe-Thread alle 2,5 s, Dienst, App, Empfaenger). */
+    private static final Object LOCK = new Object();
+
     static Config load(Context c) {
+        synchronized (LOCK) {
+            return loadLocked(c);
+        }
+    }
+
+    private static Config loadLocked(Context c) {
         try {
             File f = file(c);
             String json;
@@ -270,12 +279,21 @@ final class Config {
         return o;
     }
 
+    /** Erst in eine Nebendatei, dann umbenennen: bis 0.4.19 wurde die Datei an Ort und Stelle neu geschrieben, ein
+     *  gleichzeitiges load() las sie halb, hielt sie fuer kaputt und lief mit der Grundeinstellung weiter
+     *  (Kinder-Modus aus). Gefunden im Review 02.11.2026, nicht am Geraet beobachtet. */
     void save(Context c) {
         sanitize();
-        try (FileOutputStream out = new FileOutputStream(file(c))) {
-            out.write(toJson().toString(2).getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            Log.add(c, "Speichern fehlgeschlagen: " + e.getMessage());
+        synchronized (LOCK) {
+            File f = file(c), tmp = new File(f.getPath() + ".neu");
+            try (FileOutputStream out = new FileOutputStream(tmp)) {
+                out.write(toJson().toString(2).getBytes(StandardCharsets.UTF_8));
+                out.getFD().sync();
+            } catch (Exception e) {
+                Log.add(c, "Speichern fehlgeschlagen: " + e.getMessage());
+                return;
+            }
+            if (!tmp.renameTo(f)) Log.add(c, "Speichern fehlgeschlagen: Umbenennen von " + tmp.getName());
         }
     }
 

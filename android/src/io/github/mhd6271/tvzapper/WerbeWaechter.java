@@ -124,6 +124,11 @@ final class WerbeWaechter implements Sensor.Frames {
 
     /** Alle 2 s aus dem Dienst-Thread. */
     synchronized void tick() {
+        // Dienst beendet, waehrend dieser Tick schon unterwegs war: keinen neuen Sensor mehr starten
+        if (ZapperService.waechter != this) {
+            stopSensor();
+            return;
+        }
         PowerManager pm = c.getSystemService(PowerManager.class);
         String fg = ZapperService.foregroundApp(c);
         if (!pm.isInteractive() || fg == null || !fg.equals(Epg.tvPackage(c))) {
@@ -167,8 +172,14 @@ final class WerbeWaechter implements Sensor.Frames {
                 fritz.reset(home.name);
                 stopSensor();
             } else {
+                // Denselben Sender neu verbinden, Zustand behalten. Bis 0.4.19 watch(cur): war die App gerade
+                // ausgewichen, wurde der Ausweichsender zum Hauptsender und kam nie zurueck (Review 02.11.2026).
                 Log.add(c, "Werbe-Sensor: keine Bilder mehr – starte neu");
-                watch(cur);
+                stopSensor();
+                lastFrame = System.currentTimeMillis();
+                gotFrame = false;
+                sensor = new Sensor(fritz.urlFor(home.name), this);
+                sensor.start();
             }
         }
         if (away && System.currentTimeMillis() - pauseSince > maxAwayMs()) {
@@ -179,10 +190,14 @@ final class WerbeWaechter implements Sensor.Frames {
             return;
         }
         if (pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
-            Log.add(c, "Werbung auf " + home.name + " dauert über 12 min – Logo wird neu gelernt, bleibe hier");
+            Log.add(c, "Werbung auf " + home.name + " dauert über 12 min – Logo wird neu gelernt");
             if (logo != null) logo.relearn();
-            away = false;
             pause = false;
+            // Zeitgrenze ueber 12 min (Einstellung bis 60): bis 0.4.19 blieb der Fernseher dann auf dem Ausweichsender
+            if (away) {
+                away = false;
+                if (svc.tuneTo(home, "Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE)) returnedAt = System.currentTimeMillis();
+            }
         }
     }
 

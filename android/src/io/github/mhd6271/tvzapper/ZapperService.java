@@ -72,6 +72,19 @@ public class ZapperService extends Service {
         if (android.os.Build.VERSION.SDK_INT >= 34)
             startForeground(1, notification("Läuft"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(1, notification("Läuft"));
+        if (ACTION_ONCE.equals(action) && !once && endAt > System.currentTimeMillis()) {
+            // "Einmal pruefen" bei laufendem Zapper: nur einmal lesen. Bis 0.4.19 beendete das den Dauerlauf samt
+            // Werbeerkennung ohne Hinweis.
+            handler.post(() -> {
+                try {
+                    Epg.diagnose(this);
+                    cycle(true);
+                } catch (Exception e) {
+                    Log.add(this, "Fehler: " + e);
+                }
+            });
+            return START_STICKY;
+        }
         handler.removeCallbacksAndMessages(null);
         once = ACTION_ONCE.equals(action);
         if (!once && waechter == null) startWaechter();
@@ -118,8 +131,12 @@ public class ZapperService extends Service {
                 } catch (Exception e) {
                     Log.add(ZapperService.this, "Werbe-Sensor Fehler: " + e);
                 }
-                remind();
-                onSwitch();
+                try {   // bis 0.4.19 ausserhalb: ein Fehler hier (z. B. TvProvider) beendete die ganze App
+                    remind();
+                    onSwitch();
+                } catch (Exception e) {
+                    Log.add(ZapperService.this, "Fehler: " + e);
+                }
                 adHandler.postDelayed(this, 2500);
             }
         });
