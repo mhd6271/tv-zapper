@@ -142,7 +142,7 @@ Central HD nach etwa 1 bis 3 Sekunden, von HDMI 4 nach 4 Sekunden.
 Grenzen: Wer die Fernbedienung hat, kann den Kinder-Modus in der App ausschalten oder „Stopp“ drücken. Andere Apps
 (YouTube, Mediatheken) und der Startbildschirm bleiben frei, geprüft wird nur das Fernsehbild.
 
-Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 Minuten zum Lernen. Dafür muss man
+Ein Sender, dessen Logo die App noch nicht kennt, braucht beim ersten Mal etwa 5 bis 6 Minuten zum Lernen. Dafür muss man
 so lange auf dem Sender bleiben; wird vorher umgeschaltet, fängt die App beim nächsten Mal von vorn an.
 
 ## Integration für Home Assistant installieren
@@ -202,11 +202,14 @@ Steht in [`interessen.json`](interessen.json) – Kategorien mit Gewicht und Suc
 | Kategorie | Gewicht |
 |---|---|
 | Hip-Hop/Rap | 5 |
+| Erwachsenen-Cartoons | 4 |
+| Mysterien/Aliens | 4 |
 | Musik | 3 |
 | Dokumentation | 2 |
 | Lifestyle | 2 |
 
-Nie: Teleshopping, Dauerwerbesendung. Wörter mit `*` passen als Wortanfang (`doku*`).
+Nie: Teleshopping, Dauerwerbesendung, Verkaufsshow, Shopping-Tipps, Disney/Micky. Sender nie: Disney Channel;
+bevorzugt (+1): N24 DOKU, ZDFinfo HD. Wörter mit `*` passen als Wortanfang (`doku*`).
 Neue Interessen einfach dort eintragen.
 
 ### Wie es arbeitet
@@ -257,7 +260,7 @@ Jeder Durchgang landet in `protokoll.jsonl` (was lief, Treffer, ob umgeschaltet 
 ## Home-Assistant-Fassung
 
 Im Ordner [`homeassistant/custom_components/tv_zapper`](homeassistant/custom_components/tv_zapper) liegt
-dieselbe Logik als Integration für Home Assistant (Stand von `zapper.py` am 27.10.2026, Commit 4d6133c: Sender nie/bevorzugt,
+dieselbe Logik als Integration für Home Assistant (Stand von `zapper.py` am 27.10.2026, Commit 44ca0ad: Sender nie/bevorzugt,
 pro Durchgang nur einmal umschalten und danach nachlesen, BACK nur bei offener Programmzeitschrift). Alles wird in HA eingestellt, `interessen.json` ist nur
 die Vorlage für die Grundeinstellung: Sie liegt als Kopie `tv_zapper/vorlage.json` in der Integration. Nach einer
 Änderung an `interessen.json` neu kopieren (`cp interessen.json homeassistant/custom_components/tv_zapper/vorlage.json`),
@@ -308,6 +311,14 @@ damit nicht beide gegeneinander schalten. Ohne App liest HA wie bisher die Progr
 | Nie nehmen | Wörter, mit Komma getrennt (Teleshopping …) |
 | Sender nie nehmen | Sendernamen wie in der Programmzeitschrift, mit Komma getrennt |
 | Bevorzugte Sender | eine Zeile je Sender: `N24 DOKU \| 1` – Bonuspunkte, zählen nur, wenn die Sendung auch passt |
+| Laufzeit | wie lange der Zapper nach dem Einschalten läuft, 1–1440 Minuten; Standard 60 |
+| Verweilzeit | Minuten zwischen zwei Prüfungen, 1–120; Standard 5 |
+| Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
+| Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
+| TV-Protokoll | regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
+| Abfragetakt | wie oft das TV-Protokoll nachfragt, 5–600 Sekunden; Standard 15 |
+| Speicher-Takt | alle wie viele Minuten der Arbeitsspeicher von Fernseher und TV-App gelesen wird, 0 = aus; Standard 5 |
+| MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 Sendernamen bei „nie“ und „bevorzugt“ vergleicht die Integration tolerant, mit denselben Regeln wie die TV-App beim
 FRITZ!Box-Abgleich (`FritzTv.norm`, Tabelle in `docs/fritzbox-senderabgleich.md`): Groß-/Kleinschreibung, Leer- und
@@ -316,14 +327,6 @@ Satzzeichen zählen nicht, HD/UHD/SD als eigenes Wort auch mittendrin nicht (`WD
 `n-tv` = `ntv`, `RTL2` = `RTLZWEI`, `SWR BW` = `SWR Fernsehen BW` …). Andere Namen bleiben verschieden
 (`Comedy Central +1` ≠ `Comedy Central HD`). Der Sendername zählt beim Bewerten mit: `Deluxe Music HD` hat dadurch immer die Musik-Punkte,
 `N24 DOKU` und `kabel eins Doku` immer die Doku-Punkte – gewollt, weil der Name oft verrät, was läuft.
-| Laufzeit | wie lange der Zapper nach dem Einschalten läuft (Minuten) |
-| Verweilzeit | Minuten zwischen zwei Prüfungen |
-| Nur lesen | nie umschalten, nur bewerten (zum Ausprobieren) |
-| Einblendung am Fernseher | Meldung im Bild beim Einschalten, Umschalten und Ende (siehe unten) |
-| TV-Protokoll | regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“), auch wenn der Zapper aus ist; Standard an |
-| Abfragetakt | wie oft das TV-Protokoll nachfragt, 5–600 Sekunden; Standard 15 |
-| Speicher-Takt | alle wie viele Minuten der Arbeitsspeicher von Fernseher und TV-App gelesen wird, 0 = aus; Standard 5 |
-| MAC-Adresse | optional: Fernseher beim Einschalten des Zappers per Wake-on-LAN wecken (siehe unten) |
 
 Mehr muss man nicht kennen: Alles oben steht in HA (Einrichten, „Konfigurieren“, „Neu konfigurieren“), nichts in
 Dateien. Die TV-App braucht **keine eigene Adresse und keinen Port** – HA erreicht sie über dieselbe ADB-Verbindung
@@ -370,11 +373,13 @@ HA bewertet mit seinen eigenen Interessen.
   (`--es grund "Zapper-Runde (HA) | Hip-Hop +5 („hip hop“ im Titel) | ★ bevorzugter Sender +1 | = 6 Punkte"`) und
   blendet dann selbst nichts ein. Verfügbar wie der Schalter darüber, sobald die App die Einstellung meldet.
 - `button.tv_zapper_jetzt_prufen_nur_lesen` – ein Durchgang ohne Umschalten.
-- Ereignis `tv_zapper_durchgang` nach jedem Durchgang (mit allen Treffern) für eigene Automationen.
+- Ereignis `tv_zapper_durchgang` nach jedem Durchgang für eigene Automationen: die besten 10 Treffer, Beschreibungen
+  auf 300 Zeichen gekürzt, `treffer_gesamt` = Zahl aller Treffer (ab Integration 0.4.7; vorher alle, dann verwarf der
+  Recorder große Ereignisse).
 - **Einblendung am Fernseher** (Option, Standard an): beim Einschalten („TV-Zapper an – läuft bis …“), nach jedem
   Umschalten („Sender – Sendung (Kategorien, Punkte)“) und am Ende. HA kann selbst nichts ins Bild zeichnen:
   Ist die TV-App aus `android/` mit dem Empfänger `EinblendungEmpfaenger` installiert, blendet sie den Text ein
-  (`am broadcast -a io.github.mhd6271.tvzapper.EINBLENDEN … --es text …`), sonst schickt HA eine normale
+  (`am broadcast -a io.github.mhd6271.tvzapper.EINBLENDEN … --es text …`, optional `--ei ms 1000…60000`, Standard 6000), sonst schickt HA eine normale
   Android-Benachrichtigung – ob Google TV die sichtbar zeigt, ist noch nicht getestet. Weg über die App
   am 27.10.2026 16:11 mit dem Code der Integration geprüft: Einblendung erschien (Empfänger verlangt das Recht
   DUMP, das nur die adb-Shell hat).
@@ -385,7 +390,7 @@ HA bewertet mit seinen eigenen Interessen.
 **Logbuch:** Jede Umschaltung durch einen TV-Zapper steht mit Grund im HA-Logbuch, Punkte ausgeschrieben, z. B.
 „TV-Zapper (HA) hat auf 141 N24 DOKU („Hip Hop“) umgeschaltet, vorher 23 ProSieben HD („Navy CIS“) mit 0 Punkten.
 Grund: Hip-Hop: 5 Punkte, „hip hop“ im Titel; Doku: 2 Punkte, „doku*“ im Titel; bevorzugter Sender: 1 Punkt extra.
-Zusammen 8 Punkte.“ Umschaltungen des Zappers der **TV-App** (Werbung ausgewichen, zurück nach der Werbung, Interesse)
+Zusammen 8 Punkte.“ Umschaltungen des Zappers der **TV-App** (Werbung ausgewichen, zurück nach der Werbung, zurück nach Zeitgrenze oder Fehlalarm, Interesse, Kinder-Modus)
 erscheinen als „TV-Zapper (TV-App) …“, sobald die App sie über `ABFRAGEN` im Feld `umschaltungen` meldet; HA liest
 das im Abfragetakt mit und trägt jede Umschaltung einmal ein (nach einem HA-Neustart nur neue, nichts nachgetragen).
 Ältere App-Versionen ohne dieses Feld liefern keine Einträge. Das Ereignis heißt `tv_zapper_umgeschaltet` und taugt
@@ -470,8 +475,9 @@ genau die freien HD-Sender (alle 18 aus der Liste unten, dazu u. a. 1 Das Erste 
 81 Deluxe Music HD, 125 kabel eins Doku, 139 MTV HD); verschlüsselte wie Sky haben 0. Dass das genau Favorit1 ist,
 ist abgeleitet, nicht von TCL dokumentiert. In der App zeigt „Alle Sender zeigen“ auch die übrigen.
 
-**Bedienung:** „Start“ läuft im Hintergrund (Vordergrund-Dienst mit Benachrichtigung) bis die Laufzeit um ist,
-„Stopp“ beendet, „Einmal prüfen (nur lesen)“ bewertet nur und schreibt das Ergebnis ins Protokoll unten auf der Seite.
+**Bedienung:** „Start“ läuft im Hintergrund (Vordergrund-Dienst mit Benachrichtigung), bis die Laufzeit um ist,
+„Stopp“ beendet, „Einmal prüfen (nur lesen)“ bewertet nur und schreibt das Ergebnis ins Protokoll unten auf der Seite (ab 0.4.20 läuft
+ein gestarteter Zapper dabei weiter; bis 0.4.19 beendete der Knopf ihn samt Werbeerkennung).
 Zeigt der Fernseher etwas anderes als das Fernsehprogramm oder ist er aus, lässt die App ihn in Ruhe.
 Beendet Android den Dienst (z. B. bei Speichermangel – der TCL hat nur 2,4 GB RAM), startet er sich von selbst neu
 und läuft bis zum gemerkten Ende weiter (ab 0.3.3; Protokoll: „Von Android beendet und neu gestartet“).
@@ -574,7 +580,7 @@ Dann schaltet sie auf den besten **werbefreien Ausweichsender** (Vorgabe ZDFinfo
 Schaltet man selbst um, wird der neue Sender beobachtet. Wer mitten in eine Pause hineinschaltet (selbst oder durch den Zapper), wartet nicht
 10 s: In den ersten 30 s nach dem Hineinschalten genügen 4 von 5 Sekunden ohne Logo – nur bei Sendern mit fertiger
 Logo-Maske, ohne Maske wird gelernt statt geraten (nicht jede Szene ohne Logo ist Werbung). Sender mit gerade
-erkannter Werbung meidet der Zapper bis zum erwarteten Pausenende (typische Pause des Senders, sonst 6 min); nach dem
+erkannter Werbung meidet der Zapper bis zum erwarteten Pausenende (typische Pause des Senders, sonst die Zeitgrenze, Vorgabe 6 min); nach dem
 Zurückschalten weicht die App frühestens nach 3 min wieder aus (kein Hin und Her). Spätestens nach einer Zeitgrenze geht es auf jeden Fall
 zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind: typische Pause + 1 min, mindestens die
 Vorgabe, höchstens das Doppelte). „Typisch“ ist seit 0.4.19 der Median der Pausen ab 90 s; kürzere werden nicht mehr
@@ -586,9 +592,8 @@ die App die Maske zusätzlich bis zur Balkenhöhe nach unten verschoben; das zä
 an 1847 Kontrollbildern nachgestellt (RTL-Film 0,00 → 0,78, in Werbung kein Treffer); am Fernseher noch nicht mit
 einem Film erlebt. Die
 gemessenen Pausen je Sender zeigt die App an (`werbepausen.json`). Öffentliche Zahlen zur Blocklänge je Sender gibt
-es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Logos von ProSieben, SAT.1, Kabel Eins, Pro7 MAXX,
-kabel eins Doku und sixx liegen fertig bei (`android/assets/logos/`), andere lernt die App beim ersten Mal in etwa
-5 min und speichert sie (erst ab 0.4.6 wirklich: vorher ging ein frisch gelerntes Logo beim nächsten Neustart der App
+es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einmal je 30 min unterbrechen (§ 9). Die Logos aller 27 beobachteten Sender liegen
+seit 0.4.7 fertig bei (`android/assets/logos/`), neue lernt die App beim ersten Mal in etwa 5 bis 6 min und speichert sie (erst ab 0.4.6 wirklich: vorher ging ein frisch gelerntes Logo beim nächsten Neustart der App
 verloren). Bis 0.4.10 blendete sie beim Lernen „Logo von X wird gelernt“ bzw. „… gelernt – n von N Sendern erkannt“ ein; seit 0.4.11 nicht mehr (alle 27 Logos gelernt, Schalter `LERN_HINWEISE` in `WerbeWaechter.java`). Gelernt wird weiter still, z. B. ein Sender, der im TV-Zapper aus ist, aber gerade läuft; Log und ABFRAGEN melden es.
 **Logos sichern:** `android/logos_sichern.sh` holt die gelernten Logos vom Fernseher nach `android/assets/logos/`
 (ab 0.4.7); committet, bringt die nächste Fassung sie mit. Stand der Logos je Sender: [docs/logo-anlernen.md](docs/logo-anlernen.md).
@@ -651,12 +656,14 @@ entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINST
 `result=1` mit `fehler`). Ab 0.4.17 auch den Kinder-Modus: `--es kinder_modus true|false`, `--es kinder_sender "A, B"`
 (erlaubt), `--es kinder_sender_gesperrt "C, D"`, `--es kinder_uebrige_erlaubt true|false`, `--es kinder_sperrbegriffe
 "krimi, horror*"`; die Antwort enthält dann auch diese Werte. `ABFRAGEN` liefert `kinder_modus` und, wenn er an ist,
-die übrigen vier. `UMSCHALTEN` auf einen nicht erlaubten Sender antwortet im Kinder-Modus mit `fehler`. Ist dabei die Einstellungsseite der App offen, speichert sie beim Schließen ihren eigenen
-Stand – dann den Schalter in der App benutzen.
+die übrigen vier. `UMSCHALTEN` auf einen nicht erlaubten Sender antwortet im Kinder-Modus mit `fehler`. Als Wahrheitswert nimmt
+`EINSTELLEN` auch `1`/`0`, `an`/`aus`, `ja`/`nein`. Die Kinder-Werte stehen in jeder `EINSTELLEN`-Antwort. Ist dabei die
+Einstellungsseite der App offen, gilt ab 0.4.20 die Änderung von außen: Die App verwirft beim Schließen ihre eigenen
+Eingaben (Hinweis im Protokoll) und lädt beim nächsten Öffnen neu. Bis 0.4.19 überschrieb sie die Änderung.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
 Ohne die App nach vorn zu holen (ab 0.4.6): `ABFRAGEN`-Empfänger mit `-a io.github.mhd6271.tvzapper.STARTEN`, mit
-`--ez nur_lesen true` beobachtet der Zapper nur (Werbe-Sensor läuft, keine Zapper-Runden). Am TCL verweigert die Firmware dem
+`--ez nur_lesen true` beobachtet der Zapper nur (Werbe-Sensor läuft, keine Zapper-Runden); Antwort `ok`, `nur_lesen`. Am TCL verweigert die Firmware dem
 so gestarteten Dienst den Vordergrund-Status (logcat 01.11.2026). Er läuft trotzdem, kann aber leichter beendet werden,
 siehe `docs/kompatibilitaet.md`. Mit `--es was logos` (ab 0.4.7)
 liefert `ABFRAGEN` zusätzlich `logo_dateien` = alle gelernten Logo-Masken (`logos_sichern.sh` nutzt das).

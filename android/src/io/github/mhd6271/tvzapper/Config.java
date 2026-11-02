@@ -52,7 +52,7 @@ final class Config {
     /** Leer = automatisch erkennen. */
     String tvInput = "", tvApp = "";
     /** Spaetestens nach so vielen Minuten zurueck zum Hauptsender, auch wenn der Sensor nichts meldet
-     *  (gemessene Durchschnittsdauer des Senders + 1 min, wenn bekannt). */
+     *  (gemessen: Median der Pausen des Senders + 1 min, mindestens dieser Wert, hoechstens das Doppelte). */
     int pauseMaxMin = 6;
     /** Werbefreie Ausweichsender, bei gleicher Punktzahl gilt die Reihenfolge. */
     List<String> adFree = new ArrayList<>(java.util.Arrays.asList("ZDFinfo HD", "zdf_neo HD", "arte HD",

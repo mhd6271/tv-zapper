@@ -290,7 +290,7 @@ public class MainActivity extends Activity {
         pm.addView(text("Spätestens zurück nach", 16, false));
         pauseMax = number(String.valueOf(cfg.pauseMaxMin));
         pm.addView(pauseMax);
-        pm.addView(text("min (gemessener Durchschnitt des Senders + 1 min, sobald bekannt)", 14, false));
+        pm.addView(text("min (sobald Pausen gemessen sind: typische Pause des Senders + 1 min, höchstens das Doppelte)", 14, false));
         root.addView(pm);
         pauseStats = text("", 14, false);
         root.addView(pauseStats);

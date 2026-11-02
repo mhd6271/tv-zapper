@@ -75,7 +75,7 @@ final class Logo {
      *  Maske trifft nicht mehr (am TCL 01.11.2026: RTL/Harry Potter Logo-Wert 0,00, Fehlalarm). Dann die oberen Masken
      *  um bis zur Balkenhoehe nach unten verschoben pruefen. Zaehlt nur ein klarer Treffer (>= HI), sonst 0.
      *  Nur bei Balken, weil die Suche ueber viele Verschiebungen sonst in Werbung zufaellig Logos findet. Am Mac
-     *  nachgebildet an 1847 Kontrollbildern (180x144, hochgerechnet, daher nur ungefaehr): RTL-Film 0,00 -> 0,83,
+     *  nachgebildet an 1847 Kontrollbildern (180x144, hochgerechnet, daher nur ungefaehr): RTL-Film 0,00 -> 0,78 (Java; Python-Vorversuch 0,83),
      *  Kabel-Eins-Fehlalarm vom 01.11. waere ausgeblieben; sonst nur 2 Einzelbilder eines Trailers mit Balken ueber
      *  0,7 (bei 80 % von 30 s ohne Wirkung). */
     private float letterbox(byte[] top, int w) {

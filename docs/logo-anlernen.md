@@ -2,7 +2,7 @@
 
 Stand 28.10.2026, 17:58, nach der App selbst (ABFRAGEN `logos`, Fassung 0.4.6). Die Liste wird beim Durchschalten nachgeführt.
 
-**Zahlen:** 377 Sender am Fernseher, 36 eingeschaltet. Davon beobachtet der Werbe-Sensor **29**,
+**Zahlen (Stand 28.10., überholt, siehe unten):** 377 Sender am Fernseher, 36 eingeschaltet. Davon beobachtet der Werbe-Sensor **29**,
 **7** haben ein Logo, **22** sind offen.
 
 **Stand 29.10.2026, 08:35: fertig.** Alle **27 von 27** Logos sind gelernt und im Repo (`android/assets/logos/`, 27 Dateien).

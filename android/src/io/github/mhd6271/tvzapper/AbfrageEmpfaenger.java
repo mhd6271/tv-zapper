@@ -41,6 +41,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
             if (UMSCHALTEN.equals(i.getAction())) umschalten(c, i, out);
             else if (STARTEN.equals(i.getAction())) {
                 boolean ro = i.getBooleanExtra("nur_lesen", false);
+                // KOMPAT: Am TCL verweigert die Startsperre TclAppBoot hier den Vordergrund-Status (logcat 01.11.2026);
+                //   der Zapper lief trotzdem. Andere Hersteller haben eigene Sperren oder keine.
                 c.startForegroundService(new Intent(c, ZapperService.class).setAction(ZapperService.ACTION_START)
                         .putExtra(ZapperService.EXTRA_READ_ONLY, ro));
                 Log.add(c, "Zapper von außen gestartet" + (ro ? " (nur lesen)" : ""));
