@@ -596,7 +596,8 @@ es nicht; erlaubt sind 20 % Werbung je Zeitfenster (§ 70 MStV), Spielfilme einm
 seit 0.4.7 fertig bei (`android/assets/logos/`), neue lernt die App beim ersten Mal in etwa 5 bis 6 min und speichert sie (erst ab 0.4.6 wirklich: vorher ging ein frisch gelerntes Logo beim nächsten Neustart der App
 verloren). Bis 0.4.10 blendete sie beim Lernen „Logo von X wird gelernt“ bzw. „… gelernt – n von N Sendern erkannt“ ein; seit 0.4.11 nicht mehr (alle 27 Logos gelernt, Schalter `LERN_HINWEISE` in `WerbeWaechter.java`). Gelernt wird weiter still, z. B. ein Sender, der im TV-Zapper aus ist, aber gerade läuft; Log und ABFRAGEN melden es.
 **Logos sichern:** `android/logos_sichern.sh` holt die gelernten Logos vom Fernseher nach `android/assets/logos/`
-(ab 0.4.7); committet, bringt die nächste Fassung sie mit. Stand der Logos je Sender: [docs/logo-anlernen.md](docs/logo-anlernen.md).
+(ab 0.4.7); committet, bringt die nächste Fassung sie mit. Stand der Logos je Sender: [docs/logo-anlernen.md](docs/logo-anlernen.md). Ideen zur Verbesserung aus markad,
+MythTV und Comskip: [docs/werbeerkennung-ideen.md](docs/werbeerkennung-ideen.md).
 
 **Am Mac geprüft** (20 min Aufnahme von 6 Sendern, 15:56–16:16 Uhr, Bilder angesehen): In allen Lücken ohne Logo
 liefen echte Spots (Kaufland, Lidl, Milkana, ERGO …, bei sixx der „WERBUNG“-Trenner), mit Logo lief die Sendung.
