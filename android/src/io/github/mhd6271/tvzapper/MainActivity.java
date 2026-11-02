@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         cfg = Config.load(this);
-        cfgStamp = Config.file(this).lastModified();
+        cfgSeen = cfgText();
         ScrollView scroll = new ScrollView(this);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -151,24 +151,41 @@ public class MainActivity extends Activity {
         saveCfg();
     }
 
-    /** Stand der Einstellungsdatei beim letzten eigenen Laden/Speichern. Bis 0.4.19 lud die App nur in onCreate und
-     *  speicherte bei jedem onPause: eine Aenderung per EINSTELLEN (Kinder-Modus) wurde so wieder zurueckgesetzt. */
-    private long cfgStamp;
+    /** Inhalt der Einstellungsdatei beim letzten eigenen Laden/Speichern. Bis 0.4.19 lud die App nur in onCreate und
+     *  speicherte bei jedem onPause und Knopfdruck: eine Aenderung per EINSTELLEN (Kinder-Modus) wurde so wieder
+     *  zurueckgesetzt. Verglichen wird der Inhalt, nicht lastModified (Zeitstempel evtl. nur sekundengenau). */
+    private String cfgSeen = "";
 
+    private String cfgText() {
+        try {
+            java.io.File f = Config.file(this);
+            return f.exists() ? new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Speichern, ausser die Datei wurde inzwischen von aussen geaendert: dann neu laden, die Aenderung von aussen gilt. */
     private void saveCfg() {
+        if (changedOutside()) {
+            Log.add(this, "Einstellungen wurden von außen geändert – neu geladen, Eingaben in der App nicht gespeichert");
+            hint("Einstellungen wurden von außen geändert (z. B. Home Assistant) – neu geladen");
+            reloadIfChanged();
+            return;
+        }
         cfg.save(this);
-        cfgStamp = Config.file(this).lastModified();
+        cfgSeen = cfgText();
     }
 
     private boolean changedOutside() {
-        return Config.file(this).lastModified() != cfgStamp;
+        return !cfgText().equals(cfgSeen);
     }
 
     /** Neu laden und Seite neu aufbauen, wenn sich die Datei inzwischen geaendert hat. */
     private void reloadIfChanged() {
         if (!changedOutside()) return;
         cfg = Config.load(this);
-        cfgStamp = Config.file(this).lastModified();
+        cfgSeen = cfgText();
         catRows.clear();
         root.removeAllViews();
         build();
@@ -235,7 +252,7 @@ public class MainActivity extends Activity {
             Config.file(this).delete();
             Log.add(this, "Grundeinstellung geladen");
             cfg = Config.load(this);
-            cfgStamp = Config.file(this).lastModified();
+            cfgSeen = cfgText();
             catRows.clear();
             root.removeAllViews();
             build();

@@ -529,8 +529,9 @@ class Fernseher:
             current, chans, infos = await self.collect()
         except (Exception, asyncio.CancelledError):
             # Auch beim Abbrechen (Schalter aus, Entfernen, HA-Stopp) die Programmzeitschrift schliessen; bis 0.4.6 blieb
-            # sie dann offen. shield: ein zweites Abbrechen unterbricht das Aufraeumen nicht.
-            await asyncio.shield(self.aufraeumen())
+            # sie dann offen. Ohne shield: beim zweiten Abbrechen (HA-Stopp) lieber aufgeben als eine verwaiste
+            # adb-Verbindung neben dem Entladen weiterlaufen lassen.
+            await self.aufraeumen()
             raise
         scored, cur, best = bewerte(current, chans, infos, cfg)
         aktion, neu, nachgelesen = "bleibt", None, None

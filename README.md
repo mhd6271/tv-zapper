@@ -658,8 +658,8 @@ entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINST
 "krimi, horror*"`; die Antwort enthält dann auch diese Werte. `ABFRAGEN` liefert `kinder_modus` und, wenn er an ist,
 die übrigen vier. `UMSCHALTEN` auf einen nicht erlaubten Sender antwortet im Kinder-Modus mit `fehler`. Als Wahrheitswert nimmt
 `EINSTELLEN` auch `1`/`0`, `an`/`aus`, `ja`/`nein`. Die Kinder-Werte stehen in jeder `EINSTELLEN`-Antwort. Ist dabei die
-Einstellungsseite der App offen, gilt ab 0.4.20 die Änderung von außen: Die App verwirft beim Schließen ihre eigenen
-Eingaben (Hinweis im Protokoll) und lädt beim nächsten Öffnen neu. Bis 0.4.19 überschrieb sie die Änderung.
+Einstellungsseite der App offen, gilt ab 0.4.20 die Änderung von außen: Die App verwirft beim Schließen oder beim nächsten
+Knopfdruck ihre eigenen Eingaben, lädt neu und sagt das (Hinweis im Bild und im Protokoll). Bis 0.4.19 überschrieb sie die Änderung.
 
 Starten auch ohne Fernbedienung: `adb shell am start -n io.github.mhd6271.tvzapper/.MainActivity --ez start true`.
 Ohne die App nach vorn zu holen (ab 0.4.6): `ABFRAGEN`-Empfänger mit `-a io.github.mhd6271.tvzapper.STARTEN`, mit
