@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 from custom_components.tv_zapper import const, tv
 from custom_components.tv_zapper.logik import (
-    app_umschalt_text, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, sender_nie, sender_schluessel, text_zu_bonus,
+    EREIGNIS_INFO, EREIGNIS_TREFFER, app_umschalt_text, ereignis_daten, bewerte_sendung, bonus_zu_text, grund_zeilen, punkte_text, sender_nie, sender_schluessel, text_zu_bonus,
     umschalt_text)
 
 CFG = {"interessen": const.STANDARD_INTERESSEN, "aus": const.STANDARD_AUS,
@@ -366,3 +366,35 @@ def test_logo_status_und_bild():
     assert bild.startswith("data:image/svg+xml;charset=utf-8,") and "%3Csvg" in bild and "P7" in bild
     assert "dasharray" in logik.logo_bild("RTL HD", "lernt 40 %")
     assert logik.logo_bild("RTL HD", None) is None
+
+
+async def test_dump_liest_keine_alte_datei():
+    """Scheitert uiautomator, darf nicht die Datei vom letzten Durchgang gelesen werden."""
+    f = tv.Fernseher("x", 1, None)
+    f.sh = AsyncMock(return_value="")
+    assert await f.dump() == []
+    cmd = f.sh.call_args.args[0]
+    assert cmd.startswith("rm -f /sdcard/tvz.xml;") and "&& cat /sdcard/tvz.xml" in cmd and "; cat" not in cmd
+
+
+async def test_abbrechen_schliesst_programmzeitschrift():
+    f = fernseher([])
+    f.collect = AsyncMock(side_effect=asyncio.CancelledError)
+    f.aufraeumen = AsyncMock()
+    try:
+        await f.durchgang(CFG)
+    except asyncio.CancelledError:
+        pass
+    else:
+        raise AssertionError("CancelledError verschluckt")
+    f.aufraeumen.assert_awaited_once()
+
+
+def test_ereignis_daten_gekuerzt():
+    import json
+    treffer = [{"nr": i, "sender": f"S{i}", "info": "x" * 2000, "punkte": 3} for i in range(40)]
+    erg = {"aktion": "bleibt", "vorher": {"nr": 1, "info": "y" * 2000}, "treffer": treffer}
+    d = ereignis_daten(erg)
+    assert len(d["treffer"]) == EREIGNIS_TREFFER and d["treffer_gesamt"] == 40
+    assert all(len(x["info"]) == EREIGNIS_INFO for x in d["treffer"]) and len(d["vorher"]["info"]) == EREIGNIS_INFO
+    assert len(json.dumps(d)) < 32768 and len(erg["treffer"]) == 40 and len(erg["treffer"][0]["info"]) == 2000

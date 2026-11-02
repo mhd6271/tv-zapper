@@ -82,7 +82,7 @@ def dump(press=None, wait=0.4):
     """Optional eine Taste druecken, dann die Oberflaeche lesen - alles in einem adb-Aufruf."""
     pre = f"input keyevent {press}; sleep {wait}; " if press else ""
     # KOMPAT: uiautomator dump braucht ein beschreibbares /sdcard und ist auf schwachen Geraeten langsam.
-    xml = adb("shell", pre + "uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1; cat /sdcard/tvz.xml")
+    xml = adb("shell", pre + "rm -f /sdcard/tvz.xml; uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1 && cat /sdcard/tvz.xml")
     i = xml.find("<?xml")
     if i < 0:
         return []

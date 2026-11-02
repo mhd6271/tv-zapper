@@ -20,7 +20,7 @@ from .const import (
     CONF_EINBLENDUNG, CONF_MAC, CONF_PROTOKOLL, CONF_SENDER_NIE, CONF_SPEICHER_TAKT, CONF_TAKT, CONF_VERWEILEN,
     DOMAIN, EVENT_DURCHGANG, EVENT_UMGESCHALTET, PLATFORMS, SCHLUESSEL_DATEI, STANDARD_OPTIONEN,
 )
-from .logik import app_umschalt_text, umschalt_text
+from .logik import app_umschalt_text, ereignis_daten, umschalt_text
 from .tv import Fernseher, lade_signer
 
 _LOGGER = logging.getLogger(__name__)
@@ -308,7 +308,7 @@ class Steuerung:
                 await self.tv.trennen()   # Verbindung nicht halten, wenn nur einmal geprueft wurde
             self.letztes = ergebnis
             _LOGGER.info("Durchgang: %s", {k: ergebnis.get(k) for k in ("aktion", "vorher", "neu", "fehler")})
-            self.hass.bus.async_fire(EVENT_DURCHGANG, ergebnis)
+            self.hass.bus.async_fire(EVENT_DURCHGANG, ereignis_daten(ergebnis))
             if ergebnis.get("aktion") == "umgeschaltet" and ergebnis.get("neu"):
                 neu = ergebnis["neu"]
                 self._umgeschaltet_melden({

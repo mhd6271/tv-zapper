@@ -37,6 +37,7 @@ EINBLENDEN_EMPFAENGER = "io.github.mhd6271.tvzapper/.EinblendungEmpfaenger"
 # KOMPAT: Programmzeitschrift des TCL (Paket com.tcl.tv). Andere Hersteller haben eine andere Activity,
 # dann klappt nur der Weg ueber die TV-App.
 GUIDE_APP = "com.tcl.tv/com.tcl.tv.epg.EpgProActivity"
+DUMP_CMD = "rm -f /sdcard/tvz.xml; uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1 && cat /sdcard/tvz.xml"
 # Schnittstelle der TV-App ab 0.3.0: Sender und Sendungen aus TvContract, Umschalten ohne Tasten
 ABFRAGEN_ACTION = "io.github.mhd6271.tvzapper.ABFRAGEN"
 UMSCHALTEN_ACTION = "io.github.mhd6271.tvzapper.UMSCHALTEN"
@@ -296,8 +297,9 @@ class Fernseher:
         pre = f"input keyevent {press}; sleep {wait}; " if press else ""
         # KOMPAT: uiautomator dump braucht ein beschreibbares /sdcard fuer den shell-Benutzer. Bei Videos oder
         # Animationen scheitert es manchmal ("could not get idle state"). Auf schwachen Geraeten dauert es mehrere
-        # Sekunden. Dann kommt eine leere Liste zurueck, und der Durchgang meldet einen Fehler.
-        xml = await self.sh(pre + "uiautomator dump /sdcard/tvz.xml >/dev/null 2>&1; cat /sdcard/tvz.xml")
+        # Sekunden. Dann kommt eine leere Liste zurueck, und der Durchgang meldet einen Fehler. Bis 0.4.6 las `; cat`
+        # nach einem gescheiterten dump die Datei vom letzten Mal (alte Senderzeilen); deshalb vorher loeschen und `&&`.
+        xml = await self.sh(pre + DUMP_CMD)
         return parse_xml(xml)
 
     def guide(self, nodes):
@@ -522,8 +524,10 @@ class Fernseher:
             return {"aktion": "uebersprungen", "app": app}
         try:
             current, chans, infos = await self.collect()
-        except Exception:
-            await self.aufraeumen()
+        except (Exception, asyncio.CancelledError):
+            # Auch beim Abbrechen (Schalter aus, Entfernen, HA-Stopp) die Programmzeitschrift schliessen; bis 0.4.6 blieb
+            # sie dann offen. shield: ein zweites Abbrechen unterbricht das Aufraeumen nicht.
+            await asyncio.shield(self.aufraeumen())
             raise
         scored, cur, best = bewerte(current, chans, infos, cfg)
         aktion, neu, nachgelesen = "bleibt", None, None

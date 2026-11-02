@@ -429,3 +429,22 @@ def logo_bild(sender, stand) -> str | None:
            f'<text x="32" y="33" font-family="Arial,sans-serif" font-weight="700" font-size="{groesse}" '
            f'fill="{schrift}" text-anchor="middle" dominant-baseline="central">{text}</text></svg>')
     return "data:image/svg+xml;charset=utf-8," + quote(svg)
+
+
+EREIGNIS_TREFFER = 10   # Treffer im Ereignis tv_zapper_durchgang
+EREIGNIS_INFO = 300     # Zeichen je Beschreibung darin
+
+
+def ereignis_daten(ergebnis: dict) -> dict:
+    """Ergebnis fuer das Ereignis tv_zapper_durchgang, gekuerzt: Der Recorder verwirft Ereignisse ueber 32 KB (mit
+    Warnung bei jedem Durchgang); bis 0.4.6 ging die volle Trefferliste samt Beschreibungen hinein."""
+    def kurz(x):
+        if not isinstance(x, dict) or not isinstance(x.get("info"), str) or len(x["info"]) <= EREIGNIS_INFO:
+            return x
+        return {**x, "info": x["info"][:EREIGNIS_INFO - 1] + "…"}
+    daten = {k: kurz(v) for k, v in ergebnis.items()}
+    treffer = ergebnis.get("treffer")
+    if isinstance(treffer, list):
+        daten["treffer"] = [kurz(x) for x in treffer[:EREIGNIS_TREFFER]]
+        daten["treffer_gesamt"] = len(treffer)
+    return daten
