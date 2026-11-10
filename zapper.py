@@ -163,9 +163,15 @@ def ensure_fav_tab(nodes):
     _, _, tab = parse_guide(nodes)
     if tab == FAV_TAB:
         return True
+    # Nur in der offenen Programmzeitschrift druecken: im Fernsehbild schaltet DOWN den Sender um
+    # (wie tv.py; bis 10.11.2026 fehlte die Pruefung hier)
+    if focus_app() != GUIDE_APP:
+        return False
     key("KEYCODE_DPAD_LEFT")
     time.sleep(0.8)
     for _ in range(8):
+        if focus_app() != GUIDE_APP:
+            return False
         f = [n.get("content-desc") for n in dump() if n.get("focused") == "true"]
         if FAV_TAB in f:
             key("KEYCODE_DPAD_CENTER")

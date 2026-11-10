@@ -2,61 +2,61 @@
   "config": {
     "step": {
       "user": {
-        "title": "TV-Zapper einrichten",
-        "description": "Adresse des Fernsehers (ADB über Netzwerk muss am Fernseher an sein). Beim ersten Verbinden fragt der Fernseher „USB-Debugging zulassen?“ – mit der Fernbedienung „Immer zulassen“ wählen und OK drücken (du hast dafür 60 Sekunden). {fehler}",
+        "title": "Set up TV-Zapper",
+        "description": "Address of the TV (network ADB must be enabled on the TV). On the first connection the TV asks “Allow USB debugging?” – choose “Always allow” with the remote and press OK (you have 60 seconds). {fehler}",
         "data": {
-          "host": "Adresse (IP) des Fernsehers",
-          "port": "ADB-Port",
-          "favorit": "Name der Senderliste in der Programmzeitschrift"
+          "host": "Address (IP) of the TV",
+          "port": "ADB port",
+          "favorit": "Name of the channel list in the programme guide"
         }
       },
       "reconfigure": {
-        "title": "TV-Zapper: Adresse ändern",
-        "description": "Neue Adresse oder neuer ADB-Port des Fernsehers. Die Einstellungen bleiben erhalten. {fehler}",
+        "title": "TV-Zapper: change address",
+        "description": "New address or ADB port of the TV. Your settings are kept. {fehler}",
         "data": {
-          "host": "Adresse (IP) des Fernsehers",
-          "port": "ADB-Port"
+          "host": "Address (IP) of the TV",
+          "port": "ADB port"
         }
       }
     },
     "error": {
-      "cannot_connect": "Keine ADB-Verbindung zum Fernseher. Ist er an, ADB über Netzwerk eingeschaltet und die Abfrage am Fernseher bestätigt?",
-      "host_ungueltig": "Adresse ungültig: IP-Adresse oder Rechnername, nur Buchstaben, Ziffern, Punkt, Doppelpunkt und Bindestrich.",
-      "favorit_ungueltig": "Name der Senderliste fehlt oder ist zu lang (höchstens 60 Zeichen)."
+      "cannot_connect": "No ADB connection to the TV. Is it on, is network ADB enabled and was the prompt on the TV confirmed?",
+      "host_ungueltig": "Invalid address: IP address or host name, only letters, digits, dot, colon and hyphen.",
+      "favorit_ungueltig": "Name of the channel list is missing or too long (60 characters at most)."
     },
     "abort": {
-      "already_configured": "Dieser Fernseher ist schon eingerichtet.",
-      "reconfigure_successful": "Adresse geändert."
+      "already_configured": "This TV is already set up.",
+      "reconfigure_successful": "Address changed."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "TV-Zapper: Einstellungen",
-        "description": "Interessen: eine Zeile je Kategorie, `Name | Gewicht | Wort, Wort*, …`. Ein `*` am Wortende passt als Wortanfang (doku* = Doku, Dokumentation). Je Kategorie zählt das Gewicht einmal, die Summe entscheidet. {fehler}",
+        "title": "TV-Zapper: settings",
+        "description": "Interests: one line per category, `Name | Weight | word, word*, …`. A `*` at the end of a word matches the start of a word (doku* = Doku, Dokumentation). Each category counts its weight once, the sum decides. {fehler}",
         "data": {
-          "interessen": "Interessen",
-          "aus": "Nie nehmen (Wörter, mit Komma getrennt)",
-          "laufzeit_min": "Laufzeit nach dem Einschalten",
-          "verweilen_min": "Verweilzeit pro Sender (Minuten zwischen zwei Prüfungen)",
-          "favorit": "Name der Senderliste in der Programmzeitschrift",
-          "nur_lesen": "Nur lesen (nie umschalten, zum Testen)",
-          "sender_nie": "Sender nie nehmen (Sendernamen wie in der Programmzeitschrift, mit Komma getrennt)",
-          "sender_bevorzugt": "Bevorzugte Sender: eine Zeile je Sender, `Sendername | Bonuspunkte` (zählt nur, wenn die Sendung auch passt)",
-          "einblendung": "Einblendung am Fernseher (beim Einschalten, Umschalten und Ende)",
-          "protokoll": "TV-Protokoll: regelmäßig nachsehen, was läuft (Sensor „Läuft jetzt“, auch ohne Zapper)",
-          "takt_s": "Abfragetakt des TV-Protokolls in Sekunden (wie oft „Läuft jetzt“ nachfragt)",
-          "speicher_min": "Arbeitsspeicher von Fernseher und TV-App alle … Minuten lesen (0 = aus)",
-          "mac": "MAC-Adresse des Fernsehers für Wake-on-LAN (leer = nicht wecken, z. B. aa:bb:cc:dd:ee:ff)"
+          "interessen": "Interests",
+          "aus": "Never pick (words, separated by commas)",
+          "laufzeit_min": "Run time after switching on",
+          "verweilen_min": "Time per channel (minutes between two checks)",
+          "favorit": "Name of the channel list in the programme guide",
+          "nur_lesen": "Read only (never switch, for testing)",
+          "sender_nie": "Never pick these channels (names as in the programme guide, separated by commas)",
+          "sender_bevorzugt": "Preferred channels: one line per channel, `Channel name | bonus points` (only counts if the show matches too)",
+          "einblendung": "On-screen message on the TV (when switching on, switching channel and at the end)",
+          "protokoll": "TV log: check regularly what is on (sensor “Läuft jetzt”, also without the zapper)",
+          "takt_s": "Polling interval of the TV log in seconds (how often “Läuft jetzt” asks)",
+          "speicher_min": "Read the memory of the TV and the TV app every … minutes (0 = off)",
+          "mac": "MAC address of the TV for Wake-on-LAN (empty = do not wake, e.g. aa:bb:cc:dd:ee:ff)"
         }
       }
     },
     "error": {
-      "interessen_ungueltig": "Interessen fehlerhaft – siehe Hinweis oben.",
-      "bonus_ungueltig": "Bevorzugte Sender fehlerhaft – siehe Hinweis oben.",
-      "mac_ungueltig": "MAC-Adresse fehlerhaft – siehe Hinweis oben.",
-      "woerter_ungueltig": "Liste fehlerhaft – siehe Hinweis oben.",
-      "favorit_ungueltig": "Name der Senderliste fehlt oder ist zu lang (höchstens 60 Zeichen)."
+      "interessen_ungueltig": "Interests contain an error – see the note above.",
+      "bonus_ungueltig": "Preferred channels contain an error – see the note above.",
+      "mac_ungueltig": "MAC address contains an error – see the note above.",
+      "woerter_ungueltig": "List contains an error – see the note above.",
+      "favorit_ungueltig": "Name of the channel list is missing or too long (60 characters at most)."
     }
   }
 }
