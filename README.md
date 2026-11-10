@@ -581,7 +581,7 @@ Schaltet man selbst um, wird der neue Sender beobachtet. Wer mitten in eine Paus
 10 s: In den ersten 30 s nach dem Hineinschalten genügen 4 von 5 Sekunden ohne Logo – nur bei Sendern mit fertiger
 Logo-Maske, ohne Maske wird gelernt statt geraten (nicht jede Szene ohne Logo ist Werbung). Sender mit gerade
 erkannter Werbung meidet der Zapper bis zum erwarteten Pausenende (typische Pause des Senders, sonst die Zeitgrenze, Vorgabe 6 min); nach dem
-Zurückschalten weicht die App frühestens nach 3 min wieder aus (kein Hin und Her). Spätestens nach einer Zeitgrenze geht es auf jeden Fall
+Zurückschalten weicht die App frühestens nach 3 min wieder aus (kein Hin und Her). Ab 0.4.21 gilt das auch, wenn man während des Ausweichens selbst von Hand auf den Hauptsender zurückschaltet (am 10.11.2026 wich die App sonst dreimal in zwei Minuten von VOX aus). Bestätigt der Fernseher das Zurückschalten nicht, versucht die App es ab 0.4.21 noch zweimal; ein Ausweichen, das erst verspätet ankommt, zählt trotzdem als ausgewichen (vorher wurde der Ausweichsender dann zum Hauptsender). Schaltet man „Werbung umgehen“ aus, während die App ausgewichen ist, läuft die Zapper-Runde ab 0.4.21 weiter (vorher wartete sie endlos). Spätestens nach einer Zeitgrenze geht es auf jeden Fall
 zurück (Vorgabe 6 min, einstellbar; sobald für den Sender Pausen gemessen sind: typische Pause + 1 min, mindestens die
 Vorgabe, höchstens das Doppelte). „Typisch“ ist seit 0.4.19 der Median der Pausen ab 90 s; kürzere werden nicht mehr
 gespeichert. Bis 0.4.18 galt der Durchschnitt ab 30 s ohne Untergrenze: Kurze Fehlalarme drückten ihn, am 31.10.2026

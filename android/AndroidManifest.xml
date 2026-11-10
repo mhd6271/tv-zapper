@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.mhd6271.tvzapper"
-    android:versionCode="29"
-    android:versionName="0.4.20">
+    android:versionCode="30"
+    android:versionName="0.4.21">
 
     <!-- KOMPAT: minSdk 26. Bis 0.4.17 rief der Code Methoden ab API 29 und 33 direkt auf (Android 8 bis 12 stuerzten ab);
          seit 0.4.18 verzweigt er nach SDK_INT, im dex keine Aufrufe ueber API 26 mehr ohne Abfrage. Geprueft nur Android 14 (TCL). -->

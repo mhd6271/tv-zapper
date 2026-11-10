@@ -23,7 +23,8 @@ final class Scorer {
 
     static boolean any(List<String> words, String text) {
         for (String w : words) {
-            if (!w.trim().isEmpty() && wordRx(w).matcher(text).find()) return true;
+            // nur Sterne oder leer: kein Wort (als Muster passte es auf jeden Text, "*" bei Nie sperrte alles)
+            if (!w.replace("*", "").trim().isEmpty() && wordRx(w).matcher(text).find()) return true;
         }
         return false;
     }

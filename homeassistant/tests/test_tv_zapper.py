@@ -344,3 +344,29 @@ async def test_logbuch(hass: HomeAssistant):
     assert len(ereignisse) == 2   # UMSCHALTEN von HA nicht doppelt
     st._app_umschaltungen_melden([])   # aeltere App ohne das Feld: nichts
     assert len(ereignisse) == 2
+
+
+async def test_abbruch_waehrend_schluss_einblendung(hass: HomeAssistant):
+    """Wird die Schleife genau in der Schluss-Einblendung abgebrochen, raeumt sie trotzdem auf."""
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    drin = asyncio.Event()
+
+    async def haengt(text, ms=6000):
+        if text == "TV-Zapper aus":
+            drin.set()
+            await asyncio.sleep(3600)
+
+    st.wecken = AsyncMock()
+    st.durchgang = AsyncMock(return_value={"aktion": "fehler"})   # dreimal Fehler -> Schleife endet von selbst
+    st.opt = lambda name, _alt=st.opt: 0 if name == "verweilen_min" else _alt(name)
+    st._restzeit_s = lambda: 3600
+    with patch.object(st, "einblenden", haengt), patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()) as trennen:
+        await st.starten()
+        task = st.task
+        await asyncio.wait_for(drin.wait(), 5)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert st.task is None and st.ende is None and st.start is None
+        trennen.assert_awaited()

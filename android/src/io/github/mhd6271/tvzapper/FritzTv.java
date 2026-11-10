@@ -20,6 +20,8 @@ final class FritzTv {
     final Map<String, List<String>> urls = new LinkedHashMap<>();
     final Map<String, List<String>> names = new LinkedHashMap<>();
     private final Map<String, Integer> pick = new HashMap<>();
+    /** Je Sender: wie viele Eintraege seit dem letzten prefer()/reset() schon ohne Bild probiert wurden. */
+    private final Map<String, Integer> tried = new HashMap<>();
 
     static FritzTv load(String host) throws Exception {
         FritzTv f = new FritzTv();
@@ -93,19 +95,23 @@ final class FritzTv {
         List<String> l = urls.get(norm(tvName));
         int i = l == null || url == null ? -1 : l.indexOf(url);
         if (i >= 0) pick.put(norm(tvName), i);
+        tried.remove(norm(tvName));
     }
 
     /** Wieder beim ersten Eintrag anfangen (nach der Wartezeit, wenn keiner ging). */
     void reset(String tvName) {
         pick.remove(norm(tvName));
+        tried.remove(norm(tvName));
     }
 
-    /** Naechsten Eintrag fuer diesen Sender nehmen; false, wenn keiner mehr uebrig ist. */
+    /** Naechsten Eintrag fuer diesen Sender nehmen, nach dem letzten wieder den ersten; false, wenn alle probiert
+     *  sind. In 0.4.19/0.4.20 ging es vom gemerkten Eintrag nur bis zum Listenende: lieferte der gemerkte kein Bild
+     *  mehr, kamen die Eintraege davor nie wieder dran (Review 10.11.2026, nicht am Geraet beobachtet). */
     boolean next(String tvName) {
-        List<String> l = urls.get(norm(tvName));
-        int i = index(tvName) + 1;
-        if (l == null || i >= l.size()) return false;
-        pick.put(norm(tvName), i);
+        String k = norm(tvName);
+        List<String> l = urls.get(k);
+        if (l == null || tried.merge(k, 1, Integer::sum) >= l.size()) return false;
+        pick.put(k, (index(tvName) + 1) % l.size());
         return true;
     }
 }

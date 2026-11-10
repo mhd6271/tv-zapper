@@ -56,6 +56,12 @@ final class WerbeWaechter implements Sensor.Frames {
     private static final boolean LERN_HINWEISE = false;
     private long lastFrame, lastReport, watchStart;
     private boolean gotFrame, paused;
+    private long pausedAt;
+    /** Ausweichen, das der Fernseher nicht rechtzeitig bestaetigt hat: Zielsender und bis wann er noch zaehlt. */
+    private long pendingAway = -1, pendingUntil;
+    /** Fehlversuche beim Zurueckschalten auf den Hauptsender, mit Text und Grund fuer den naechsten Versuch. */
+    private int backTries;
+    private String backText, backReason;
     /** Sender, die die FRITZ!Box gerade nicht liefert (z. B. 562 MHz: MTV, Comedy Central) -> bis wann ignorieren. */
     private final Map<String, Long> noSignal = new java.util.HashMap<>();
     private int framesSinceReport;
@@ -139,6 +145,7 @@ final class WerbeWaechter implements Sensor.Frames {
             if (sensor != null) {
                 stopSensor();
                 paused = true;   // Fernsehbild nicht vorn: Stream sparen, danach fuer denselben Sender neu starten
+                pausedAt = System.currentTimeMillis();
             }
             return;
         }
@@ -147,14 +154,38 @@ final class WerbeWaechter implements Sensor.Frames {
             Log.add(c, "Werbe-Sensor: Fernsehbild wieder vorn – beobachte " + home.name + " weiter");
             lastFrame = System.currentTimeMillis();
             gotFrame = false;
+            // Die Zeit ohne Fernsehbild zaehlt nicht als Werbung (sonst nach 12 min "Logo neu lernen" mit guter Maske),
+            // und Sekunden von vorher gehoeren nicht ins Fenster.
+            if (pause) pauseSince += System.currentTimeMillis() - pausedAt;
+            seconds.clear();
+            secStart = 0;
+            secSum = 0;
+            secN = 0;
             sensor = new Sensor(fritz.urlFor(home.name), this);
             sensor.start();
         }
         long cur = Epg.currentChannelId(c);
         if (cur < 0) return;
         if (away && cur != awayChannel) {
-            Log.add(c, "Werbung: selbst umgeschaltet – folge dem neuen Sender");
             away = false;
+            backTries = 0;
+            if (home != null && cur == home.id) {
+                // Von Hand zurueck auf den Hauptsender: gewollt. Bis 0.4.20 wich die App gleich wieder aus, sobald sie
+                // dort erneut Werbung sah (am TCL 10.11.2026: dreimal VOX -> ZDFinfo in zwei Minuten).
+                Log.add(c, "Werbung: von Hand zurück auf " + home.name + " – weiche vorerst nicht wieder aus");
+                returnedAt = System.currentTimeMillis();
+            } else Log.add(c, "Werbung: selbst umgeschaltet – folge dem neuen Sender");
+        }
+        if (!away && pendingAway >= 0) {
+            if (System.currentTimeMillis() > pendingUntil) pendingAway = -1;
+            else if (cur == pendingAway && home != null && cur != home.id && pause) {
+                // Der Fernseher hat doch noch umgeschaltet: als ausgewichen fuehren. Bis 0.4.20 wurde der
+                // Ausweichsender sonst zum Hauptsender, und es ging nie zurueck.
+                Log.add(c, "Werbung: Ausweichen von " + home.name + " doch noch angekommen");
+                away = true;
+                awayChannel = cur;
+                pendingAway = -1;
+            }
         }
         if (!away && (home == null || home.id != cur)
                 && (System.currentTimeMillis() >= retryAt || (retryFor >= 0 && cur != retryFor))) watch(cur);
@@ -186,11 +217,14 @@ final class WerbeWaechter implements Sensor.Frames {
                 sensor.start();
             }
         }
+        if (away && backTries > 0) {   // Zurueckschalten war nicht bestaetigt: noch einmal
+            goHome(backText, backReason);
+            return;
+        }
         if (away && System.currentTimeMillis() - pauseSince > maxAwayMs()) {
             Log.add(c, "Werbepause auf " + home.name + " läuft schon " + (System.currentTimeMillis() - pauseSince) / 60_000
                     + " min – zurück (Zeitgrenze)");
-            away = false;
-            if (svc.tuneTo(home, "Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE)) returnedAt = System.currentTimeMillis();
+            goHome("Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE);
             return;
         }
         if (pause && System.currentTimeMillis() - pauseSince > MAX_PAUSE_MS) {
@@ -198,10 +232,25 @@ final class WerbeWaechter implements Sensor.Frames {
             if (logo != null) logo.relearn();
             pause = false;
             // Zeitgrenze ueber 12 min (Einstellung bis 60): bis 0.4.19 blieb der Fernseher dann auf dem Ausweichsender
-            if (away) {
-                away = false;
-                if (svc.tuneTo(home, "Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE)) returnedAt = System.currentTimeMillis();
-            }
+            if (away) goHome("Zurück zu " + home.name, Umschaltungen.ZURUECK_ZEITGRENZE);
+        }
+    }
+
+    /** Zurueck auf den Hauptsender. Bestaetigt der Fernseher ihn nicht, bleibt "ausgewichen" stehen und tick() versucht
+     *  es noch zweimal. Bis 0.4.20 gab es nur einen Versuch; danach galt der Ausweichsender als neuer Hauptsender. */
+    private void goHome(String text, String reason) {
+        if (svc.tuneTo(home, text, reason)) {
+            away = false;
+            awayChannel = -1;
+            backTries = 0;
+            returnedAt = System.currentTimeMillis();
+        } else if (++backTries >= 3) {
+            Log.add(c, "Zurückschalten auf " + home.name + " dreimal nicht bestätigt – gebe auf");
+            away = false;
+            backTries = 0;
+        } else {
+            backText = text;
+            backReason = reason;
         }
     }
 
@@ -210,6 +259,7 @@ final class WerbeWaechter implements Sensor.Frames {
         paused = false;
         home = null;
         pause = false;
+        pendingAway = -1;
         seconds.clear();
         secStart = 0;
         secSum = 0;
@@ -266,9 +316,16 @@ final class WerbeWaechter implements Sensor.Frames {
         sensor = null;
     }
 
+    /** Auch wenn "Werbung umgehen" ausgeschaltet wird. Bis 0.4.20 blieb "ausgewichen" dabei stehen: Die Zapper-Runde
+     *  wartete dann endlos ("Werbepause läuft"), und nach dem Wiedereinschalten warf tick() bei jedem Aufruf einen Fehler. */
     synchronized void shutdown() {
         stopSensor();
         home = null;
+        pause = false;
+        away = false;
+        paused = false;
+        backTries = 0;
+        pendingAway = -1;
     }
 
     // --- Bilder vom Sensor (Sensor-Thread) ---
@@ -314,10 +371,7 @@ final class WerbeWaechter implements Sensor.Frames {
             pause = false;
             adUntil.remove(home.name);
             seconds.clear();
-            if (away) {
-                away = false;
-                if (svc.tuneTo(home, "Doch keine Werbung – zurück zu " + home.name, Umschaltungen.ZURUECK_FEHLALARM)) returnedAt = now;
-            }
+            if (away) goHome("Doch keine Werbung – zurück zu " + home.name, Umschaltungen.ZURUECK_FEHLALARM);
         }
         if (secStart == 0) secStart = now;
         secSum += v;
@@ -424,13 +478,7 @@ final class WerbeWaechter implements Sensor.Frames {
             PauseStats.add(c, home.name, secs);
             adUntil.remove(home.name);
             dump("vorbei_" + homeKey);
-            if (away) {
-                away = false;
-                if (svc.tuneTo(home, "Werbung vorbei – zurück zu " + home.name, Umschaltungen.ZURUECK)) {
-                    awayChannel = -1;
-                    returnedAt = System.currentTimeMillis();
-                }
-            }
+            if (away) goHome("Werbung vorbei – zurück zu " + home.name, Umschaltungen.ZURUECK);
         }
     }
 
@@ -492,6 +540,10 @@ final class WerbeWaechter implements Sensor.Frames {
         if (svc.tuneTo(best, "Werbung auf " + home.name + " – solange " + best.name + (p == null ? "" : ": " + p.title), Umschaltungen.WERBUNG)) {
             away = true;
             awayChannel = best.id;
+            backTries = 0;
+        } else {   // nicht bestaetigt: kommt der Fernseher in den naechsten 15 s doch dort an, zaehlt es (tick)
+            pendingAway = best.id;
+            pendingUntil = System.currentTimeMillis() + 15_000;
         }
     }
 }

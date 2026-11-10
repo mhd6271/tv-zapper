@@ -281,12 +281,16 @@ class Steuerung:
                     break
                 await asyncio.sleep(takt)
         finally:
-            if not asyncio.current_task().cancelling():
-                await self.einblenden("TV-Zapper aus")
-            self.task = None
-            self.start = self.ende = None
-            await self.tv.trennen()
-            self.benachrichtigen()
+            try:
+                if not asyncio.current_task().cancelling():
+                    await self.einblenden("TV-Zapper aus")
+            finally:
+                # Auch wenn genau hier abgebrochen wird (Schalter aus waehrend der Einblendung): bis 0.4.7 blieben
+                # dann "laeuft bis" und die Verbindung stehen.
+                self.task = None
+                self.start = self.ende = None
+                self.benachrichtigen()
+                await self.tv.trennen()
 
     # --- Ein Durchgang ----------------------------------------------------------------------
     async def durchgang(self, nur_lesen: bool) -> dict:
