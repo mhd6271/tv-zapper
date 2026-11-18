@@ -27,6 +27,7 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
     static final String UMSCHALTEN = "io.github.mhd6271.tvzapper.UMSCHALTEN";
     /** --es sender "ProSieben MAXX HD" [--el von <ms>] [--el bis <ms>] [--ez alt true] – siehe PauseStats.delete */
     /** --es ausweichen_bevorzugt true|false  [--es werbung_umgehen true|false] [--es umschaltgrund_einblenden true|false]
+     *  [--es programminfo true|false]
      *  [--es kinder_modus true|false] [--es kinder_sender "KiKA HD, ..."] [--es kinder_sender_gesperrt "RTL HD, ..."]
      *  [--es kinder_uebrige_erlaubt true|false] [--es kinder_sperrbegriffe "krimi, horror*"] */
     static final String EINSTELLEN = "io.github.mhd6271.tvzapper.EINSTELLEN";
@@ -54,19 +55,22 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
                 String ab = i.getStringExtra("ausweichen_bevorzugt"), wu = i.getStringExtra("werbung_umgehen"),
                         ug = i.getStringExtra("umschaltgrund_einblenden"), km = i.getStringExtra("kinder_modus"),
                         ks = i.getStringExtra("kinder_sender"), kb = i.getStringExtra("kinder_sperrbegriffe"),
-                        kg = i.getStringExtra("kinder_sender_gesperrt"), ku = i.getStringExtra("kinder_uebrige_erlaubt");
+                        kg = i.getStringExtra("kinder_sender_gesperrt"), ku = i.getStringExtra("kinder_uebrige_erlaubt"),
+                        pi = i.getStringExtra("programminfo");
                 boolean kid = km != null || ks != null || kb != null || kg != null || ku != null;
-                if (ab == null && wu == null && ug == null && !kid)
+                if (ab == null && wu == null && ug == null && pi == null && !kid)
                     throw new IllegalArgumentException("nichts zu setzen");
                 if (ab != null) cfg.dodgePreferred = parseBool(ab);
                 if (wu != null) cfg.avoidAds = parseBool(wu);
                 if (ug != null) cfg.showReason = parseBool(ug);
+                if (pi != null) cfg.programInfo = parseBool(pi);
                 if (km != null) cfg.kids = parseBool(km);
                 if (ks != null) cfg.kidsChannels = Config.splitList(ks);
                 if (kb != null) cfg.kidsBlock = Config.splitList(kb);
                 if (kg != null) cfg.kidsDenied = Config.splitList(kg);
                 if (ku != null) cfg.kidsRestAllowed = parseBool(ku);
                 cfg.save(c);
+                SenderInfo.sicherstellen(c);
                 kinderJson(cfg, out);
                 if (kid)
                     Log.add(c, "Kinder-Modus von außen: " + (cfg.kids ? "an" : "aus") + ", " + cfg.kidsChannels.size()
@@ -76,8 +80,9 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
                 out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
                 out.put("werbung_umgehen", cfg.avoidAds);
                 out.put("umschaltgrund_einblenden", cfg.showReason);
+                out.put("programminfo", cfg.programInfo);
                 Log.add(c, "Einstellung von außen: ausweichen_bevorzugt=" + cfg.dodgePreferred + ", werbung_umgehen=" + cfg.avoidAds
-                        + ", umschaltgrund_einblenden=" + cfg.showReason);
+                        + ", umschaltgrund_einblenden=" + cfg.showReason + ", programminfo=" + cfg.programInfo);
             } else if (PAUSEN_LOESCHEN.equals(i.getAction())) {
                 String ch = i.getStringExtra("sender");
                 if (ch == null) throw new IllegalArgumentException("sender fehlt");
@@ -110,6 +115,8 @@ public class AbfrageEmpfaenger extends BroadcastReceiver {
         out.put("werbung_umgehen", cfg.avoidAds);
         out.put("ausweichen_bevorzugt", cfg.dodgePreferred);
         out.put("umschaltgrund_einblenden", cfg.showReason);
+        out.put("programminfo", cfg.programInfo);
+        SenderInfo.sicherstellen(c);   // Home Assistant fragt alle 15 s: startet die Programminfo neu, falls Android sie beendet hat
         if (cfg.kids) kinderJson(cfg, out);
         else out.put("kinder_modus", false);
         WerbeWaechter w = ZapperService.waechter;

@@ -8,7 +8,7 @@ from .entity import ZapperEntity
 
 async def async_setup_entry(hass, entry, async_add_entities):
     st = entry.runtime_data
-    async_add_entities([ZapperSchalter(st), AusweichenSchalter(st), GrundSchalter(st)])
+    async_add_entities([ZapperSchalter(st), AusweichenSchalter(st), GrundSchalter(st), ProgramminfoSchalter(st)])
 
 
 class ZapperSchalter(ZapperEntity, SwitchEntity):
@@ -64,3 +64,8 @@ def AusweichenSchalter(st):  # noqa: N802
 def GrundSchalter(st):  # noqa: N802
     """Zum Nachvollziehen: bei jeder Umschaltung den Grund mit Punkten im Fernsehbild einblenden (Standard aus)."""
     return AppEinstellungSchalter(st, "umschaltgrund_einblenden", "Umschaltgrund einblenden", "mdi:message-text-outline")
+
+
+def ProgramminfoSchalter(st):  # noqa: N802
+    """Bei jedem Senderwechsel unten links Sender und laufende Sendung einblenden, auch ohne Zapper (Standard an)."""
+    return AppEinstellungSchalter(st, "programminfo", "Programminfo beim Umschalten", "mdi:information-outline")

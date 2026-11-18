@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
     private Button kidsBtn;
     private EditText never, runH, runM, dwell, bonus, adFree, fritz, pauseMax, tvInput, tvApp;
     private TextView pauseStats, apiInfo;
-    private Button adToggle, setupButton, startButton, prefToggle, reasonToggle;
+    private Button adToggle, setupButton, startButton, prefToggle, reasonToggle, infoToggle;
     private TextView status, perms, log;
     private boolean showAllChannels;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -84,6 +84,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         reloadIfChanged();
+        SenderInfo.sicherstellen(this);
         ui.post(refresher);
         if (setupRunning) ui.postDelayed(this::setupNext, 400);   // zurueck aus einer Einstellungsseite
     }
@@ -349,6 +350,16 @@ public class MainActivity extends Activity {
         });
         reasonToggle.setText("Umschaltgrund einblenden: " + (cfg.showReason ? "an" : "aus"));
         root.addView(reasonToggle);
+        root.addView(text("Zeigt bei jedem Senderwechsel unten links etwa 7 s lang Sender, laufende Sendung und Restzeit – "
+                + "auch wenn der Zapper aus ist.", 14, false));
+        infoToggle = button("", v -> {
+            cfg.programInfo = !cfg.programInfo;
+            infoToggle.setText("Programminfo beim Umschalten: " + (cfg.programInfo ? "an" : "aus"));
+            saveCfg();
+            SenderInfo.sicherstellen(this);
+        });
+        infoToggle.setText("Programminfo beim Umschalten: " + (cfg.programInfo ? "an" : "aus"));
+        root.addView(infoToggle);
         section("Protokoll");
         log = text("", 13, false);
         log.setTypeface(android.graphics.Typeface.MONOSPACE);

@@ -246,6 +246,22 @@ async def test_umschaltgrund_einblenden(hass: HomeAssistant):
 
 
 
+async def test_programminfo_schalter(hass: HomeAssistant):
+    entry = await _einrichten(hass)
+    st = entry.runtime_data
+    sw = "switch.tv_zapper_programminfo_beim_umschalten"
+    assert hass.states.get(sw).state == "unavailable"   # App vor 0.4.22 meldet das Feld nicht
+    st.jetzt = {"quelle": "app", "fernsehbild_vorn": True, "jetzt": None, "programminfo": True}
+    st.benachrichtigen()
+    assert hass.states.get(sw).state == "on"
+    ein = AsyncMock(return_value={"ok": True, "programminfo": False})
+    with patch("custom_components.tv_zapper.tv.Fernseher.app_einstellen", ein), \
+         patch("custom_components.tv_zapper.tv.Fernseher.trennen", AsyncMock()), \
+         patch("custom_components.tv_zapper.Steuerung.jetzt_lesen", AsyncMock()):
+        await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
+    ein.assert_awaited_once_with("programminfo", False)
+
+
 async def test_sicherheit_formulare(hass: HomeAssistant):
     import voluptuous as vol
     # Adresse mit Shell-Zeichen und Port ausserhalb 1-65535 werden abgewiesen, ohne Verbindungsversuch

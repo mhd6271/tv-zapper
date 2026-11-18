@@ -47,6 +47,8 @@ final class Config {
     boolean dodgePreferred = false;
     /** Debug: bei jeder Umschaltung Grund und Punkte einblenden. */
     boolean showReason = false;
+    /** Bei jedem Senderwechsel unten links Sender und laufende Sendung einblenden, auch ohne Zapper (SenderInfo). */
+    boolean programInfo = true;
     // KOMPAT: "fritz.box" loest nur auf, wenn die FRITZ!Box der DNS-Server ist; sonst IP in den Einstellungen eintragen.
     String fritz = "fritz.box";
     /** Leer = automatisch erkennen. */
@@ -141,6 +143,7 @@ final class Config {
         cfg.avoidAds = o.optBoolean("werbung_umgehen", true);
         cfg.dodgePreferred = o.optBoolean("ausweichen_bevorzugt", false);
         cfg.showReason = o.optBoolean("umschaltgrund_einblenden", false);
+        cfg.programInfo = o.optBoolean("programminfo", true);
         cfg.fritz = o.optString("fritzbox", "fritz.box");
         cfg.tvInput = o.optString("tv_eingang", "");
         cfg.tvApp = o.optString("tv_app", "");
@@ -256,6 +259,7 @@ final class Config {
         o.put("werbung_umgehen", avoidAds);
         o.put("ausweichen_bevorzugt", dodgePreferred);
         o.put("umschaltgrund_einblenden", showReason);
+        o.put("programminfo", programInfo);
         o.put("fritzbox", fritz);
         o.put("tv_eingang", tvInput);
         o.put("tv_app", tvApp);

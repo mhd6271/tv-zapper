@@ -113,6 +113,10 @@ Alles mit der Fernbedienung:
 - **Werbung umgehen:** an/aus, die werbefreien Ausweichsender, „bei Werbung zuerst auf bevorzugte Sender ausweichen“,
   Zeitgrenze, Adresse der FRITZ!Box
 - **Umschaltgrund einblenden** (Fehlersuche): zeigt bei jeder Umschaltung Grund und Punkte im Bild, Standard aus
+- **Programminfo beim Umschalten** (ab 0.4.22): zeigt bei jedem Senderwechsel, auch von Hand und auch ohne laufenden
+  Zapper, unten links etwa 7 s lang Sender, laufende Sendung, Uhrzeit und Restzeit (die Info-Leiste des Fernsehers ist
+  nicht immer aktuell). Läuft als eigener kleiner Dienst; Home Assistant startet ihn bei jeder Abfrage neu, falls Android
+  ihn beendet hat. Standard an
 - **Einmal prüfen (nur lesen):** bewertet alle Sender, ohne umzuschalten; das Ergebnis steht im Protokoll
 - **Fernseher:** Tuner-Eingang und Fernseh-App. Leer heißt, die App erkennt beides selbst; auf anderen Fernsehern kann
   man es hier von Hand eintragen.
@@ -368,6 +372,8 @@ HA bewertet mit seinen eigenen Interessen.
   Ist gerade die Einstellungsseite der TV-App offen, speichert sie beim Schließen ihren eigenen Stand und
   überschreibt einen in der Zeit aus HA gesetzten Wert (laut App-Sitzung, 27.10.2026).
 - `switch.tv_zapper_umschaltgrund_einblenden` – setzt die Einstellung `umschaltgrund_einblenden` der **TV-App**
+- `switch.tv_zapper_programminfo_beim_umschalten` – setzt die Einstellung `programminfo` der **TV-App** (ab 0.4.22,
+  vorher „nicht verfügbar“)
   (ab 0.4.0), Standard aus; zum Nachvollziehen. Ist sie an, blendet die App bei jeder Umschaltung 12 s lang den Grund
   mit Punkten ein – bei ihren eigenen und bei denen des HA-Zappers: der schickt dafür beim `UMSCHALTEN` Zeilen mit
   (`--es grund "Zapper-Runde (HA) | Hip-Hop +5 („hip hop“ im Titel) | ★ bevorzugter Sender +1 | = 6 Punkte"`) und
@@ -535,6 +541,7 @@ Die App prüft den Sender alle 2,5 s und nur, solange der Zapper läuft. Wer sch
 | Bei Werbung zuerst auf bevorzugte Sender ★ ausweichen (`ausweichen_bevorzugt`): bester bevorzugter Sender, der nicht gerade selbst Werbung hat, sonst ein werbefreier | „Werbung umgehen“ | aus |
 | FRITZ!Box-Adresse | „Werbung umgehen“ | `fritz.box` |
 | Umschaltgrund einblenden (`umschaltgrund_einblenden`, Fehlersuche): bei jeder Umschaltung 12 s Sender, Grund und Punkte einzeln mit Summe | „Fehlersuche“ | aus |
+| Programminfo beim Umschalten (`programminfo`, ab 0.4.22): bei jedem Senderwechsel 7 s Sender und laufende Sendung unten links, auch ohne Zapper | „Fehlersuche“ | an |
 | Tuner-Eingang, Fernseh-App | „Fernseher“ (leer = automatisch, Erkanntes steht dabei) | automatisch |
 | Für Home Assistant: IP des Fernsehers, adb an/aus, adb-Port, Befehle | „Schnittstelle für Home Assistant“ (nur Anzeige) | – |
 
@@ -639,7 +646,7 @@ adb shell am broadcast -a io.github.mhd6271.tvzapper.UMSCHALTEN -n io.github.mhd
 
 `ABFRAGEN` liefert `zeit`, `bildschirm_an`, `vorn` (App im Vordergrund), `fernsehbild_vorn`, `zapper_laeuft`,
 `werbe_sensor` (Text), `werbung` (true/false, null wenn unbekannt), `logos` (ab 0.4.6: `gelernt`, `beobachtet`, `ohne_logo`,
-`ohne_fritzbox`; gezählt wird je Logo über eingeschaltete, nicht werbefreie Sender, die die FRITZ!Box liefert; RTL HD und RTL UHD teilen sich ein Logo und zählen einmal), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
+`ohne_fritzbox`; gezählt wird je Logo über eingeschaltete, nicht werbefreie Sender, die die FRITZ!Box liefert; RTL HD und RTL UHD teilen sich ein Logo und zählen einmal), `werbung_umgehen`, `ausweichen_bevorzugt`, `umschaltgrund_einblenden`, `programminfo` (ab 0.4.22), `umschaltungen` (ab 0.4.0) und `jetzt` = laufender Sender mit `nr`, `sender`,
 `id` (TvContract), `zustand` (an/bevorzugt/aus), `sendung`, `folge`, `genre` (wie vom Sender geliefert, bei TCL ein
 DVB-Zahlencode), `beschreibung`, `start`, `ende` (ISO 8601), `punkte`, `treffer`. Mit `was=liste` zusätzlich `liste`:
 alle nicht ausgeschalteten Sender in derselben Form. `umschaltungen` sind die letzten 20 Umschaltungen, neueste
@@ -653,7 +660,7 @@ Abfrage 0,3 s, Liste 36 Sender, Umschalten 0,8 s. Mit `--es was sender` (ab 0.4.
 (`anzahl`, `durchschnitt_s`, Einzelwerte `pausen` mit `ende` in ms und `s`); `PAUSEN_LOESCHEN` (`--es sender …`,
 optional `--el von <ms> --el bis <ms>` für einen Zeitraum, `--ez alt true` für die Sammelwerte aus 0.2.x/0.3.0)
 entfernt Fehlmessungen und antwortet mit `vorher`, `entfernt`, `nachher`. `EINSTELLEN` setzt `--es ausweichen_bevorzugt true|false`,
-`--es werbung_umgehen true|false` und/oder `--es umschaltgrund_einblenden true|false` und antwortet mit `ok` und allen drei Werten (ungültiger Wert:
+`--es werbung_umgehen true|false`, `--es umschaltgrund_einblenden true|false` und/oder `--es programminfo true|false` (ab 0.4.22) und antwortet mit `ok` und allen drei Werten (ungültiger Wert:
 `result=1` mit `fehler`). Ab 0.4.17 auch den Kinder-Modus: `--es kinder_modus true|false`, `--es kinder_sender "A, B"`
 (erlaubt), `--es kinder_sender_gesperrt "C, D"`, `--es kinder_uebrige_erlaubt true|false`, `--es kinder_sperrbegriffe
 "krimi, horror*"`; die Antwort enthält dann auch diese Werte. `ABFRAGEN` liefert `kinder_modus` und, wenn er an ist,

@@ -453,6 +453,8 @@ class Fernseher:
                 # Einstellungen der TV-App (ab dem Stand nach 0.3.0), nur zur Anzeige
                 "werbung_umgehen": daten.get("werbung_umgehen"), "ausweichen_bevorzugt": daten.get("ausweichen_bevorzugt"),
                 "umschaltgrund_einblenden": daten.get("umschaltgrund_einblenden"),
+                # ab TV-App 0.4.22: Programminfo bei jedem Senderwechsel (SenderInfo)
+                "programminfo": daten.get("programminfo"),
                 # ab der App-Version mit Logo-Zaehler: {"gelernt": n, "beobachtet": m}, sonst None
                 "logos": logo_zaehler(daten.get("logos")),
                 "werbe_sensor": daten.get("werbe_sensor") if isinstance(daten.get("werbe_sensor"), str) else None,
